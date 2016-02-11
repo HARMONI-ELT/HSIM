@@ -2,7 +2,7 @@
 
 Author: Simon Zieleniewski
 
-Last updated: 12-10-14
+Last updated: 11-02-16
 
 '''
 
@@ -30,27 +30,27 @@ def generate_fits_cube(cube, head, wavels, filename, extra_headers, outd, varext
 
     '''
     from misc_utils import path_setup
-    
+
     #Update header with cube type
     #cube_type = filename.split('_')[0] + ' ' + filename.split('_')[1]
     cube_type = filename.split('_')[-2] + ' ' + filename.split('_')[-1]
     head['TYPE'] = cube_type
-    
+
     #Update header with extras:
     head_keys = extra_headers.keys()
     for i in head_keys:
         head[i] = extra_headers[i]
-    
+
     outFile = filename+'.fits'
     #os.chdir('./Output_cubes')
     cwd = os.getcwd()
     #os.chdir(path_setup('../../Output_cubes'))
     os.chdir(outd)
-    
+
     for filename in os.listdir('./'):
         if (filename.lower() == outFile.lower()):
             os.rename(filename, filename.split('.fits')[0]+'.old'+'.fits')
-        
+
     if head['CTYPE3'].lower() == 'wavelength':
         #p.writeto(outFile, cube, header=head)
         newfile = p.HDUList()
@@ -60,20 +60,20 @@ def generate_fits_cube(cube, head, wavels, filename, extra_headers, outd, varext
             vhead['EXTTYPE'] = 'VARIANCE'
             newfile.append(p.ImageHDU(varext, vhead))
         newfile.writeto(outFile)
-    
+
     elif head['CTYPE3'].lower() == 'nl wavelength':
         newfile = p.HDUList()
         newfile.append(p.PrimaryHDU(cube, head))
         whead = p.Header(['EXTTYPE', 'CUNIT1'])
         whead['EXTTYPE'] = 'WAVELENGTH'
-        whead['CUNIT1'] = 'um'   
+        whead['CUNIT1'] = 'um'
         newfile.append(p.ImageHDU(wavels, whead))
         if type(varext) == n.ndarray:
             vhead = head.copy()
             vhead['EXTTYPE'] = 'VARIANCE'
             newfile.append(p.ImageHDU(varext, vhead))
         newfile.writeto(outFile)
-                       
+
     os.chdir(cwd)
 
 
@@ -82,7 +82,7 @@ def generate_fits_cube(cube, head, wavels, filename, extra_headers, outd, varext
 def fits_header_check(header):
     '''Function that checks input FITS datacube header for
     required header keywords.
-    Required headers = ['CDELT1/2/3'], ['CRVAL3'], ['NAXIS1/2/3'], ['FUNITS'], ['CRPIX3'] = 1,
+    Required headers = ['CDELT1/2/3'], ['CRVAL3'], ['NAXIS1/2/3'], ['FUNITS']/['BUNIT'], ['CRPIX3'] = 1,
     ['CTYPE1/2/3'] = 'RA, DEC, WAVELENGTH, ['CUNIT1/2/3'] = MAS, MAS, microns/angstroms/etc,
     ['SPECRES'].
 
@@ -109,12 +109,15 @@ def fits_header_check(header):
               'J/s/m2/A/arcsec2', 'erg/s/cm2/um/arcsec2']
     crpix3 = [1]
 
+    #Check for use of BUNIT key
+    if 'BUNIT' in header:
+        header['FUNITS'] = header['BUNIT']
     for i in required_headers:
         if i not in header:
             print 'Missing header: ', i
             missing_headers.append(i)
     if len(missing_headers) != 0:
-        #print 'Missing headers: ', missing_headers
+        # print 'Missing headers: ', missing_headers
         raise HeaderError('Missing headers. Please correct datacube header.')
     else:
         if header['CUNIT1'].lower() == 'arcsec':
@@ -185,7 +188,7 @@ def wavelength_array(header):
     header['CRVAL3'] = lambs[0]
     header['CDELT3'] = (lambs[1]-lambs[0])
     header['CUNIT3'] = 'microns'
-    
+
     return lambs, header
 
 
@@ -193,7 +196,3 @@ def wavelength_array(header):
 #Header Error function
 class HeaderError(Exception):
     pass
-
-
-
-

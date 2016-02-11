@@ -8,7 +8,7 @@ to move from an input datacube (lambda, y, x) to output cubes:
 Written by Simon Zieleniewski
 
 Started 28-05-13
-Last edited 02-09-15
+Last edited 11-02-16
 '''
 
 #Import all required modules
@@ -78,7 +78,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
         background_cube: FITS file of datacube representing background sources
         reduced_cube: FITS file of observed datacube after subtracting background
         noise_cube: FITS file of noise for each pixel in datacube
-        
+
     '''
 
     print 'Filename: ', datacube
@@ -107,7 +107,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
     #Generate random number seed
     seednum = generate_seed(noise_force_seed)
     n.random.seed(seednum)
-    
+
 
     #OPEN INPUT FITS file
     if os.path.isfile(datacube) == True and os.path.splitext(datacube)[1].lower() == '.fits':
@@ -119,7 +119,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
             head = datacube.header
         except:
             raise ValueError('UNKNOWN INPUT FILE FORMAT: Please use FITS file')
-            
+
 
     #Check that datacube has required headers to be processed in simulator
     #Required headers = ['CDELT1/2/3'], ['CRVAL3'], ['NAXIS1/2/3'], ['FUNITS'], ['CRPIX3'] = 1,
@@ -127,7 +127,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
     #['SPECRES'].
     fits_header_check(head)
     pp.pprint(head)
-        
+
     #telescope options = 'VLT', 'E-ELT'
     #Sets diameter D, M1 collecting area and obscuration ratio eps
     if telescope == 'VLT':
@@ -155,7 +155,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
             print "AO PSFs currently don't support seeing < 0.67'' FWHM"
             seeing = 0.67
     print 'Seeing at chosen zenith angle = %.3f arcsec FWHM' % seeing
-    
+
 
     #CREATE WAVELENGTH ARRAY IN MICRONS
     lambs, head = wavelength_array(head)
@@ -196,7 +196,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
     print 'Chosen spaxel scales (x, y) = ', spax
     print 'Output cube shape (lam, y, x) = ', out_cube.shape
     print 'PSF generation size = ', psfsize
-   
+
     #WAVELENGTH CHANNEL LOOP
     print 'Entering loop over wavelength channels'
     psfvars = [psfparams, psfspax, psfsize, [D, eps], res_jitter, seeing, upsf]
@@ -214,7 +214,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
                                             (head['NAXIS1']*head['CDELT1']/float(spax[0]),head['NAXIS2']*head['CDELT2']/float(spax[1])),
                                             spax, adr_switch=config_data['ADR'], usecpus=ncpus)
     elif AO in ['LTAO', 'SCAO'] and ncpus < 3:
-        print 'Using 1 CPU'
+        # print 'Using 1 CPU'
         out_cube, head = wavelength_loop(cube, head, lambs, out_cube, AO, psfvars, adr,
                                             (head['NAXIS1']*head['CDELT1']/float(spax[0]),head['NAXIS2']*head['CDELT2']/float(spax[1])),
                                             spax, adr_switch=config_data['ADR'])
@@ -224,7 +224,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
                                             spax, adr_switch=config_data['ADR'])
     else:
         raise ValueError('UNKNOWN AO CHOICE: choose LTAO, SCAO or Gaussian')
-            
+
     inspax = n.array([head['CDELT1'],head['CDELT2']])*1.E-3
     outspax = n.array([spax[0],spax[1]])*1.E-3
     head['CDELT1'] = (spax[0], "mas")
@@ -253,22 +253,22 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
     else:
         raise ValueError('UNKNOWN FLUX UNITS: Please change FUNITS header key to erg/s/cm2/A/arcsec2')
     en2ph_conv_fac.shape = (len(lambs),1,1)
-    
-    
+
+
     #Total throughput cube
     throughput_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, sky=True, telescope=True, instrument=True, QE=True)
-    
+
     #Create object cube (enter spaxel as arcsec = mas*1.E-3)
-    #[units of passed values: lambs: [um], DIT: [s], outspax: [arcsec], pix_disp: [um/pixel], area: [m2]] 
-    out_cube = n.divide(out_cube, en2ph_conv_fac)   
+    #[units of passed values: lambs: [um], DIT: [s], outspax: [arcsec], pix_disp: [um/pixel], area: [m2]]
+    out_cube = n.divide(out_cube, en2ph_conv_fac)
     object_cube, object_shot_noise, noiseless_object = generate_object_cube(out_cube, lambs, throughput_cube, DIT,
                                                           NDIT, outspax, pix_disp, area)
-    
+
     #Instrument + Quantum efficiency cube
-    inst_qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, sky=False, telescope=False, instrument=True, QE=True)    
+    inst_qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, sky=False, telescope=False, instrument=True, QE=True)
     #Quantum efficiency cube
     qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, sky=False, telescope=False, instrument=False, QE=True)
-    
+
     #Create background cube [sky + telescope + instrument photons]
     background_cube, background_shot_noise, noiseless_background = create_background_cube(out_cube.shape, lambs, throughput_cube, inst_qe_cube,
                                                                  qe_cube, DIT, NDIT, outspax, delta_lambda, pix_disp, area, site_temp, sky=True,
@@ -280,7 +280,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
                                                    vis_dark=config_data['dark_current_vis'], nir_dark=config_data['dark_current_nir'])
     observed_cube = object_cube + background_cube + dark_cube + read_cube
     observed_noise = generate_noise_cube(noiseless_object, noiseless_background, noiseless_dark, nrc)
-   
+
     #Create separate background measurement cube
     background_cube2, background_shot_noise2, noiseless_background2 = create_background_cube(out_cube.shape, lambs, throughput_cube, inst_qe_cube,
                                                                    qe_cube, DIT, NDIT, outspax, delta_lambda, pix_disp, area, site_temp, sky=True,
@@ -306,12 +306,12 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
     outFile_obscube = datacube.split('/')[-1].split('.fits')[0] + '_Observed_cube'
     outFile_bgrcube = datacube.split('/')[-1].split('.fits')[0] + '_Background_cube'
     outFile_nbgrcube = datacube.split('/')[-1].split('.fits')[0] + '_Noiseless_Background_cube'
-    outFile_snr = datacube.split('/')[-1].split('.fits')[0] + '_Obs_SNR_cube' 
+    outFile_snr = datacube.split('/')[-1].split('.fits')[0] + '_Obs_SNR_cube'
     outFile_redcube = datacube.split('/')[-1].split('.fits')[0] + '_Reduced_cube'
     outFile_redsnr = datacube.split('/')[-1].split('.fits')[0] + '_Red_SNR_cube'
     outFile_trans = datacube.split('/')[-1].split('.fits')[0] + '_Transmission_cube'
 
-    
+
     #return observed_cube, observed_noise, background_cube2, background_noise2
     generate_fits_cube(observed_cube, head, lambs, outFile_obscube, common_header_info, outdir, varext=n.power(observed_noise,2))
     generate_fits_cube(background_cube2, head, lambs, outFile_bgrcube, common_header_info, outdir, varext=n.power(background_noise2,2))
@@ -321,12 +321,12 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
     if return_object == 'True':
         generate_fits_cube(object_cube, head, lambs, outFile_objcube, common_header_info, outdir)
         generate_fits_cube(noiseless_object, head, lambs, outFile_nlobjcube, common_header_info, outdir)
-       
+
     if remove_background == 'True':
         reduced_cube = n.subtract(observed_cube, background_cube2)
         reduced_noise = generate_noise_cube(noiseless_object, 2.*noiseless_background,
                                             2.*noiseless_dark, n.sqrt(2.)*nrc2)
-        
+
         generate_fits_cube(reduced_cube, head, lambs, outFile_redcube, common_header_info, outdir, varext=n.power(reduced_noise,2))
         generate_fits_cube((noiseless_object/reduced_noise), head, lambs, outFile_redsnr, common_header_info, outdir)
 
@@ -364,8 +364,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
     print ' '
     print 'Simulation Complete!'
 
-    
-    
+
+
 
 if __name__=="__main__":
 
@@ -406,7 +406,7 @@ if __name__=="__main__":
         print ""
 
     if len(sys.argv) == 21:
-        
+
         datacube = str(sys.argv[1])
         DIT = int(sys.argv[2])
         NDIT = int(sys.argv[3])
@@ -434,6 +434,4 @@ if __name__=="__main__":
 
         main(datacube, DIT, NDIT, band, spax, seeing, zenith_ang, telescope, user_PSF,
              AO, res_jitter, site_temp, combine_ndits, spec_N, Spec_samp,
-             noise_force_seed, remove_background, return_obj, return_tra) 
-
-    
+             noise_force_seed, remove_background, return_obj, return_tra)

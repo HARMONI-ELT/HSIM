@@ -1,6 +1,6 @@
 '''Generate cubes functions
 
-Last updated: 03-09-15
+Last updated: 09-02-16
 
 '''
 
@@ -36,15 +36,15 @@ def generate_object_cube(datacube, wavels, throughput_cube, DIT, NDIT, spaxel, d
             #Shot noise
             object_cube_new += n.random.poisson(object_cube)
         object_cube_new/=np.float(NDIT)
-    
+
     else:
         object_cube = datacube*throughput_cube*DIT*NDIT*(spaxel[0]*spaxel[1])*delta_lambda*area
         object_cube_new = n.random.poisson(abs(object_cube))
-        
+
     object_cube_new = object_cube_new.astype(n.float64)
     object_noise = n.abs(object_cube_new-object_cube)
 
-    
+
     return object_cube_new, object_noise, object_cube
 
 
@@ -66,7 +66,7 @@ def generate_read_cube(cube_shape, wavels, DIT, NDIT, readsig_vis, readsig_nirs,
     Outputs:
 
         read_cube: Read noise cube
-        
+
     '''
 
     #Read noise sigma from KMOS HAWAII-2RG detectors
@@ -77,7 +77,7 @@ def generate_read_cube(cube_shape, wavels, DIT, NDIT, readsig_vis, readsig_nirs,
     cutoff = 0.8
 
     #If DIT < 120 s use larger near-IR Read noise value
-    if DIT <= 120.: 
+    if DIT <= 120.:
         readsig_nir = readsig_nirs[1]
     else:
         readsig_nir = readsig_nirs[0]
@@ -95,10 +95,10 @@ def generate_read_cube(cube_shape, wavels, DIT, NDIT, readsig_vis, readsig_nirs,
             for nnn in xrange(NDIT):
                 read_cube[0:vis_cut+1,:,:] += n.random.normal(zero_cube[0:vis_cut+1,:,:], readsig_vis)
                 nrc[0:vis_cut+1,:,:] += readsig_vis**2.0
-                read_cube[vis_cut:,:,:] += n.random.normal(zero_cube[vis_cut:,:,:], readsig_nir)
-                nrc[vis_cut:,:,:] += readsig_nir**2.0
+                read_cube[vis_cut+1:,:,:] += n.random.normal(zero_cube[vis_cut:,:,:], readsig_nir)
+                nrc[vis_cut+1:,:,:] += readsig_nir**2.0
             nrc=n.sqrt(nrc)
-            
+
         except:
             #Check if wavelengths are shorter (visible) or longer (near-IR) than 0.8 um.
             if wavels[-1] < cutoff:
@@ -110,10 +110,10 @@ def generate_read_cube(cube_shape, wavels, DIT, NDIT, readsig_vis, readsig_nirs,
                     read_cube += n.random.normal(zero_cube, readsig_nir)
                     nrc += readsig_nir**2.0
             nrc=n.sqrt(nrc)
-                
-    else:               
+
+    else:
         try:
-            vis_cut = n.where(wavels < cutoff)[0][-1]     
+            vis_cut = n.where(wavels < cutoff)[0][-1]
             read_cube[0:vis_cut+1,:,:] += n.random.normal(zero_cube[0:vis_cut+1,:,:], n.sqrt(NDIT)*readsig_vis)
             nrc[0:vis_cut+1,:,:] += n.sqrt(NDIT)*readsig_vis
             read_cube[vis_cut:,:,:] += n.random.normal(zero_cube[vis_cut:,:,:], n.sqrt(NDIT)*readsig_nir)
@@ -149,15 +149,15 @@ def generate_dark_cube(cube_shape, wavels, dit, ndit, vis_dark, nir_dark, slow=F
         dark_cube_new: Cube of dark current [e-]
         dark_cube: Noiseless dark cube
     '''
-    
+
     #Check what wavelengths cube is (Vis/near-IR cutoff at 0.8 um.)
     cutoff = 0.8
 
     dark_cube = n.zeros(cube_shape, dtype=float)
     try:
-        vis_cut = n.where(wavels < cutoff)[0][-1]     
+        vis_cut = n.where(wavels < cutoff)[0][-1]
         dark_cube[0:vis_cut+1,:,:] += vis_dark
-        dark_cube[vis_cut:,:,:] += nir_dark
+        dark_cube[vis_cut+1:,:,:] += nir_dark
     except:
         #Check if wavelengths are shorter (visible) or longer (near-IR) than 0.8 um.
         if wavels[-1] < cutoff:
@@ -177,7 +177,7 @@ def generate_dark_cube(cube_shape, wavels, dit, ndit, vis_dark, nir_dark, slow=F
     else:
         dark_cube *= dit*ndit
         dark_cube_new = n.random.poisson(abs(dark_cube))
-        
+
     dark_cube_new = dark_cube_new.astype(n.float64)
     dark_noise = n.abs(dark_cube_new-dark_cube)
 
@@ -204,11 +204,9 @@ def generate_noise_cube(obj_cube, bg_cube, dark_cube, read_cube):
     Outputs:
         noise_cube: cube respresnting sigma for each pixel in observed cube.
     '''
-    
+
     #Uncorrelated noise adds in quadrature
     noise_cube = n.sqrt(obj_cube + bg_cube + dark_cube + read_cube**2)
 
-    
+
     return noise_cube
-
-
