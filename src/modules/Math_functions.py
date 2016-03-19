@@ -2,19 +2,24 @@
 
 Author: Simon Zieleniewski
 
-Last updated: 18-09-14
+Last updated: 19-11-15
 
 '''
 
 import numpy as n
-from scipy.special import jv
+from scipy.special import j1
 
 
 def obsc_airy(x, h, w, q):
-    if 0. in x:
-        loc = n.argwhere(x==0.)[0]
-        x[loc[0],loc[1]] = 1.E-30 #Fix for 0. in array - using 1.E-30 seems to give good result for Airy function
-    return h*((2*jv(1,n.sin(x)/w) - q*jv(1,q*(n.sin(x)/w)))/((n.sin(x)/w)*(1 - q**2)))**2
+    #Search for 0 in array - if not present, pass
+    try:
+        #loc = n.argwhere(x==0.)[0]
+        #x[loc[0],loc[1]] = 1.E-30 #Fix for 0. in array - using 1.E-30 seems to give good result for Airy function
+        loc = n.argwhere(x==0.)
+        x[loc] = 1.E-30
+    except IndexError:
+        pass
+    return h*((2*j1(n.sin(x)/w) - q*j1(q*(n.sin(x)/w)))/((n.sin(x)/w)*(1 - q**2)))**2
 
 
 def moffat(x, h, w, q):
@@ -35,6 +40,3 @@ def x2(x, a, b, c):
 
 def x6(x, a, b, c, d, e, f, g):
     return a +b*x + c*x**2 + d*x**3 + e*x**4 + f*x**5 + g*x**6
-
-
-
