@@ -4,7 +4,7 @@ with keywords.
 
 Written by Simon Zieleniewski
 
-Last updated 31-08-15
+Last updated 27-04-16
 
 '''
 
@@ -27,7 +27,8 @@ config_data = {
 
     'read_noise_nir_lowexp':12.0,   #e/pix
 
-    'transmission':'intrinsic',     #Default=intrinsic, or enter value here if desired
+    'trans_w_grat':0.45,     #Default=0.45, HARMONI transmission when using grating curve
+    'trans_wo_grat':0.35,     #Default=0.35, HARMONI transmission without grating curve
 
     'ADR': 'ON',                     #ADR effect ON or OFF
 

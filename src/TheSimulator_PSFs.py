@@ -4,26 +4,26 @@ in the HARMONI simulator.
 Writen by Simon Zieleniewski
 
 Started 04-06-13
-Last edited 28-06-15
+Last edited 28-04-16
 '''
 
 import os
 import numpy as n
 import astropy.io.fits as p
 import scipy.interpolate as s
-from scipy.special import jv
 from scipy.optimize import curve_fit
 from modules.Gaussians import Gauss2D
 from modules.frebin import *
 from modules.spaxel_rebin import *
 from modules.Math_functions import x1, x2, x6
 from modules.misc_utils import path_setup
+from modules.fits_utils import psf_fits_header_check, wavelength_array
 
 
 psf_path = path_setup('../../Sim_data/PSFs/')
 
 
-#AO options = 'SCAO', 'LTAO', 'GLAO', 'Gaussian'
+#AO options = 'SCAO', 'LTAO', 'Gaussian'
 #If user provides PSF - this always supersedes AO choice
 #PSF convolution ideally needs to happen at a spatial scale at least 1/10th of the output scale
 #for the coarsest scales(10,20,40,60 mas) and at least 1/5th of the output scale of the finest
@@ -48,7 +48,7 @@ def psf_setup(cube, head, lambs, spax, user_PSF, AO, seeing, tel):
              res_jitter: residual telescope windshake jitter [mas]
              Nyquist: False
              samp: PSF spatial sampling [mas]
-             
+
 
         Outputs:
 
@@ -57,39 +57,24 @@ def psf_setup(cube, head, lambs, spax, user_PSF, AO, seeing, tel):
             psfspax: Initial PSF spaxel scale
             psfparams: dictionary containing several PSF parameters
             psfsize: array size in spaxels
+            upsf: User uploaded PSF (2D or 3D)
+            upsflams: Wavelength array for PSF cube if 3D cube
+
 
     '''
-    
+
     #If user uploaded PSF
     if user_PSF != 'None':
 
         print 'User uploaded PSF'
-        
-        upsf, upsfh = p.getdata(user_PSF, header=True)
-        #Check for CDELT1, CDELT2, CUNIT1, CUNIT2
-        psfrequired_headers = ['NAXIS1', 'NAXIS2', 'CDELT1',
-                            'CDELT2', 'CUNIT1', 'CUNIT2']
-        psfmissing_headers = []
 
-        for i in psfrequired_headers:
-            if i not in upsfh:
-                print 'Missing header: ', i
-                psfmissing_headers.append(i)
-        if len(psfmissing_headers) != 0:
-            #print 'Missing headers: ', missing_headers
-            raise HeaderError('Missing headers. Please correct PSF header.')
-        
-        else:
-            if upsfh['CUNIT1'].lower() == 'arcsec':
-                upsfh['CUNIT1'] = 'mas'
-                upsfh['CDELT1'] = upsfh['CDELT1']*1000.
-            if upsfh['CUNIT2'].lower() == 'arcsec':
-                upsfh['CUNIT2'] = 'mas'
-                upsfh['CDELT2'] = upsfh['CDELT2']*1000.
+        upsf, upsfh = p.getdata(user_PSF, header=True)
+
+        psf_fits_header_check(upsfh)
 
         print 'Input PSF sampling = %.2f mas' % upsfh['CDELT1']
         print 'Input datacube sampling = %.2f mas' % head['CDELT1']
-        
+
         if upsfh['CDELT1'] > head['CDELT1'] and upsfh['CDELT2'] > head['CDELT2']:
             print 'PSF coarser than datacube - rebinning datacube up'
             cube *= (head['CDELT1']*head['CDELT2']*1.E-6)
@@ -100,10 +85,24 @@ def psf_setup(cube, head, lambs, spax, user_PSF, AO, seeing, tel):
             cube *= (head['CDELT1']*head['CDELT2']*1.E-6)
             cube, head = spaxel_scale(cube, head, (upsfh['CDELT1'],upsfh['CDELT2']))
             cube /= (head['CDELT1']*head['CDELT2']*1.E-6)
-            
+
         if head['CDELT1'] <= spax[0]/10. and head['CDELT2'] <= spax[1]/10.:
-            print 'Spaxel scale is equal to or coarser than 10 mas.'        
+            print 'Spaxel scale is equal to or coarser than 1/10 output scale.'
+            print 'Datacube sampling = (%.2f, %.2f) mas' % (head['CDELT1'], head['CDELT2'])
+            print 'Output spaxel scale = (%.2f, %.2f) mas' % (spax[0], spax[1])
             print 'WARNING: If coarser this runs the risk of convolving with the pixel scale twice!'
+
+        #2D PSF image
+        if 'NAXIS3' not in upsfh:
+            upsflams = 'None'
+        #3D PSF cube
+        elif 'NAXIS3' in upsfh:
+            upsflams, upsfh = wavelength_array(upsfh)
+            if upsflams[0] <= lambs[0] and upsflams[-1] >= lambs[-1]:
+                pass
+            else:
+                print 'Input PSF datacube DOES NOT cover wavelength range of input datacube'
+                raise ValueError('Input PSF datacube DOES NOT cover wavelength range of input datacube')
 
         psfspax = upsfh['CDELT1']
         psfsize = upsfh['NAXIS1']
@@ -111,13 +110,15 @@ def psf_setup(cube, head, lambs, spax, user_PSF, AO, seeing, tel):
 
 
     else:
-        upsf = 'None' #placeholder
+        upsf = 'None'; upsflams = 'None' #placeholders for when no user PSF given
+
+        print 'Inbuilt PSFs'
         print 'Input spatial scales = %.1f mas, %.1f mas' % (head['CDELT1'], head['CDELT2'])
         print 'Chosen output spatial scales = %.1f mas, %.1f mas' % (spax[0], spax[1])
         psfspax = 1.0 #[mas/spaxel]
         print  'Chosen PSF initial sampling scale = %.1f mas' % psfspax
 
-        #Check spaxel scales of input and output cubes: 
+        #Check spaxel scales of input and output cubes:
         if head['CDELT1'] <= spax[0]/10. and head['CDELT2'] <= spax[1]/10.:
             print 'Input spatial scale is at least 1/10th of the output scale.'
             print 'Rebinning input cube to 1/10th of output scale.'
@@ -133,7 +134,7 @@ def psf_setup(cube, head, lambs, spax, user_PSF, AO, seeing, tel):
             print 'Generating PSFcube at 1/10th output scale.'
 
             psfparams, psfsize = generate_psfcube(lambs, AO, seeing, tel, head, samp=psfspax)
-            
+
 
         elif spax[0]/10. <= head['CDELT1'] <= spax[0]/5. and spax[1]/10. <= head['CDELT2'] <= spax[1]/5.:
             print 'Input spatial scale is between 1/10th and 1/5th of the output scale.'
@@ -143,7 +144,7 @@ def psf_setup(cube, head, lambs, spax, user_PSF, AO, seeing, tel):
 
                 psfparams, psfsize = generate_psfcube(lambs, AO, seeing, tel, head, samp=psfspax)
 
-                
+
             elif spax[0] >= 10. and spax[1] >= 10.:
                 print 'Spaxel scale is equal to or coarser than 10 mas.'
                 print 'WARNING: If coarser this runs the risk of convolving with the pixel scale twice!'
@@ -168,7 +169,7 @@ def psf_setup(cube, head, lambs, spax, user_PSF, AO, seeing, tel):
             psfparams, psfsize = generate_psfcube(lambs, AO, seeing, tel, head, samp=psfspax)
 
     print 'PSF setup done!'
-    return cube, head, psfspax, psfparams, psfsize, upsf
+    return cube, head, psfspax, psfparams, psfsize, upsf, upsflams
 
 
 
@@ -176,7 +177,7 @@ def generate_psfcube(lambs, AO, seeing, aperture, datahead, samp=1.):
     '''Function to generate PSF datacube parameters.
 
     Inputs:
-    
+
         lambs: array of wavelengths for datacube
         AO: Type of AO: LTAO, SCAO, Gaussian. This option selects the
             parameters to generate chosen PSF type
@@ -191,16 +192,16 @@ def generate_psfcube(lambs, AO, seeing, aperture, datahead, samp=1.):
         datahead: Datacube FITS header
         Nyquist: Boolean. Use nyquist sampling.
         samp: PSF sampling in milliarcsec.
-        
+
     Outputs:
-    
+
         psfcube: dictionary containing PSF parameters as a function of wavelength
         size: size of 2D PSF array in pixels
     '''
 
     print 'PSF parameter generation'
-    
-            
+
+
     #Get longest side of datacube array
     if datahead['NAXIS1'] >= datahead['NAXIS2']:
         datsize = datahead['NAXIS1']
@@ -209,7 +210,7 @@ def generate_psfcube(lambs, AO, seeing, aperture, datahead, samp=1.):
         datsize = datahead['NAXIS2']
         datsamp = datahead['CDELT2']
 
-        
+
     if AO == 'LTAO':
         #Set array size according to: size = 2400 [mas] /spaxel_scale [mas/pixel] (10^-8 intensity achieved by r=1200 mas.)
         if datsize > int(2400/(datsamp*float(samp))):
@@ -236,7 +237,7 @@ def generate_psfcube(lambs, AO, seeing, aperture, datahead, samp=1.):
             #psfsize = int(3200/(datsamp*float(samp)))
             psfsize = 3200
         psfcube = None
-        
+
     else:
         return ValueError('Incorrect choice for AO type. Try again.')
 
@@ -250,15 +251,15 @@ def SCAOpsfcube(lambs, seeing, aperture):
     '''Function that creates a 3D spatial E-ELT SCAO PSF datacube by interpolating
     between parameters of several analytical functions. Parameters are stored in
     datafiles and are accessed by code.
-    
+
     Inputs:
-    
+
         lambs: Array of wavelengths.
         seeing: FWHM value of the seeing at 500nm (V-band). Value must be between 0.67" and 1.10".
         aperture: List containing [diameter of telescope, obscuration ratio]
 
     Output:
-    
+
         psfcube: PSF cube of same spectral length as wavelength array
     '''
 
@@ -270,8 +271,8 @@ def SCAOpsfcube(lambs, seeing, aperture):
     ###Load data from text file - wavelengths = vals[:,0]
     #vals = n.loadtxt('/Users/SimonZ/Data/Sim_data/PSFs/SCAOdata.txt', delimiter=',')
     #vals = n.loadtxt(psf_path+'SCAO/SCAOdata.txt', delimiter=',')
-    vals = n.loadtxt(os.path.join(psf_path,'SCAO/SCAOdata.txt'), delimiter=',') 
-    
+    vals = n.loadtxt(os.path.join(psf_path,'SCAO/SCAOdata.txt'), delimiter=',')
+
     #Seeing values
     see_vals = n.array([0.67, 0.85, 0.95, 1.10])
 
@@ -297,7 +298,7 @@ def SCAOpsfcube(lambs, seeing, aperture):
     params.append(ymh)
     params.append(ylh)
     params.append(ym2h)
-   
+
 
     #Fit 6th order polynomial to Moffat (seeing) width and Lorentzian width parameters and then interpolate
     for i in n.array([4, 8]):
@@ -312,10 +313,10 @@ def SCAOpsfcube(lambs, seeing, aperture):
         yp4 = x6(vals[:,0], p4[0], p4[1], p4[2], p4[3], p4[4], p4[5], p4[6])
 
         yps = n.array([yp1, yp2, yp3, yp4])
-        
+
         pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
-        
+
         params.append(ys)
 
 
@@ -334,7 +335,7 @@ def SCAOpsfcube(lambs, seeing, aperture):
         yps = n.array([yp1, yp2, yp3, yp4])
         pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
-        
+
         params.append(ys)
 
     #Fit 2nd order polynomial to Moffat (core) shape
@@ -352,7 +353,7 @@ def SCAOpsfcube(lambs, seeing, aperture):
         yps = n.array([yp1, yp2, yp3, yp4])
         pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
-        
+
         params.append(ys)
 
     #params = [oh, mh, lh, m2h, mw, lw, ow, mq, lp, m2w, m2q]
@@ -369,15 +370,15 @@ def LTAOpsfcube(lambs, seeing, aperture):
     '''Function that creates a 3D spatial E-ELT LTAO PSF datacube by interpolating
     between parameters of several analytical functions. Parameters are stored in
     datafiles and are accessed by code.
-    
+
     Inputs:
-    
+
         lambs: Array of wavelengths corresponding to [start_wave, end_wave, del_wave].
         seeing: FWHM value of the seeing. Value must be between 0.67" and 0.95" (21-12-13).
         aperture: List containing [diameter of telescope, obscuration ratio]
 
     Output:
-    
+
         psfcube: PSF cube of same spectral length as wavelength array
     '''
 
@@ -388,8 +389,8 @@ def LTAOpsfcube(lambs, seeing, aperture):
 
     ###Load data from text file - wavelengths = vals[:,0]
     #vals = n.loadtxt(psf_path+'LTAO/LTAOdata.txt', delimiter=',')
-    vals = n.loadtxt(os.path.join(psf_path,'LTAO/LTAOdata.txt'), delimiter=',') 
-    
+    vals = n.loadtxt(os.path.join(psf_path,'LTAO/LTAOdata.txt'), delimiter=',')
+
     #Seeing values
     see_vals = n.array([0.67, 0.95])
 
@@ -415,7 +416,7 @@ def LTAOpsfcube(lambs, seeing, aperture):
     params.append(ymh)
     params.append(ylh)
     params.append(ym2h)
-   
+
 
     #Fit 6th order polynomial to Moffat (seeing) width and Lorentzian width parameters and then interpolate
     for i in n.array([3, 7]):
@@ -428,7 +429,7 @@ def LTAOpsfcube(lambs, seeing, aperture):
         yps = n.array([yp1, yp2])
         pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
-        
+
         params.append(ys)
 
 
@@ -443,7 +444,7 @@ def LTAOpsfcube(lambs, seeing, aperture):
         yps = n.array([yp1, yp2])
         pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
-        
+
         params.append(ys)
 
     #Interpolate for Moffat (core) width and shape as these are (effectively) step functions
@@ -456,15 +457,12 @@ def LTAOpsfcube(lambs, seeing, aperture):
     #Airy width directly proportional to wavelength: width [mas] = (lambda[m]/(pi*D))*206265000.
     yows = lambs*1.E-6*206265000./(n.pi*aperture[0])
     params.append(yows)
-    
+
 
     #params = [oh, mh, lh, m2h, mw, lw, mq, lp, m2w, m2q, ow]
     pdict = {'oh':params[0], 'ow':params[10], 'mh':params[1],
              'mw':params[4], 'mq':params[6], 'lh':params[2],
              'lp':params[7], 'lw':params[5], 'm2h':params[3],
              'm2w':params[8], 'm2q':params[9]}
-    
+
     return pdict
-
-
-

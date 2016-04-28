@@ -3,7 +3,7 @@ to datacubes.
 
 Written by Sarah Kendrew & Simon Zieleniewski
 
-Last updated 31-07-15
+Last updated 27-04-16
 
 '''
 
@@ -15,33 +15,47 @@ import math
 
 
 #====================================================
-def calc_ref(l, T, ppwv=17.0, P=760.0):
-    
+def calc_ref(l, T, rh=0.1, P=760.0):
+
     '''This function calculates the refractive index of air vs. wavelength.
+    ppwv derived from relative humidity RH, saturation
+    pressure of water ps, and temperature T. Default values for RH and P
+    from Kendrew et al. 2008.
+    EQUATIONS:
+
+    RH = ppwv / ps
+    ps = 6.11 * exp([17.27 * T] / [T + 237.3]) [millibar] for T in deg C.
+    Reference: VDF-TRE-IOA-00009-0003 by Dafydd Wyn Evans, 2004, http://casu.ast.cam.ac.uk/documents/wfcam/astrometry/refractir.pdf
+
     INPUTS:
     l:      wavelength axis (microns)
     T:      temperature (Kelvin)
-    ppwv:    partial pressure of water (millibar)
+    rh:     relative humidity (fraction)
     P:      atmospheric pressure (millibar)
-    
+
     OUTPUT:
     refractive index of air on the provided wavelength scale'''
-    
-    Ps = 1013.25
+
+    Tc = T-273.15
+    ppwv = rh * 6.11 * np.exp((17.27 * Tc) / (Tc + 237.3))
+
+    # Ps = 1013.25
+    Ps = 1000.0#When using mbar units --> Reference: VDF-TRE-IOA-00009-0003 by Dafydd Wyn Evans, 2004
     Ts = 288.15
-    
+
     nout = 1 + ( 64.328 + (29498.1)/(146.0 - l**(-2)) + (255.4)/(41 - l**(-2)) )\
            * ((P*Ts)/(Ps*T)) * 1e-6 - 43.49 * (1.0 - (7.956e-3)/l**2)*(ppwv/Ps) * 1e-6
-    
-    return nout
-#====================================================
 
+    return nout
+
+
+#====================================================
 def calc_adr(wave, n, am, optlam):
-    
+
     ''' calculates the differential refration in MILLI-ARCSEC
     across the wavelength range provided given the refractive
     index and airmass.
-    
+
     INPUTS:
     wave:       wavelength axis, in microns
     n:          refractive index, unitless (must have same length as wave)
@@ -61,13 +75,13 @@ def calc_adr(wave, n, am, optlam):
     print 'Guiding wavelegth: %.3f' % optlam
 
     z = np.arccos(1./am)
-    
+
     diffref = 206265. * 1.e3 * ((n**2-1.0)/(2.0*n**2) - (nc**2-1.0)/(2.*nc**2)) * np.tan(z)
-    
+
     return diffref
 
 
-
+#====================================================
 def add_ADR(array, head, adr_val, interp_mode='spline3'):
     '''Function that takes datacube and applies the effects of
     atmospheric differential refraction by shifting wavelength
@@ -87,7 +101,7 @@ def add_ADR(array, head, adr_val, interp_mode='spline3'):
 
     '''
 
-    
+
     #check units of both axes
     if head['CUNIT1'] == 'mas' and head['CUNIT2'] == 'mas':
         u_conv = 1.
@@ -95,7 +109,7 @@ def add_ADR(array, head, adr_val, interp_mode='spline3'):
         u_conv = 1.E3
     else:
         raise ValueError('Units of spatial axes are different!')
-        
+
 
     #Find longest spatial axis to disperse along
     #Displacement in pixel units
@@ -122,7 +136,7 @@ def add_ADR(array, head, adr_val, interp_mode='spline3'):
     return adr_channel
 
 
-
+#====================================================
 def optimalguide(wave0, wave1, temp) :
     '''
     Calculates the optimal guiding wavelength for to given end wavelengths
@@ -149,7 +163,7 @@ def optimalguide(wave0, wave1, temp) :
 
     #print 'Guiding wavelength = ', waveg
     return waveg
-        
+
 
 #====================================================
 
@@ -159,29 +173,26 @@ if __name__=="__main__":
     import astropy.io.fits as fits
     import matplotlib.pyplot as plt
     import pylab as P
-    
+
     inp = sys.argv[1]
 
     plt.close('all')
-
-    #Set the temperature in K
-    #Should be inherited from the main function in practice
-    temp = 288.15
 
     # set zenith distance (degrees) and convert to airmass (= sec(z), with z in radians).
     #should also be inherited from main function
     z = 30.
     airmass = 1./np.cos(np.radians(z))
 
-    # set humidity, pressure
+    # set humidity, pressure, temperature
     # Assume a relative humidity of 10\% (I used 9.6 for Paranal in the past)
     # Relative humidity = pw / ps * 100
     #(pw = partial pressure of water vapour, ps = saturation pressure of water vapour at the same temperature)
     #The value for ppwv below is valid for a RH = 10\%.
     #This and the atmosphere pressure of 760 mbar are values provided by ESO for Paranal.
-    ppwv = 17.0
+    temp = 288.15
+    RH = 0.1
+    ppwv = 1.0
     p = 760.
-
 
     # read in the test cube
     hdu = fits.open(inp)
@@ -197,7 +208,7 @@ if __name__=="__main__":
     dec = np.arange(head['NAXIS2'])*head['CDELT2']
 
     # pass to a function that calculates the differential refraction vector
-    refr = calc_ref(wave, temp, ppwv, p)
+    refr = calc_ref(wave, temp, RH, p)
 
     # now calculate the resulting differential refraction for the given airmass
     adr = calc_adr(wave, refr, airmass)
@@ -206,7 +217,6 @@ if __name__=="__main__":
     new_cube = add_ADR(cube, head, adr, 'linear')
 
     fits.writeto(sys.argv[1], new_cube, header=head)
-
 
 ##    P.figure(figsize=(11,9),dpi=72)
 ##    P.plot(wave, adr, 'k-', lw=1.5)
@@ -219,4 +229,3 @@ if __name__=="__main__":
 ##    P.tick_params(which='minor', length=8, width=1.5,
 ##                  axis='both')
 ##    P.show()
-    
