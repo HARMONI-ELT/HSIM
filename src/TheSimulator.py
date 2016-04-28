@@ -8,7 +8,7 @@ to move from an input datacube (lambda, y, x) to output cubes:
 Written by Simon Zieleniewski
 
 Started 28-05-13
-Last edited 11-02-16
+Last edited 27-04-16
 '''
 
 #Import all required modules
@@ -170,8 +170,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
                                                                  spec_nyquist=Spec_nyquist, spec_samp=Spec_samp)
 
     #PSF GENERATION CODE
-    cube, head, psfspax, psfparams, psfsize, upsf = psf_setup(cube, head, lambs, spax, user_PSF,
-                                                        AO, seeing, [D,eps])
+    cube, head, psfspax, psfparams, psfsize, upsf, upsflams = psf_setup(cube, head, lambs, spax,
+                                                                        user_PSF, AO, seeing, [D,eps])
+
     #POINT SOURCE CHECK
     if (head['NAXIS1']*head['CDELT1'])/float(spax[0]) < 1. or (head['NAXIS2']*head['CDELT2'])/float(spax[1]) < 1.:
         print 'Point source - single spaxel output'
@@ -199,7 +200,16 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
 
     #WAVELENGTH CHANNEL LOOP
     print 'Entering loop over wavelength channels'
-    psfvars = [psfparams, psfspax, psfsize, [D, eps], res_jitter, seeing, upsf]
+    psfvars = [psfparams, psfspax, psfsize, [D, eps], res_jitter, seeing, upsf, upsflams]
+
+    # print 'PSFVARS[1] = ', psfvars[1]
+    # print 'PSFVARS[2] = ', psfvars[2]
+    # print 'PSFVARS[3] = ', psfvars[3]
+    # print 'PSFVARS[4] = ', psfvars[4]
+    # print 'PSFVARS[5] = ', psfvars[5]
+    # print 'PSFVARS[6] = ', psfvars[6]
+    # print 'PSFVARS[7] = ', psfvars[7]
+
     ncpus = nprocs
     print 'No. of CPUs: ', ncpus
     try:
@@ -209,19 +219,20 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
         print 'No pprocess module'
         print 'Using 1 CPU'
         ncpus = 1
-    if AO in ['LTAO', 'SCAO'] and ncpus >= 3:
+    PSFs = ['LTAO', 'SCAO', 'Gaussian']
+    if AO in PSFs and ncpus >= 3:
         out_cube, head = pp_wavelength_loop(cube, head, lambs, out_cube, AO, psfvars, adr,
                                             (head['NAXIS1']*head['CDELT1']/float(spax[0]),head['NAXIS2']*head['CDELT2']/float(spax[1])),
                                             spax, adr_switch=config_data['ADR'], usecpus=ncpus)
-    elif AO in ['LTAO', 'SCAO'] and ncpus < 3:
+    elif AO in PSFs and ncpus < 3:
         # print 'Using 1 CPU'
         out_cube, head = wavelength_loop(cube, head, lambs, out_cube, AO, psfvars, adr,
                                             (head['NAXIS1']*head['CDELT1']/float(spax[0]),head['NAXIS2']*head['CDELT2']/float(spax[1])),
                                             spax, adr_switch=config_data['ADR'])
-    elif AO == 'Gaussian':
-        out_cube, head = wavelength_loop(cube, head, lambs, out_cube, AO, psfvars, adr,
-                                            (head['NAXIS1']*head['CDELT1']/float(spax[0]),head['NAXIS2']*head['CDELT2']/float(spax[1])),
-                                            spax, adr_switch=config_data['ADR'])
+    # elif AO == 'Gaussian':
+    #     out_cube, head = pp_wavelength_loop(cube, head, lambs, out_cube, AO, psfvars, adr,
+    #                                         (head['NAXIS1']*head['CDELT1']/float(spax[0]),head['NAXIS2']*head['CDELT2']/float(spax[1])),
+    #                                         spax, adr_switch=config_data['ADR'])
     else:
         raise ValueError('UNKNOWN AO CHOICE: choose LTAO, SCAO or Gaussian')
 
@@ -256,7 +267,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
 
 
     #Total throughput cube
-    throughput_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, sky=True, telescope=True, instrument=True, QE=True)
+    throughput_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating,
+    [config_data['trans_w_grat'],config_data['trans_wo_grat']], sky=True, telescope=True, instrument=True, QE=True)
 
     #Create object cube (enter spaxel as arcsec = mas*1.E-3)
     #[units of passed values: lambs: [um], DIT: [s], outspax: [arcsec], pix_disp: [um/pixel], area: [m2]]
@@ -265,9 +277,11 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
                                                           NDIT, outspax, pix_disp, area)
 
     #Instrument + Quantum efficiency cube
-    inst_qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, sky=False, telescope=False, instrument=True, QE=True)
+    inst_qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating,
+    [config_data['trans_w_grat'],config_data['trans_wo_grat']], sky=False, telescope=False, instrument=True, QE=True)
     #Quantum efficiency cube
-    qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, sky=False, telescope=False, instrument=False, QE=True)
+    qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating,
+    [config_data['trans_w_grat'],config_data['trans_wo_grat']], sky=False, telescope=False, instrument=False, QE=True)
 
     #Create background cube [sky + telescope + instrument photons]
     background_cube, background_shot_noise, noiseless_background = create_background_cube(out_cube.shape, lambs, throughput_cube, inst_qe_cube,

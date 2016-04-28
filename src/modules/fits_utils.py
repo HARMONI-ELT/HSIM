@@ -2,7 +2,7 @@
 
 Author: Simon Zieleniewski
 
-Last updated: 11-02-16
+Last updated: 26-04-16
 
 '''
 
@@ -145,6 +145,83 @@ def fits_header_check(header):
     if header['CRPIX3'] not in crpix3:
         raise HeaderError("CRPIX3 must be set to: ", crpix3)
     print 'All header values acceptable!'
+
+
+
+
+def psf_fits_header_check(upsfh):
+    '''Function that checks input FITS PSF file header for
+    required header keywords. Input PSF can either be a 2D image
+    or a 3D cube. If 3D cube then must fully cover wavelength range of input
+    data cube!
+    Required headers = ['CDELT1/2/3'], ['CRVAL3'], ['NAXIS1/2/3'],
+                       ['CRPIX3'] = 1,
+                       ['CTYPE1/2/3'] = 'RA, DEC, WAVELENGTH,
+                       ['CUNIT1/2/3'] = MAS, MAS, microns/angstroms.
+
+        Input:
+
+            upsfh: PSF FITS file header
+
+    '''
+
+    if 'NAXIS3' not in upsfh:
+        psfrequired_headers = ['NAXIS1', 'NAXIS2', 'CDELT1',
+                            'CDELT2', 'CUNIT1', 'CUNIT2',
+                            'CTYPE1', 'CTYPE2']
+    elif 'NAXIS3' in upsfh:
+        psfrequired_headers = ['NAXIS1', 'NAXIS2', 'NAXIS3',
+                               'CTYPE1', 'CTYPE2', 'CTYPE3',
+                               'CDELT1', 'CDELT2', 'CDELT3',
+                               'CUNIT1', 'CUNIT2', 'CUNIT3',
+                               'CRVAL3', 'CRPIX3']
+
+    psfctype1 = ['ra', 'x']
+    psfctype2 = ['dec', 'y']
+    psfcunit1 = ['mas', 'arcsec']
+    psfcunit2 = psfcunit1
+    psfctype3 = ['wavelength']
+    psfcunit3 = ['micron', 'angstrom', 'meter', 'nanometers',
+              'microns', 'angstroms', 'meters', 'nm']
+    psfcrpix3 = [1]
+
+    psfmissing_headers = []
+
+    #Check for missing headers
+    for i in psfrequired_headers:
+        if i not in upsfh:
+            print 'Missing header: ', i
+            psfmissing_headers.append(i)
+    if len(psfmissing_headers) != 0:
+        #print 'Missing headers: ', missing_headers
+        raise HeaderError('Missing headers. Please correct PSF header.')
+
+    #Check units of headers
+    if upsfh['CTYPE2'].lower() not in psfctype2:
+        raise HeaderError("CTYPE2 must be set to: ", psfctype2)
+    if upsfh['CTYPE1'].lower() not in psfctype1:
+        raise HeaderError("CTYPE1 must be set to: ", psfctype1)
+    if upsfh['CUNIT2'].lower() not in psfcunit2:
+        raise HeaderError("CUNIT2 must be set to one of: ", psfcunit2)
+    if upsfh['CUNIT1'].lower() not in psfcunit1:
+        raise HeaderError("CUNIT1 must be set to one of: ", psfcunit1)
+    if 'NAXIS3' in upsfh:
+        if upsfh['CRPIX3'] not in psfcrpix3:
+            raise HeaderError("CRPIX3 must be set to: ", crpix3)
+        if upsfh['CTYPE3'].lower() not in psfctype3:
+            raise HeaderError("CTYPE3 must be set to: ", psfctype3)
+        if upsfh['CUNIT3'].lower() not in psfcunit3:
+            raise HeaderError("CUNIT3 must be set to one of: ", psfcunit3)
+
+    #Sort out CDELT1/2 units into mas
+    if upsfh['CUNIT1'].lower() == 'arcsec':
+        upsfh['CUNIT1'] = 'mas'
+        upsfh['CDELT1'] = upsfh['CDELT1']*1000.
+    if upsfh['CUNIT2'].lower() == 'arcsec':
+        upsfh['CUNIT2'] = 'mas'
+        upsfh['CDELT2'] = upsfh['CDELT2']*1000.
+
+    print 'All PSF header values acceptable!'
 
 
 

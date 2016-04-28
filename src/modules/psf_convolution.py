@@ -2,7 +2,7 @@
 
 Author: simon Zieleniewski
 
-Last updated: 18-09-14
+Last updated: 02-12-15
 
 '''
 
@@ -13,11 +13,11 @@ import numpy as n
 def psf_convolve(datacube, psfcube):
     '''Function to convolve each wavelength channel of datacube with
     corresponding spatial PSF.
-    
+
     Inputs:
         datacube: science datacube
         psfcube: PSF datacube of same shape as science datacube
-        
+
     Outputs:
         conv_cube: Convolved datacube of same shape as input science datacube
     '''
@@ -43,7 +43,7 @@ def psf_convolve(datacube, psfcube):
         conv_cube_slice = n.fft.ifft2(n.fft.fft2(img_box)*n.fft.fft2(psfcube))
         conv_cube_slice_final = n.fft.fftshift(conv_cube_slice.real)
         conv_channel = conv_cube_slice_final[(extra_y/2.)-yfac:yy-extra_y/2.,(extra_x/2.)-xfac:xx-extra_x/2.]
-        
+
     #If PSF images are smaller than cube images, do something else!
     elif yy < y and xx < x:
 #        print 'PSF cube smaller than datacube - padding PSF array with outermost values to PSF size - then FFT convolving.'
@@ -59,14 +59,13 @@ def psf_convolve(datacube, psfcube):
         img_box = n.zeros((y, x), dtype=n.float64)
 
         img_box[(extra_y/2.)-yfac:y-extra_y/2.,(extra_x/2.)-xfac:x-extra_x/2.] = psfcube
-        conv_cube_slice = n.fft.ifft2(n.fft.fft2(img_box)*n.fft.fft2(psfcube))
+        conv_cube_slice = n.fft.ifft2(n.fft.fft2(datacube)*n.fft.fft2(img_box))
         conv_cube_slice_final = n.fft.fftshift(conv_cube_slice.real)
-        conv_channel = conv_cube_slice_final[(extra_y/2.)-yfac:y-extra_y/2.,(extra_x/2.)-xfac:x-extra_x/2.]        
+        conv_channel = conv_cube_slice_final[(extra_y/2.)-yfac:y-extra_y/2.,(extra_x/2.)-xfac:x-extra_x/2.]
 
     else:
         print 'Datacube spatial shape = (%g, %g)' % (datacube.shape[1], datacube.shape[0])
         print 'PSF cube spatial shape = (%g, %g)' % (psfcube.shape[1], psfcube.shape[0])
         raise ValueError("Can't currently deal with odd shaped arrays!")
-      
-    return conv_channel
 
+    return conv_channel

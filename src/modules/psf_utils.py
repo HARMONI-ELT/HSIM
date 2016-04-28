@@ -2,7 +2,7 @@
 
 Author: Simon Zieleniewski
 
-Last updated: 16-09-15
+Last updated: 28-04-16
 
 '''
 
@@ -34,9 +34,9 @@ def r_values(spaxels, spans):
        ============================ Out ===============================
        r             - 2D numpy array. Contains the distance of each
                        element from the centre point of the array.'''
-    
+
     spans = n.array(spans, dtype=n.float32)
-    
+
     i=(spaxels[0]/2)-1
     j=(spaxels[1]/2)-1
     incrx=spans[0]/(2*spaxels[0])#Half a spaxel width in arcsec
@@ -49,7 +49,7 @@ def r_values(spaxels, spans):
     r /= 206265.                        #Values in radians
     #Quick and dirty fix to ensure central value is tiny for Airy function to handle.
     r = n.where(r < 1.E-15, 1.E-30, r)
-    
+
     return r
 
 
@@ -67,7 +67,7 @@ def dist_arr(size, spax):
         - distance_array: shape (size,size)
 
     '''
-    
+
     arra = n.zeros((size,size),dtype=float)
     y, x = arra.shape
     x_inds, y_inds = n.ogrid[:y, :x]
@@ -103,11 +103,11 @@ def residual_jitter(array, array_spax, res_jitt):
         fwhm_jitt = 2.*n.sqrt(2.*n.log(2.)) * res_jitt
         pix_fwhm = abs(fwhm_jitt)/(array_spax)
         g_array = Gauss2D(array.shape[0], pix_fwhm)
-        
+
         #Convolve using FFTs
         conv_array = n.fft.ifft2(n.fft.fft2(array)*n.fft.fft2(g_array))
         jitt_array = n.fft.fftshift(conv_array.real)
-           
+
         return jitt_array
 
 
@@ -131,12 +131,12 @@ def create_Gausspsf_channel(wave, seeing, aperture, res_jitter, array_dim, Nyqui
                          - False uses value of spaxel.
         psfspax: Initial spatial sampling value [mas].
         output_spax: Output spatial sampling [mas].
-        
+
 
     Output:
-    
+
         psf: PSF array for given wavelength.
-        
+
     '''
 
 ##    lam = 500.E-9
@@ -151,7 +151,7 @@ def create_Gausspsf_channel(wave, seeing, aperture, res_jitter, array_dim, Nyqui
 
     r0 = 0.976*500.E-9/float(seeing)*(180./n.pi*3600.)*(wave/0.5)**1.2 #in m
     fwhm = seeing*(wave/0.5)**(-0.2)*n.sqrt(1.+(1./(1.+300.*aperture[0]/23.)-1)*2.183*(r0/23.)**(0.356)) #in arcsec
-    
+
     if Nyquist:
         #fwhm = B/float((wave*(1.E-6))**(1/5.)) #in arcsec
         diff = wave*(1.E-6)/(2.*float(aperture[0]))
@@ -171,7 +171,7 @@ def create_Gausspsf_channel(wave, seeing, aperture, res_jitter, array_dim, Nyqui
     psf /= psf.sum()
 
     #Frebin PSF up to same sampling as datacube channels
-    
+
     #total field of view in mas
     x_field = array_dim*psfspax
     y_field = array_dim*psfspax
@@ -179,7 +179,7 @@ def create_Gausspsf_channel(wave, seeing, aperture, res_jitter, array_dim, Nyqui
     y_newsize = y_field/float(output_spax[1])
 
     psf = frebin(psf, (x_newsize, y_newsize), total=True)
-           
+
     return psf
 
 
@@ -206,7 +206,7 @@ def create_psf_channel(params, iteration, psfspax, output_spax, array_dim, apert
 
     #array = r_values([array_dim, array_dim], [(psfspax/1000.)*array_dim,(psfspax/1000.)*array_dim])
     array = dist_arr(array_dim, psfspax/1000.)
-    
+
     airy = obsc_airy(array, params['oh'][iteration], params['ow'][iteration]*rad_conv, aperture[1])
     moff1 = moffat(array, params['mh'][iteration], params['mw'][iteration]*rad_conv, params['mq'][iteration])
     lor = lorentz(array, params['lh'][iteration], params['lp'][iteration]*rad_conv, params['lw'][iteration]*rad_conv)
@@ -218,7 +218,7 @@ def create_psf_channel(params, iteration, psfspax, output_spax, array_dim, apert
 
     #Frebin PSF up to same sampling as datacube channels
     psf /= psf.sum() #normalise
-    
+
     #total field of view in mas
     x_field = array_dim*psfspax
     y_field = array_dim*psfspax
@@ -226,7 +226,7 @@ def create_psf_channel(params, iteration, psfspax, output_spax, array_dim, apert
     y_newsize = y_field/float(output_spax[1])
 
     psf = frebin(psf, (x_newsize, y_newsize), total=True)
-       
+
     return psf
 
 
@@ -267,7 +267,8 @@ def create_instpsf(array_dim, psfspax, output_spax, psfoutspax):
         instpsf = Gauss2D(array_dim, FWHM/float(psfspax))
     except:
         #print 'Non-HARMONI spaxel scale - no instrument PSF'
-        instpsf = n.ones([array_dim, array_dim], dtype=float)
+        instpsf = n.zeros([array_dim, array_dim], dtype=float)
+        instpsf[array_dim/2,array_dim/2] = 1.0
 
     #total field of view in mas
     x_field = array_dim*psfspax
@@ -278,4 +279,3 @@ def create_instpsf(array_dim, psfspax, output_spax, psfoutspax):
     instpsf = frebin(instpsf, (x_newsize, y_newsize), total=True)
 
     return instpsf
-
