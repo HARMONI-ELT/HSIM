@@ -3,7 +3,7 @@ simulation pipeline.
 
 Written by Simon Zieleniewski
 
-Last updated 28-04-16
+Last updated 19-05-16
 
 '''
 
@@ -230,7 +230,7 @@ def pp_wavelength_loop(cube, head, wavels, out_cube, AO, psfvars, adrvals, newsi
     queue = pp.Queue(limit=usecpus)
     waveloop = queue.manage(pp.MakeParallel(pp_wavelength_channel))
 
-    print "Calculating..."
+    print "Initialising..."
     for lam in xrange(len(wavels)):
         waveloop(cube[lam,:,:], head, wavels[lam], lam, AO, psfvars, adrvals[lam], newsize, outspax, adr_switch)
 
