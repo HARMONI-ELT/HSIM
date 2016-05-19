@@ -1,4 +1,9 @@
-#KMOS detector chip 3 noise properties: 300s dark exposure
+##NAME: KMOS_Detector_chip3_noise_prob_dist.txt
+##DATE: 01-03-14
+##TYPE: KMOS detector chip 3 noise properties: 300s dark exposure
+##AUTHOR: Simon Zieleniewski
+##VERSION: 1.0
+##EXTRA: 10x KMOS dark frames (300 s exposure time)
 #Total variance, no.of pixels, Variance probability distribution
 0.00000e+00,1.83000e+02,0.00000e+00
 9.98999e-02,2.39443e+02,1.68472e-05
