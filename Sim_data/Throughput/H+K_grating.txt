@@ -1,3 +1,10 @@
+##NAME: H+K_grating.txt
+##DATE: 27-04-16
+##TYPE: H+K grating throughput curve
+##AUTHOR: KOSI letter & Simon Zieleniewski
+##VERSION: 1.0
+##EXTRA:
+#Wavelength [um], throughput
 1.400000,0.570000
 1.450000,0.577551
 1.481111,0.602041

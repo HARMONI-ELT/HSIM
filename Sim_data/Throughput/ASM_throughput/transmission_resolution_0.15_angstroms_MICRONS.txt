@@ -1,3 +1,9 @@
+##NAME: transmission_resolution_0.15_angstroms_MICRONS.txt
+##DATE: 24-11-13
+##TYPE: Skycalc atmospheric transmission data file
+##AUTHOR: ESO SKYCALC
+##VERSION: 1.0
+##EXTRA: resolution=0.15A, 0.46-2.5um, airmass=1.15 (all other values set at default)
 #Wavelength [um], %
 4.600000e-01 8.282748e-01
 4.600150e-01 8.282904e-01

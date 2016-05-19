@@ -1,3 +1,9 @@
+##NAME: HARMONI_R500_mode_data.txt
+##DATE: 13-08-14
+##TYPE: HARMONI low resolution 'prism' R=500 mode
+##AUTHOR: Simon Zieleniewski
+##VERSION: 1.0
+##EXTRA:
 #Wavelength [um], R power, Delta lambda [um]
 0.750000,893.751797,0.000839
 0.767500,851.920634,0.000901

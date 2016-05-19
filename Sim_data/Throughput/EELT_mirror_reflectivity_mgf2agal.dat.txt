@@ -1,5 +1,10 @@
-# MgF2 protected Ag/Al
-# Wavelength [um]  Reflectivity  
+##NAME: EELT_mirror_reflectivity_mgf2agal.dat.txt
+##DATE: 28-05-13
+##TYPE: EELT mirror reflectivity curve
+##AUTHOR: ESO EELT DRM
+##VERSION: 1.0
+##EXTRA: MgF2 protected Ag/Al
+#Wavelength [um], Reflectivity  
  0.317             0.243
  0.319             0.305
  0.321             0.452
