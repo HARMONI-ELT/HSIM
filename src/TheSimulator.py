@@ -8,7 +8,7 @@ to move from an input datacube (lambda, y, x) to output cubes:
 Written by Simon Zieleniewski
 
 Started 28-05-13
-Last edited 27-04-16
+Last edited 19-05-16
 '''
 
 #Import all required modules
@@ -159,6 +159,19 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
 
     #CREATE WAVELENGTH ARRAY IN MICRONS
     lambs, head = wavelength_array(head)
+    #Check limits of wavelength array and cut cube into HARMONI wavelength range if neccessary
+    if grating=='None' and lambs[0] < config_data['gratings']['V+R'][0]:
+        print 'Cube lowest wavelength lower than HARMONI range'
+        llim = n.where(lambs > config_data['gratings']['V+R'][0])[0][0]
+        lambs = lambs[llim:]
+        cube = cube[llim:,:,:]
+        head['CRVAL3'] = lambs[0]
+    if grating=='None' and lambs[-1] > config_data['gratings']['H+K'][1]:
+        print 'Cube longest wavelength longer than HARMONI range'
+        hlim = n.where(lambs < config_data['gratings']['H+K'][1])[0][-1]
+        lambs = lambs[:hlim+1]
+        cube = cube[:hlim+1,:,:]
+    head['NAXIS3'] = len(lambs)
 
 
     #RESCALE DATACUBE TO CHOSEN SPECTRAL RESOLUTION.
@@ -201,14 +214,6 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
     #WAVELENGTH CHANNEL LOOP
     print 'Entering loop over wavelength channels'
     psfvars = [psfparams, psfspax, psfsize, [D, eps], res_jitter, seeing, upsf, upsflams]
-
-    # print 'PSFVARS[1] = ', psfvars[1]
-    # print 'PSFVARS[2] = ', psfvars[2]
-    # print 'PSFVARS[3] = ', psfvars[3]
-    # print 'PSFVARS[4] = ', psfvars[4]
-    # print 'PSFVARS[5] = ', psfvars[5]
-    # print 'PSFVARS[6] = ', psfvars[6]
-    # print 'PSFVARS[7] = ', psfvars[7]
 
     ncpus = nprocs
     print 'No. of CPUs: ', ncpus

@@ -4,7 +4,7 @@ transmission and background aspects of the model
 Written by Simon Zieleniewski
 
 Started 11-06-13
-Last edited 27-04-16
+Last edited 19-05-16
 '''
 
 import numpy as n
@@ -48,7 +48,8 @@ def create_thruput_cube(datacube_shape, wavels, resolution, grating, inst_tpvals
     init_cube = n.ones((datacube_shape), dtype=n.float64)
 
     if sky:
-        init_cube *= sky_transmission_curve(wavels, resolution)
+        sky_cube, wavels = sky_transmission_curve(wavels, resolution)
+        init_cube *= sky_cube
         print 'Sky tranismission done!'
     if telescope:
         init_cube *= telescope_transmission_curve(wavels)
@@ -109,11 +110,11 @@ def sky_transmission_curve(wavels, delta_lambda):
         conv_sky_trans = gauss_convolve(sky_trans_slice, sigma, lambda_space='Linear')
 
         interp_trans = s.interpolate.interp1d(conv_sky_trans[:,0], conv_sky_trans[:,1],
-                                              kind='linear')
+                                              kind='linear', bounds_error=False, fill_value=0)
         sky_total_trans = interp_trans(wavels)
 
     sky_total_trans.shape = (len(wavels),1,1)
-    return sky_total_trans
+    return sky_total_trans, wavels
 
 
 #Telescope throughput curve generated just using wavelength array.
