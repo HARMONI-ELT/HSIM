@@ -140,14 +140,14 @@ The pipeline takes an input FITS file datacube containing spatial and spectral i
 
 The following FITS headers are essential:
 
-NAXIS1, NAXIS2, NAXIS3 - Size of the x, y, and wavelength axes respectively.
-CTYPE1, CTYPE2, CTYPE3 - Axis type. Accepted values: [x, y, WAVELENGTH] or [RA, DEC, WAVELENGTH].
-CUNIT1, CUNIT2, CUNIT3 - Units for each axis. Accepted values: [mas, mas, microns], [mas, mas, angstroms], [mas, mas, metres], [mas, mas, nm].
-CDELT1, CDELT2, CDELT3 - Sampling for each axis in units given by CUNIT1/2/3 headers.
-CRVAL3 - Value of array element given by CRPIX3 in units of CUNIT3.
-CRPIX3 - Denotes the array element for CRVAL3. Should be set to 1 so CRVAL3 denotes first wavelength value.
-FUNITS (or BUNIT) - Flux units for each element in datacube. Accepted values: [J/s/m2/um/arcsec2], [J/s/m2/A/arcsec2], [erg/s/cm2/um/arcsec2], [erg/s/cm2/A/arcsec2].
-SPECRES - Spectral resolution FWHM in units of CUNIT3.
+- NAXIS1, NAXIS2, NAXIS3 - Size of the x, y, and wavelength axes respectively.
+- CTYPE1, CTYPE2, CTYPE3 - Axis type. Accepted values: [x, y, WAVELENGTH] or [RA, DEC, WAVELENGTH].
+- CUNIT1, CUNIT2, CUNIT3 - Units for each axis. Accepted values: [mas, mas, microns], [mas, mas, angstroms], [mas, mas, metres], [mas, mas, nm].
+- CDELT1, CDELT2, CDELT3 - Sampling for each axis in units given by CUNIT1/2/3 headers.
+- CRVAL3 - Value of array element given by CRPIX3 in units of CUNIT3.
+- CRPIX3 - Denotes the array element for CRVAL3. Should be set to 1 so CRVAL3 denotes first wavelength value.
+- FUNITS (or BUNIT) - Flux units for each element in datacube. Accepted values: [J/s/m2/um/arcsec2], [J/s/m2/A/arcsec2], [erg/s/cm2/um/arcsec2], [erg/s/cm2/A/arcsec2].
+- SPECRES - Spectral resolution FWHM in units of CUNIT3.
 
 All other headers will be ignored by the pipeline so extra information can be added.
 
