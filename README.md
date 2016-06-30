@@ -74,19 +74,20 @@ there should be no errors!
 
 The root directory contains several sub directories containing essential data files:
 
+```
 ./src - main python functions stored here
-     /modules - additional python functions stored here
+        /modules - additional python functions stored here
 ./Output_cubes - output cubes are stored here
 ./Sim_data - Simulation data is stored here
-	  /Background
-		     /ASM_background - radiance_resolution_0.15_angstroms_MICRONS.txt stored here
-	  /Throughput - EELT_mirror_reflectivity_mgf2agal.dat.txt, HARMONIthruput.txt, DetectorQE.txt stored here
-		     /ASM_throughput - transmission_resolution_0.15_angstroms_MICRONS.txt stored here
-	  /PSFs
-	       /SCAO - SCAOdata.txt stored here
-	       /LTAO - LTAOdata.txt stored here
-          /R500 - HARMONI_R500_mode_data.txt stored here
-
+	 /Background
+		/ASM_background - radiance_resolution_0.15_angstroms_MICRONS.txt stored here
+	/Throughput - EELT_mirror_reflectivity_mgf2agal.dat.txt, HARMONIthruput.txt, DetectorQE.txt stored here
+		/ASM_throughput - transmission_resolution_0.15_angstroms_MICRONS.txt stored here
+	/PSFs
+	        /SCAO - SCAOdata.txt stored here
+	        /LTAO - LTAOdata.txt stored here
+        /R500 - HARMONI_R500_mode_data.txt stored here
+```
 
 ## HOW TO USE:
 
@@ -104,26 +105,26 @@ $ python hsim.py -c
 to display arguments list
 	
 The commands must be entered in the following order:
-        1. datacube: Input datacube filepath
-        2. DIT: Exposure time [s]
-        3. NDIT: No. of exposures
-        4. band: Photometric band [V+R, Iz+J, H+K, V, R, Iz, J, H, K, V-high, R-high, z, J-high, H-high, K-high, None]
-        5. x-spax: x spatial pixel (spaxel) scale [mas]
-        6. y-spax: y spatial pixel (spaxel) scale [mas]
-	7. telescope: Telescope type (E-ELT, VLT)
-	8. AO: AO mode (LTAO, SCAO, Gaussian)
-        9. seeing: Atmospheric seeing FWHM [arcsec] - Between 0.67"-1.10"
-        10. zenith_ang: Zenith angle [deg]
-        11. user_PSF: Path to user uploaded PSF file - Enter None if not required
-        12. PSF blur: Additional telescope jitter [mas]
-        13. Site_temp: Site/telescope temperature [K]
-        14. Spec_Nyquist: (True/False) - Set spectral sampling to Nyquist sample spectral resolution element
-        15. Spec_samp: Spectral sampling [A/pix] - Only used if Spec_Nyquist = False, but enter a value regardless!
-        16. Noise_force_seed: Force random number seed to take a set value (0=No, 1-2=yes and takes that value)
-        17. Remove_background: (True/False) - Subtract background spectrum
-	18. Return_object: (True/False) - Return object cube
-	19. Return_transmission: (True/False) - Return transmission cube
-	20. Turn ADR off: (True/False)
+1. datacube: Input datacube filepath
+2. DIT: Exposure time [s]
+3. NDIT: No. of exposures
+4. band: Photometric band [V+R, Iz+J, H+K, V, R, Iz, J, H, K, V-high, R-high, z, J-high, H-high, K-high, None]
+5. x-spax: x spatial pixel (spaxel) scale [mas]
+6. y-spax: y spatial pixel (spaxel) scale [mas]
+7. telescope: Telescope type (E-ELT, VLT)
+8. AO: AO mode (LTAO, SCAO, Gaussian)
+9. seeing: Atmospheric seeing FWHM [arcsec] - Between 0.67"-1.10"
+10. zenith_ang: Zenith angle [deg]
+11. user_PSF: Path to user uploaded PSF file - Enter None if not required
+12. PSF blur: Additional telescope jitter [mas]
+13. Site_temp: Site/telescope temperature [K]
+14. Spec_Nyquist: (True/False) - Set spectral sampling to Nyquist sample spectral resolution element
+15. Spec_samp: Spectral sampling [A/pix] - Only used if Spec_Nyquist = False, but enter a value regardless!
+16. Noise_force_seed: Force random number seed to take a set value (0=No, 1-2=yes and takes that value)
+17. Remove_background: (True/False) - Subtract background spectrum
+18. Return_object: (True/False) - Return object cube
+19. Return_transmission: (True/False) - Return transmission cube
+20. Turn ADR off: (True/False)
 
 Use -h or --help to display help message and exit
 Use -c or --cline option to use command line.
@@ -161,20 +162,18 @@ The pipeline can take an input PSF FITS file instead of using the built-in PSFs.
 The following FITS header are essential:
 
 2D PSF FITS image:
-
-NAXIS1, NAXIS2 - Size of the x, y axes respectively.
-CTYPE1, CTYPE2 - Axis type. Accepted values: [x, y] or [RA, DEC].
-CUNIT1, CUNIT2 - Units for each axis. Accepted values: [mas, mas]], [arcsec, arcsec].
-CDELT1, CDELT2 - Sampling for each axis in units given by CUNIT1/2 headers.
+- NAXIS1, NAXIS2 - Size of the x, y axes respectively.
+- CTYPE1, CTYPE2 - Axis type. Accepted values: [x, y] or [RA, DEC].
+- CUNIT1, CUNIT2 - Units for each axis. Accepted values: [mas, mas]], [arcsec, arcsec].
+- CDELT1, CDELT2 - Sampling for each axis in units given by CUNIT1/2 headers.
 
 3D PSF FITS cube:
-
-NAXIS1, NAXIS2, NAXIS3 - Size of the x, y, and wavelength axes respectively.
-CTYPE1, CTYPE2, CTYPE3 - Axis type. Accepted values: [x, y, WAVELENGTH] or [RA, DEC, WAVELENGTH].
-CUNIT1, CUNIT2, CUNIT3 - Units for each axis. Accepted values: [mas, mas, microns], [mas, mas, angstroms], [mas, mas, metres], [mas, mas, nm].
-CDELT1, CDELT2, CDELT3 - Sampling for each axis in units given by CUNIT1/2/3 headers.
-CRVAL3 - Value of array element given by CRPIX3 in units of CUNIT3.
-CRPIX3 - Denotes the array element for CRVAL3. Should be set to 1 so CRVAL3 denotes first wavelength value.
+- NAXIS1, NAXIS2, NAXIS3 - Size of the x, y, and wavelength axes respectively.
+- CTYPE1, CTYPE2, CTYPE3 - Axis type. Accepted values: [x, y, WAVELENGTH] or [RA, DEC, WAVELENGTH].
+- CUNIT1, CUNIT2, CUNIT3 - Units for each axis. Accepted values: [mas, mas, microns], [mas, mas, angstroms], [mas, mas, metres], [mas, mas, nm].
+- CDELT1, CDELT2, CDELT3 - Sampling for each axis in units given by CUNIT1/2/3 headers.
+- CRVAL3 - Value of array element given by CRPIX3 in units of CUNIT3.
+- CRPIX3 - Denotes the array element for CRVAL3. Should be set to 1 so CRVAL3 denotes first wavelength value.
 
 
 
