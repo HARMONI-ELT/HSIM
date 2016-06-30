@@ -23,6 +23,7 @@ This pipeline provides a self contained and consistent way of performing detaile
 ## FILES:
 
 The pipeline currently uses 11 main python files:
+```
 hsim.py
 TheSimulator.py
 TheSimulator_GUI.py
@@ -34,6 +35,7 @@ TheSimulator_ADR.py
 TheSimulator_Loop.py
 TheSimulator_Lowres.py
 TheSimulator_Config.py
+```
 
 as well as several functions found in the src/modules/ sub directory.
 
@@ -94,14 +96,14 @@ The root directory contains several sub directories containing essential data fi
 The code can be run in two ways:
 
 1. Running the GUI:
-$ python hsim.py
+``$ python hsim.py``
 This opens the graphical interface from which you can enter the various parameters and start the simulation.
 
 2. From the command line:
-$ python hsim.py -c arg1 arg2 arg3 etc…
+``$ python hsim.py -c arg1 arg2 arg3 etc…``
 
 Use:
-$ python hsim.py -c
+``$ python hsim.py -c``
 to display arguments list
 	
 The commands must be entered in the following order:
