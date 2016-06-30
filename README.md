@@ -107,6 +107,7 @@ Use:
 to display arguments list
 	
 The commands must be entered in the following order:
+
 1. datacube: Input datacube filepath
 2. DIT: Exposure time [s]
 3. NDIT: No. of exposures
