@@ -8,7 +8,7 @@ to move from an input datacube (lambda, y, x) to output cubes:
 Written by Simon Zieleniewski
 
 Started 28-05-13
-Last edited 19-05-16
+Last edited 05-08-16
 '''
 
 #Import all required modules
@@ -317,8 +317,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
 
     #Common headers to add to all cubes
     common_header_info = {'DIT': DIT, 'NDIT': NDIT, 'SEEING': seeing, 'ZENITH': zenith_ang, 'AOMODE': AO,
-                          'R': R, 'Grating': grating, 'RES_JITT': res_jitter, 'FUNITS': 'electrons',
-                          'VERSION': version}
+                          'USER_PSF': user_PSF, 'R': R, 'Grating': grating, 'RES_JITT': res_jitter,
+                          'FUNITS': 'electrons', 'VERSION': version}
 
     outFile_objcube = datacube.split('/')[-1].split('.fits')[0] + '_Object_cube'
     outFile_nlobjcube = datacube.split('/')[-1].split('.fits')[0] + '_Noiseless_Object_cube'
