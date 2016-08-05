@@ -4,7 +4,7 @@ in the HARMONI simulator.
 Writen by Simon Zieleniewski
 
 Started 04-06-13
-Last edited 28-04-16
+Last edited 05-08-16
 '''
 
 import os
@@ -72,25 +72,47 @@ def psf_setup(cube, head, lambs, spax, user_PSF, AO, seeing, tel):
 
         psf_fits_header_check(upsfh)
 
-        print 'Input PSF sampling = %.2f mas' % upsfh['CDELT1']
-        print 'Input datacube sampling = %.2f mas' % head['CDELT1']
+        print 'Input PSF sampling = (%.2f, %.2f) mas' % (upsfh['CDELT1'], upsfh['CDELT2'])
+        print 'Input datacube sampling = (%.2f, %.2f) mas' % (head['CDELT1'], head['CDELT2'])
+        print 'Output spaxel scale = (%.2f, %.2f) mas' % (spax[0], spax[1])
 
+        #Check spaxel scales of input and output cubes:
+        mscale = 10.0
+        if head['CDELT1'] <= spax[0]/mscale and head['CDELT2'] <= spax[1]/mscale:
+            print 'Input spatial scale is at least 1/'+str(int(mscale))+'th of the output scale.'
+            print 'Rebinning input cube to 1/'+str(int(mscale))+'th of output scale.'
+            cube *= (head['CDELT1']*head['CDELT2']*1.E-6)
+            if spax[0] <= spax[1]:
+                print 'Output xspax < yspax'
+                cube, head = spaxel_scale(cube, head, (spax[0]/mscale, spax[0]/mscale))
+            elif spax[0] > spax[1]:
+                print 'Output yspax < xspax'
+                cube, head = spaxel_scale(cube, head, (spax[1]/mscale, spax[1]/mscale))
+            cube /= (head['CDELT1']*head['CDELT2']*1.E-6)
+
+        else:
+            print 'WARNING: Input spatial scale is coarser than 1/'+str(int(mscale))+'th of the output scale.'
+            print 'Interpolating input to a scale of 1/'+str(int(mscale))+'th the output.'
+            print 'WARNING: Use of interpolation on input data!'
+            cube *= (head['CDELT1']*head['CDELT2']*1.E-6)
+            if spax[0] <= spax[1]:
+                print 'Output xspax < yspax'
+                cube, head = spaxel_scale(cube, head, (spax[0]/mscale, spax[0]/mscale))
+            elif spax[0] > spax[1]:
+                print 'Output yspax < xspax'
+                cube, head = spaxel_scale(cube, head, (spax[1]/mscale, spax[1]/mscale))
+            cube /= (head['CDELT1']*head['CDELT2']*1.E-6)
+
+        print 'Scaling PSF to match input datacube'
         if upsfh['CDELT1'] > head['CDELT1'] and upsfh['CDELT2'] > head['CDELT2']:
-            print 'PSF coarser than datacube - rebinning datacube up'
-            cube *= (head['CDELT1']*head['CDELT2']*1.E-6)
-            cube, head = spaxel_scale(cube, head, (upsfh['CDELT1'],upsfh['CDELT2']))
-            cube /= (head['CDELT1']*head['CDELT2']*1.E-6)
+            print 'PSF coarser than datacube - rebinning PSF to match'
+            # cube *= (head['CDELT1']*head['CDELT2']*1.E-6)
+            # cube, head = spaxel_scale(cube, head, (upsfh['CDELT1'],upsfh['CDELT2']))
+            # cube /= (head['CDELT1']*head['CDELT2']*1.E-6)
+            upsf, upsfh = spaxel_scale(upsf, upsfh, (head['CDELT1'],head['CDELT2']))
         if upsfh['CDELT1'] < head['CDELT1'] and upsfh['CDELT2'] < head['CDELT2']:
-            print 'PSF finer than datacube - interpolating datacube'
-            cube *= (head['CDELT1']*head['CDELT2']*1.E-6)
-            cube, head = spaxel_scale(cube, head, (upsfh['CDELT1'],upsfh['CDELT2']))
-            cube /= (head['CDELT1']*head['CDELT2']*1.E-6)
-
-        if head['CDELT1'] <= spax[0]/10. and head['CDELT2'] <= spax[1]/10.:
-            print 'Spaxel scale is equal to or coarser than 1/10 output scale.'
-            print 'Datacube sampling = (%.2f, %.2f) mas' % (head['CDELT1'], head['CDELT2'])
-            print 'Output spaxel scale = (%.2f, %.2f) mas' % (spax[0], spax[1])
-            print 'WARNING: If coarser this runs the risk of convolving with the pixel scale twice!'
+            print 'PSF finer than datacube - rebinning PSF to match'
+            upsf, upsfh = spaxel_scale(upsf, upsfh, (head['CDELT1'],head['CDELT2']))
 
         #2D PSF image
         if 'NAXIS3' not in upsfh:
@@ -153,7 +175,7 @@ def psf_setup(cube, head, lambs, spax, user_PSF, AO, seeing, tel):
                 psfparams, psfsize = generate_psfcube(lambs, AO, seeing, tel, head, samp=psfspax)
 
         else:
-            print 'WARNING: Input spatial scale is over 1/5th of the output scale.'
+            print 'WARNING: Input spatial scale is coarser than 1/5th of the output scale.'
             print 'Interpolating input to a scale of 1/10th the output.'
             print 'WARNING: Use of interpolation on input data!'
             cube *= (head['CDELT1']*head['CDELT2']*1.E-6)

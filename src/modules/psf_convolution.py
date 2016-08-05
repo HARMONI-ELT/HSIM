@@ -2,7 +2,7 @@
 
 Author: simon Zieleniewski
 
-Last updated: 02-12-15
+Last updated: 05-08-16
 
 '''
 
@@ -61,7 +61,7 @@ def psf_convolve(datacube, psfcube):
         img_box[(extra_y/2.)-yfac:y-extra_y/2.,(extra_x/2.)-xfac:x-extra_x/2.] = psfcube
         conv_cube_slice = n.fft.ifft2(n.fft.fft2(datacube)*n.fft.fft2(img_box))
         conv_cube_slice_final = n.fft.fftshift(conv_cube_slice.real)
-        conv_channel = conv_cube_slice_final[(extra_y/2.)-yfac:y-extra_y/2.,(extra_x/2.)-xfac:x-extra_x/2.]
+        conv_channel = conv_cube_slice_final
 
     else:
         print 'Datacube spatial shape = (%g, %g)' % (datacube.shape[1], datacube.shape[0])
