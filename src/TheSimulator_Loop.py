@@ -3,7 +3,7 @@ simulation pipeline.
 
 Written by Simon Zieleniewski
 
-Last updated 19-05-16
+Last updated 19-01-17
 
 '''
 
@@ -86,7 +86,7 @@ def wavelength_loop(cube, head, wavels, out_cube, AO, psfvars, adrvals, newsize,
         channel = psf_convolve(cube[l,:,:], psf)
 
         #Convolve cube channel with instrument PSF
-        channel = psf_convolve(cube[l,:,:], instpsf)
+        channel = psf_convolve(channel, instpsf)
 
         #Frebin datacube up to output spaxel scale
         newsize = (int(newsize[0]), int(newsize[1]))
