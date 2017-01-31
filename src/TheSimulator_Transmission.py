@@ -4,7 +4,7 @@ transmission and background aspects of the model
 Written by Simon Zieleniewski
 
 Started 11-06-13
-Last edited 19-05-16
+Last edited 27-10-16 by Laurence Routledge
 '''
 
 import numpy as n
@@ -19,8 +19,8 @@ tppath = path_setup('../../Sim_data/Throughput/')
 
 
 
-def create_thruput_cube(datacube_shape, wavels, resolution, grating, inst_tpvals, sky=True, telescope=True, instrument=True, QE=True,
-                        illumination=None):
+def create_thruput_cube(datacube_shape, wavels, resolution, grating, zenith_angle, inst_tpvals, sky=True, telescope=True,
+                        instrument=True, QE=True, illumination=None):
     '''Function that creates cube representing total throughput for each pixel in datacube.
     This incorporates sky, telescope, instrument and detector throughputs to convert photons to
     electrons. This will also be able to add in additional effects like illumination patterns.
@@ -30,6 +30,7 @@ def create_thruput_cube(datacube_shape, wavels, resolution, grating, inst_tpvals
         wavels: wavelength array of datacube
         resolution: spectral resolution [um]
         grating: grating choice to set grating throughput curve
+        zenith_angle: zenith angle of observation [degrees]
         inst_tpvals: instrument throughput values (from config file) [W_grat, WO_grat]
         sky: Boolian - incorporate sky throughput
         telescope: Boolian incorporate telescope throughput
@@ -48,7 +49,7 @@ def create_thruput_cube(datacube_shape, wavels, resolution, grating, inst_tpvals
     init_cube = n.ones((datacube_shape), dtype=n.float64)
 
     if sky:
-        sky_cube, wavels = sky_transmission_curve(wavels, resolution)
+        sky_cube, wavels = sky_transmission_curve(wavels, resolution, zenith_angle)
         init_cube *= sky_cube
         print 'Sky tranismission done!'
     if telescope:
@@ -73,25 +74,33 @@ def create_thruput_cube(datacube_shape, wavels, resolution, grating, inst_tpvals
 
 
 #Sky throughput curve generated just using wavelength array.
-def sky_transmission_curve(wavels, delta_lambda):
+def sky_transmission_curve(wavels, delta_lambda, zenith_ang):
     '''Function that generates a full throughput curve combining
     sky transmission & sky extinction.
 
     Inputs:
         wavels: array of wavelengths for datacube
         delta_lambda: Resolution element [um]
+        zenith_ang: zenith angle of observation [degrees]
 
     Outputs:
         cube_total_sky_trans: array of total throughput
                      for each wavelength value in wavels
     '''
+    #convert from zenith angle to airmass
+    X = 1./n.cos(n.radians(zenith_ang))
+    inbuilt_airmasses = [1., 1.15, 1.41, 2.]
 
-    #NEED TO IMPLEMENT DIFFERENT AIRMASS VALUES AT SOME POINT
-    #Currently set at 1.15 to match PSFs - Zenith angle = 30deg
+    #determine the closest data to the airmass value given and find it's location in the data file
+    closest_X = min(inbuilt_airmasses, key=lambda x:abs(x - X))
+    data_index = inbuilt_airmasses.index(closest_X) + 1
 
-    #load sky transmission & extinction files
-    sky_trans = n.genfromtxt(os.path.join(tppath,'ASM_throughput/transmission_resolution_0.15_angstroms_MICRONS.txt'))
-
+    #load sky transmission & extinction files, then reduce to the columns required
+    sky_trans_all_X = n.genfromtxt(os.path.join(tppath,'ASM_throughput/transmission_0.15_angstroms_resolution.txt'))
+    sky_trans = n.column_stack((sky_trans_all_X[:,0], sky_trans_all_X[:,data_index]))
+    print len(sky_trans)
+    sky_trans_all_X = []            #clean up unused data for sake of memory
+        
     #Find start and end wavelength values of curves
     st_start_arg = n.where(sky_trans[:,0] < wavels[0])[0][-1]
     st_end_arg = n.where(sky_trans[:,0] > wavels[-1])[0][0]
