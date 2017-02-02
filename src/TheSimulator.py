@@ -282,10 +282,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
                                                           NDIT, outspax, pix_disp, area)
 
     #Instrument + Quantum efficiency cube
-    inst_qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating,
+    inst_qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating, zenith_ang,
     [config_data['trans_w_grat'],config_data['trans_wo_grat']], sky=False, telescope=False, instrument=True, QE=True)
     #Quantum efficiency cube
-    qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating,
+    qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating, zenith_ang,
     [config_data['trans_w_grat'],config_data['trans_wo_grat']], sky=False, telescope=False, instrument=False, QE=True)
 
     #Create background cube [sky + telescope + instrument photons]
