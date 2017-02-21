@@ -8,7 +8,7 @@ to move from an input datacube (lambda, y, x) to output cubes:
 Written by Simon Zieleniewski
 
 Started 28-05-13
-Last edited 05-08-16
+Last edited 27-10-16 by Laurence Routledge
 '''
 
 #Import all required modules
@@ -147,7 +147,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
     X = 1./(n.cos(n.radians(zenith_ang)))
     seeing = seeing*X**(3./5.)
 
-    if AO == 'LATO' or AO == 'GLAO' or AO == 'SCAO':
+    if AO == 'LTAO' or AO == 'GLAO' or AO == 'SCAO':
         if seeing > 1.1:
             print "AO PSFs currently don't support seeing > 1.1'' FWHM"
             seeing = 1.1
@@ -272,7 +272,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
 
 
     #Total throughput cube
-    throughput_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating,
+    throughput_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating, zenith_ang, 
     [config_data['trans_w_grat'],config_data['trans_wo_grat']], sky=True, telescope=True, instrument=True, QE=True)
 
     #Create object cube (enter spaxel as arcsec = mas*1.E-3)
@@ -282,10 +282,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
                                                           NDIT, outspax, pix_disp, area)
 
     #Instrument + Quantum efficiency cube
-    inst_qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating,
+    inst_qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating, zenith_ang,
     [config_data['trans_w_grat'],config_data['trans_wo_grat']], sky=False, telescope=False, instrument=True, QE=True)
     #Quantum efficiency cube
-    qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating,
+    qe_cube = create_thruput_cube(out_cube.shape, lambs, delta_lambda, grating, zenith_ang,
     [config_data['trans_w_grat'],config_data['trans_wo_grat']], sky=False, telescope=False, instrument=False, QE=True)
 
     #Create background cube [sky + telescope + instrument photons]
