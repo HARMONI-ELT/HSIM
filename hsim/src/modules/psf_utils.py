@@ -175,8 +175,8 @@ def create_Gausspsf_channel(wave, seeing, aperture, res_jitter, array_dim, Nyqui
     #total field of view in mas
     x_field = array_dim*psfspax
     y_field = array_dim*psfspax
-    x_newsize = x_field/float(output_spax[0])
-    y_newsize = y_field/float(output_spax[1])
+    x_newsize = int(x_field/float(output_spax[0]))
+    y_newsize = int(y_field/float(output_spax[1]))
 
     psf = frebin(psf, (x_newsize, y_newsize), total=True)
 
@@ -222,8 +222,8 @@ def create_psf_channel(params, iteration, psfspax, output_spax, array_dim, apert
     #total field of view in mas
     x_field = array_dim*psfspax
     y_field = array_dim*psfspax
-    x_newsize = x_field/float(output_spax[0])
-    y_newsize = y_field/float(output_spax[1])
+    x_newsize = int(x_field/float(output_spax[0]))
+    y_newsize = int(y_field/float(output_spax[1]))
 
     psf = frebin(psf, (x_newsize, y_newsize), total=True)
 
@@ -273,8 +273,8 @@ def create_instpsf(array_dim, psfspax, output_spax, psfoutspax):
     #total field of view in mas
     x_field = array_dim*psfspax
     y_field = array_dim*psfspax
-    x_newsize = x_field/float(psfoutspax[0])
-    y_newsize = y_field/float(psfoutspax[1])
+    x_newsize = int(x_field/float(psfoutspax[0]))
+    y_newsize = int(y_field/float(psfoutspax[1]))
 
     instpsf = frebin(instpsf, (x_newsize, y_newsize), total=True)
 

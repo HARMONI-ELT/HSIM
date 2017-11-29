@@ -38,8 +38,8 @@ def spaxel_scale(datacube, head, spaxel):
     x_field = cdelt1*x
     y_field = cdelt2*y
 
-    x_newsize = n.round(x_field/float(spaxel[0]),0)
-    y_newsize = n.round(y_field/float(spaxel[1]),0)
+    x_newsize = int(n.round(x_field/float(spaxel[0]),0))
+    y_newsize = int(n.round(y_field/float(spaxel[1]),0))
 
     try:
         newcube = n.zeros((z, y_newsize, x_newsize), dtype=n.float64)

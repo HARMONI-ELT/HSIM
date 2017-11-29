@@ -86,7 +86,7 @@ def frebin(array, shape, total=True):
 
     #Otherwise if not integral contraction
     #First bin in y dimension
-    temp = n.zeros((shape[1], x),dtype=n.float64)
+    temp = n.zeros((int(shape[1]), x),dtype=n.float64)
     #Loop on output image lines
 #    for i in xrange(0, int(n.round(shape[1],0)), 1):
     for i in xrange(0, int(shape[1]), 1):
@@ -112,7 +112,7 @@ def frebin(array, shape, total=True):
     temp = n.transpose(temp)
 
     #Bin in x dimension
-    result = n.zeros((shape[0], shape[1]), dtype=n.float64)
+    result = n.zeros((int(shape[0]), int(shape[1])), dtype=n.float64)
     #Loop on output image samples
 #    for i in xrange(0, int(n.round(shape[0],0)), 1):
     for i in xrange(0, int(shape[0]), 1):

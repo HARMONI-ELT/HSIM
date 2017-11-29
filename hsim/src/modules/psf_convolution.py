@@ -39,10 +39,10 @@ def psf_convolve(datacube, psfcube):
             yfac = 1
         img_box = n.zeros((yy, xx), dtype=n.float64)
 
-        img_box[(extra_y/2.)-yfac:yy-extra_y/2.,(extra_x/2.)-xfac:xx-extra_x/2.] = datacube
+        img_box[int(extra_y/2.)-yfac:yy-int(extra_y/2.),int(extra_x/2.)-xfac:xx-int(extra_x/2.)] = datacube
         conv_cube_slice = n.fft.ifft2(n.fft.fft2(img_box)*n.fft.fft2(psfcube))
         conv_cube_slice_final = n.fft.fftshift(conv_cube_slice.real)
-        conv_channel = conv_cube_slice_final[(extra_y/2.)-yfac:yy-extra_y/2.,(extra_x/2.)-xfac:xx-extra_x/2.]
+        conv_channel = conv_cube_slice_final[int(extra_y/2.)-yfac:yy-int(extra_y/2.),int(extra_x/2.)-xfac:xx-int(extra_x/2.)]
 
     #If PSF images are smaller than cube images, do something else!
     elif yy < y and xx < x:
@@ -58,7 +58,7 @@ def psf_convolve(datacube, psfcube):
             yfac = 1
         img_box = n.zeros((y, x), dtype=n.float64)
 
-        img_box[(extra_y/2.)-yfac:y-extra_y/2.,(extra_x/2.)-xfac:x-extra_x/2.] = psfcube
+        img_box[int(extra_y/2.)-yfac:y-int(extra_y/2.),int(extra_x/2.)-xfac:x-int(extra_x/2.)] = psfcube
         conv_cube_slice = n.fft.ifft2(n.fft.fft2(datacube)*n.fft.fft2(img_box))
         conv_cube_slice_final = n.fft.fftshift(conv_cube_slice.real)
         conv_channel = conv_cube_slice_final
