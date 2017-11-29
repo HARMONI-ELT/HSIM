@@ -288,6 +288,7 @@ def SCAOpsfcube(lambs, seeing, aperture):
     print 'Generating SCAO PSF cube'
 
     ks = 1
+    kl = 2
     box = [0.4,2.5,0.6,1.5]
 
     ###Load data from text file - wavelengths = vals[:,0]
@@ -301,19 +302,19 @@ def SCAOpsfcube(lambs, seeing, aperture):
     params= []
     #Interpolate for all height parameters (oh = 1, 12, 23, 34; mh = 3, 14, 25, 36; lh = 6, 17, 28, 39; m2h = 9, 20, 31, 42)
     ohvals = n.array([vals[:,1], vals[:,12], vals[:,23], vals[:,34]])
-    ohinterp = s.RectBivariateSpline(vals[:,0], see_vals, ohvals.transpose(),kx=ks, ky=ks, bbox=box)
+    ohinterp = s.RectBivariateSpline(vals[:,0], see_vals, ohvals.transpose(),kx=kl, ky=ks, bbox=box)
     yoh = ohinterp(lambs, seeing)
 
     mhvals = n.array([vals[:,3], vals[:,14], vals[:,25], vals[:,36]])
-    mhinterp = s.RectBivariateSpline(vals[:,0], see_vals, mhvals.transpose(),kx=ks, ky=ks, bbox=box)
+    mhinterp = s.RectBivariateSpline(vals[:,0], see_vals, mhvals.transpose(),kx=kl, ky=ks, bbox=box)
     ymh = mhinterp(lambs, seeing)
 
     lhvals = n.array([vals[:,6], vals[:,17], vals[:,28], vals[:,39]])
-    lhinterp = s.RectBivariateSpline(vals[:,0], see_vals, lhvals.transpose(),kx=ks, ky=ks, bbox=box)
+    lhinterp = s.RectBivariateSpline(vals[:,0], see_vals, lhvals.transpose(),kx=kl, ky=ks, bbox=box)
     ylh = lhinterp(lambs, seeing)
 
     m2hvals = n.array([vals[:,9], vals[:,20], vals[:,31], vals[:,42]])
-    m2hinterp = s.RectBivariateSpline(vals[:,0], see_vals, m2hvals.transpose(),kx=ks, ky=ks, bbox=box)
+    m2hinterp = s.RectBivariateSpline(vals[:,0], see_vals, m2hvals.transpose(),kx=kl, ky=ks, bbox=box)
     ym2h = m2hinterp(lambs, seeing)
 
     params.append(yoh)
@@ -336,7 +337,7 @@ def SCAOpsfcube(lambs, seeing, aperture):
 
         yps = n.array([yp1, yp2, yp3, yp4])
 
-        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
+        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=kl, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
 
         params.append(ys)
@@ -355,7 +356,7 @@ def SCAOpsfcube(lambs, seeing, aperture):
         yp4 = x1(vals[:,0], p4[0], p4[1])
 
         yps = n.array([yp1, yp2, yp3, yp4])
-        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
+        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=kl, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
 
         params.append(ys)
@@ -373,7 +374,7 @@ def SCAOpsfcube(lambs, seeing, aperture):
         yp4 = x2(vals[:,0], p4[0], p4[1], p4[2])
 
         yps = n.array([yp1, yp2, yp3, yp4])
-        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
+        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=kl, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
 
         params.append(ys)
@@ -407,6 +408,7 @@ def LTAOpsfcube(lambs, seeing, aperture):
     print 'Generating LTAO PSF cube'
 
     ks = 1
+    kl = 2
     box = [0.4,2.5,0.6,1.5]
 
     ###Load data from text file - wavelengths = vals[:,0]
@@ -419,19 +421,19 @@ def LTAOpsfcube(lambs, seeing, aperture):
     params= []
     #Interpolate for all height parameters (oh = 1, 12, 23, 34; mh = 3, 14, 25, 36; lh = 6, 17, 28, 39; m2h = 9, 20, 31, 42)
     ohvals = n.array([vals[:,1], vals[:,11]])
-    ohinterp = s.RectBivariateSpline(vals[:,0], see_vals, ohvals.transpose(),kx=ks, ky=ks, bbox=box)
+    ohinterp = s.RectBivariateSpline(vals[:,0], see_vals, ohvals.transpose(),kx=kl, ky=ks, bbox=box)
     yoh = ohinterp(lambs, seeing)
 
     mhvals = n.array([vals[:,2], vals[:,12]])
-    mhinterp = s.RectBivariateSpline(vals[:,0], see_vals, mhvals.transpose(),kx=ks, ky=ks, bbox=box)
+    mhinterp = s.RectBivariateSpline(vals[:,0], see_vals, mhvals.transpose(),kx=kl, ky=ks, bbox=box)
     ymh = mhinterp(lambs, seeing)
 
     lhvals = n.array([vals[:,5], vals[:,15]])
-    lhinterp = s.RectBivariateSpline(vals[:,0], see_vals, lhvals.transpose(),kx=ks, ky=ks, bbox=box)
+    lhinterp = s.RectBivariateSpline(vals[:,0], see_vals, lhvals.transpose(),kx=kl, ky=ks, bbox=box)
     ylh = lhinterp(lambs, seeing)
 
     m2hvals = n.array([vals[:,8], vals[:,18]])
-    m2hinterp = s.RectBivariateSpline(vals[:,0], see_vals, m2hvals.transpose(),kx=ks, ky=ks, bbox=box)
+    m2hinterp = s.RectBivariateSpline(vals[:,0], see_vals, m2hvals.transpose(),kx=kl, ky=ks, bbox=box)
     ym2h = m2hinterp(lambs, seeing)
 
     params.append(yoh)
@@ -449,7 +451,7 @@ def LTAOpsfcube(lambs, seeing, aperture):
         yp2 = x6(vals[:,0], p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], p2[6])
 
         yps = n.array([yp1, yp2])
-        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
+        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=kl, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
 
         params.append(ys)
@@ -464,7 +466,7 @@ def LTAOpsfcube(lambs, seeing, aperture):
         yp2 = x1(vals[:,0], p2[0], p2[1])
 
         yps = n.array([yp1, yp2])
-        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
+        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=kl, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
 
         params.append(ys)
@@ -472,7 +474,7 @@ def LTAOpsfcube(lambs, seeing, aperture):
     #Interpolate for Moffat (core) width and shape as these are (effectively) step functions
     for i in n.array([9, 10]):
         yps = n.array([vals[:,i], vals[:,i+10]])
-        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=ks, ky=ks, bbox=box)
+        pinterp = s.RectBivariateSpline(vals[:,0], see_vals, yps.transpose(), kx=kl, ky=ks, bbox=box)
         ys = pinterp(lambs, seeing)
         params.append(ys)
 
