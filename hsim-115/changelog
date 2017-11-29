@@ -1,0 +1,6 @@
+changes from v.114:
+
+fixed bug affecting simulations run on 'single channel'
+clarified how to run on multiple processors from command line
+clarified how to set output directory from command line
+added input filename into output fits cube 
