@@ -302,20 +302,20 @@ def SCAOpsfcube(lambs, seeing, aperture):
     params= []
     #Interpolate for all height parameters (oh = 1, 12, 23, 34; mh = 3, 14, 25, 36; lh = 6, 17, 28, 39; m2h = 9, 20, 31, 42)
     ohvals = n.array([vals[:,1], vals[:,12], vals[:,23], vals[:,34]])
-    ohinterp = s.RectBivariateSpline(vals[:,0], see_vals, ohvals.transpose(),kx=kl, ky=ks, bbox=box)
-    yoh = ohinterp(lambs, seeing)
+    ohinterp = s.RectBivariateSpline(vals[:,0], see_vals, n.log(ohvals.transpose()), kx=kl, ky=ks, bbox=box)
+    yoh = n.exp(ohinterp(lambs, seeing))
 
     mhvals = n.array([vals[:,3], vals[:,14], vals[:,25], vals[:,36]])
-    mhinterp = s.RectBivariateSpline(vals[:,0], see_vals, mhvals.transpose(),kx=kl, ky=ks, bbox=box)
-    ymh = mhinterp(lambs, seeing)
+    mhinterp = s.RectBivariateSpline(vals[:,0], see_vals, n.log(mhvals.transpose()), kx=kl, ky=ks, bbox=box)
+    ymh = n.exp(mhinterp(lambs, seeing))
 
     lhvals = n.array([vals[:,6], vals[:,17], vals[:,28], vals[:,39]])
-    lhinterp = s.RectBivariateSpline(vals[:,0], see_vals, lhvals.transpose(),kx=kl, ky=ks, bbox=box)
-    ylh = lhinterp(lambs, seeing)
+    lhinterp = s.RectBivariateSpline(vals[:,0], see_vals, n.log(lhvals.transpose()), kx=kl, ky=ks, bbox=box)
+    ylh = n.exp(lhinterp(lambs, seeing))
 
     m2hvals = n.array([vals[:,9], vals[:,20], vals[:,31], vals[:,42]])
-    m2hinterp = s.RectBivariateSpline(vals[:,0], see_vals, m2hvals.transpose(),kx=kl, ky=ks, bbox=box)
-    ym2h = m2hinterp(lambs, seeing)
+    m2hinterp = s.RectBivariateSpline(vals[:,0], see_vals, n.log(m2hvals.transpose()), kx=kl, ky=ks, bbox=box)
+    ym2h = n.exp(m2hinterp(lambs, seeing))
 
     params.append(yoh)
     params.append(ymh)
@@ -421,20 +421,20 @@ def LTAOpsfcube(lambs, seeing, aperture):
     params= []
     #Interpolate for all height parameters (oh = 1, 12, 23, 34; mh = 3, 14, 25, 36; lh = 6, 17, 28, 39; m2h = 9, 20, 31, 42)
     ohvals = n.array([vals[:,1], vals[:,11]])
-    ohinterp = s.RectBivariateSpline(vals[:,0], see_vals, ohvals.transpose(),kx=kl, ky=ks, bbox=box)
-    yoh = ohinterp(lambs, seeing)
+    ohinterp = s.RectBivariateSpline(vals[:,0], see_vals, n.log(ohvals.transpose()), kx=kl, ky=ks, bbox=box)
+    yoh = n.exp(ohinterp(lambs, seeing))
 
     mhvals = n.array([vals[:,2], vals[:,12]])
-    mhinterp = s.RectBivariateSpline(vals[:,0], see_vals, mhvals.transpose(),kx=kl, ky=ks, bbox=box)
-    ymh = mhinterp(lambs, seeing)
+    mhinterp = s.RectBivariateSpline(vals[:,0], see_vals, n.log(mhvals.transpose()), kx=kl, ky=ks, bbox=box)
+    ymh = n.exp(mhinterp(lambs, seeing))
 
     lhvals = n.array([vals[:,5], vals[:,15]])
-    lhinterp = s.RectBivariateSpline(vals[:,0], see_vals, lhvals.transpose(),kx=kl, ky=ks, bbox=box)
-    ylh = lhinterp(lambs, seeing)
+    lhinterp = s.RectBivariateSpline(vals[:,0], see_vals, n.log(lhvals.transpose()), kx=kl, ky=ks, bbox=box)
+    ylh = n.exp(lhinterp(lambs, seeing))
 
     m2hvals = n.array([vals[:,8], vals[:,18]])
-    m2hinterp = s.RectBivariateSpline(vals[:,0], see_vals, m2hvals.transpose(),kx=kl, ky=ks, bbox=box)
-    ym2h = m2hinterp(lambs, seeing)
+    m2hinterp = s.RectBivariateSpline(vals[:,0], see_vals, n.log(m2hvals.transpose()), kx=kl, ky=ks, bbox=box)
+    ym2h = n.exp(m2hinterp(lambs, seeing))
 
     params.append(yoh)
     params.append(ymh)
