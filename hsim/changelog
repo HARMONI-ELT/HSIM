@@ -1,6 +1,8 @@
 changes from v.114:
 
-fixed bug affecting simulations run on 'single channel'
-clarified how to run on multiple processors from command line
-clarified how to set output directory from command line
-added input filename into output fits cube 
+Fixed bug affecting simulations run on 'single channel'
+Clarified how to run on multiple processors from command line
+Clarified how to set output directory from command line
+Added input filename into output fits cube 
+Fixed PSF kink due to linear PSF interpolation
+Fixed integer array indices for numpy > 1.13
