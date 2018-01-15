@@ -6,3 +6,4 @@ Clarified how to set output directory from command line
 Added input filename into output fits cube 
 Fixed PSF kink due to linear PSF interpolation
 Fixed integer array indices for numpy > 1.13
+Updated HARMONI and detector transmission files

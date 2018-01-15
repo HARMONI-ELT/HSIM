@@ -202,10 +202,9 @@ def HARMONI_transmission_curve(wavels, grating, inst_tpvals):
     if grating != 'None':
         if grating in ['V+R', 'V', 'R', 'V-high', 'R-high']:
             gratingfile = 'V+R'
-        elif grating in ['Iz+J', 'Iz', 'J', 'z', 'J-high']:
-            gratingfile = 'Iz+J'
-        elif grating in ['H+K', 'H', 'K', 'H-high', 'K-high']:
-            gratingfile = 'H+K'
+        else:
+            gratingfile = grating
+            
         #Load grating throughput file
         inst_r = n.genfromtxt(os.path.join(tppath,gratingfile+'_grating.txt'), delimiter=',')
 
