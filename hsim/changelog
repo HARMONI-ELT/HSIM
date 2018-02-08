@@ -7,3 +7,5 @@ Added input filename into output fits cube
 Fixed PSF kink due to linear PSF interpolation
 Fixed integer array indices for numpy > 1.13
 Updated HARMONI and detector transmission files
+Updated ELT mirror reflectivity
+Updated grating spectral resolutions and wavelength ranges

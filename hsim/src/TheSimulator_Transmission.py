@@ -31,7 +31,7 @@ def create_thruput_cube(datacube_shape, wavels, resolution, grating, zenith_angl
         resolution: spectral resolution [um]
         grating: grating choice to set grating throughput curve
         zenith_angle: zenith angle of observation [degrees]
-        inst_tpvals: instrument throughput values (from config file) [W_grat, WO_grat]
+        inst_tpvals: instrument throughput values (from config file) [WO_grat]
         sky: Boolian - incorporate sky throughput
         telescope: Boolian incorporate telescope throughput
         instrument: Boolian - incorporate instrument throughput
@@ -128,11 +128,7 @@ def sky_transmission_curve(wavels, delta_lambda, zenith_ang):
 
 #Telescope throughput curve generated just using wavelength array.
 def telescope_transmission_curve(wavels):
-    '''Function that generates a full telescope throughput curve.
-    Current telescope design contains 6 mirros, each with the same
-    Ag/Al coating and reflectivity curve. Thus total throughput
-    given by:
-    T(lambda) = R(lambda)^6
+    '''Function that reads a full telescope throughput curve.
 
     Inputs:
         wavels: array of wavelengths for datacube
@@ -142,14 +138,8 @@ def telescope_transmission_curve(wavels):
                      for each wavelength value in wavels
     '''
 
-    #Telescope transmission model taken from EELT DRM telescope model
-    #http://www.eso.org/sci/facilities/eelt/science/drm/tech_data/telescope/
-
     #Load telescope reflectivity file
-    tele_r = n.genfromtxt(os.path.join(tppath,'EELT_mirror_reflectivity_mgf2agal.dat.txt'))
-
-    #Apply dust free area fraction as calculated by Niranjan Thatte 02-06-14
-    tele_r[:,1] *= 0.978
+    tele_r = n.genfromtxt(os.path.join(tppath,'ELT_mirror_reflectivity.txt'), delimiter=',')
 
     #Find start and end wavelength values of curves
     tt_start_arg = n.where(tele_r[:,0] < wavels[0])[0][-1]
@@ -160,10 +150,8 @@ def telescope_transmission_curve(wavels):
     tele_trans_interp = s.interpolate.interp1d(tele_trans_slice[:,0], tele_trans_slice[:,1],
                                                kind='linear', bounds_error=False, fill_value=0.)
     #Obtain values for datacube wavelength array
-    cube_tele_ref = tele_trans_interp(wavels)
+    cube_tele_trans = tele_trans_interp(wavels)
 
-    #Apply equation to obtain transmission (7 mirror design)
-    cube_tele_trans = cube_tele_ref ** 7.
     cube_tele_trans.shape = (len(wavels),1,1)
 
     return cube_tele_trans
@@ -177,34 +165,16 @@ def HARMONI_transmission_curve(wavels, grating, inst_tpvals):
     Inputs:
         wavels: array of wavelengths for datacube
         grating: grating choice to set grating throughput curve
-        inst_tpvals: instrument throughput values (from config file) [W_grat, WO_grat]
+        inst_tpvals: instrument throughput values (from config file) [ WO_grat]
 
     Outputs:
         cube_inst_trans: array of instrument throughput
                      for each wavelength value in wavels
     '''
 
-    # #Load instrument throughput file
-    # inst_r = n.genfromtxt(os.path.join(tppath,'HARMONIthruput.txt'), delimiter=',')
-    #
-    # #Find start and end wavelength values of curves
-    # it_start_arg = n.where(inst_r[:,0] < wavels[0])[0][-1]
-    # it_end_arg = n.where(inst_r[:,0] > wavels[-1])[0][0]
-    # inst_trans_slice = inst_r[it_start_arg:it_end_arg+1,:]
-    #
-    # #Interpolate as a function of wavelength
-    # inst_trans_interp = s.interpolate.interp1d(inst_trans_slice[:,0], inst_trans_slice[:,1],
-    #                                            kind='linear', bounds_error=False, fill_value=0.)
-    # #Obtain values for datacube wavelength array
-    # cube_inst_trans = inst_trans_interp(wavels)
-    # cube_inst_trans.shape = (len(wavels),1,1)
-
     if grating != 'None':
-        if grating in ['V+R', 'V', 'R', 'V-high', 'R-high']:
-            gratingfile = 'V+R'
-        else:
-            gratingfile = grating
-            
+        gratingfile = grating
+
         #Load grating throughput file
         inst_r = n.genfromtxt(os.path.join(tppath,gratingfile+'_grating.txt'), delimiter=',')
 
@@ -217,11 +187,11 @@ def HARMONI_transmission_curve(wavels, grating, inst_tpvals):
         inst_trans_interp = s.interpolate.interp1d(inst_trans_slice[:,0], inst_trans_slice[:,1],
                                                    kind='linear', bounds_error=False, fill_value=0.)
         #Obtain values for datacube wavelength array
-        cube_inst_trans = inst_trans_interp(wavels)*inst_tpvals[0]
+        cube_inst_trans = inst_trans_interp(wavels)
         cube_inst_trans.shape = (len(wavels),1,1)
 
     elif grating == 'None':
-        cube_inst_trans = n.ones(len(wavels), dtype=float)*inst_tpvals[1]
+        cube_inst_trans = n.ones(len(wavels), dtype=float)*inst_tpvals[0]
         cube_inst_trans.shape = (len(wavels),1,1)
 
     return cube_inst_trans
