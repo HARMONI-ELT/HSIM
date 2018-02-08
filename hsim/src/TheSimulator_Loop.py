@@ -48,19 +48,20 @@ def wavelength_loop(cube, head, wavels, out_cube, AO, psfvars, adrvals, newsize,
         outspax: Output spaxel scale (mas, mas)
 
     '''
-
     for l in xrange(len(wavels)):
         #Print percentage bar
         update_progress(n.round(l/float(len(wavels)),2))
 
         #Create PSF channel
         #If user PSF and 2D image
-        if psfvars[-2] != 'None' and psfvars[-1] == 'None':
-            psf = psfvars[-2]
+        upsf = psfvars[-2]
+        upsflams = psfvars[-1]
+        if type(upsf) != str and type(upsflams) == str:
+            psf = upsf
         #If User PSF and 3D cube
-        elif psfvars[-2] != 'None' and psfvars[-1] != 'None':
+        elif type(upsf) != str and type(upsflams) != str:
             #Interpolate PSF cube
-            interp = interp1d(psfvars[-1], psfvars[-2], axis=0)
+            interp = interp1d(upsflams, upsf, axis=0)
             psf = interp(wavels[l])
 
         elif AO == 'LTAO' or AO == 'SCAO' or AO == 'GLAO':
@@ -144,10 +145,10 @@ def pp_wavelength_channel(chann, head, wave, l, AO, psfvars, adrval, newsize, ou
     #If user PSF and 2D image
     upsf = psfvars[-2]
     upsflams = psfvars[-1]
-    if upsf != 'None' and upsflams == 'None':
+    if type(upsf) != str and type(upsflams) == str:
         psf = upsf
     #If User PSF and 3D cube
-    elif upsf != 'None' and upsflams != 'None':
+    elif type(upsf) != str and type(upsflams) != str:
         #Interpolate PSF cube
         interp = interp1d(upsflams, upsf, axis=0)
         psf = interp(wave)

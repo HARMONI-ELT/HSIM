@@ -83,7 +83,7 @@ if __name__=="__main__":
             print '1. datacube: Input datacube filepath'
             print '2. DIT: Exposure time [s]'
             print '3. NDIT: No. of exposures'
-            print '4. grating: [V+R, Iz+J, H+K, V, R, Iz, J, H, K, V-high, R-high, z, J-high, H-high, K-high, None]'
+            print '4. grating: [V+R, Iz+J, H+K, Iz, J, H, K, z, J-high, H-high, K-high, None]'
             print '5. x-spax: x spatial pixel (spaxel) scale [mas]'
             print '6. y-spax: y spatial pixel (spaxel) scale [mas]'
             print '7. Telescope: Telescope type (E-ELT, VLT)'
@@ -198,10 +198,8 @@ if __name__=="__main__":
                     self.YSPAXVAL = wx.TextCtrl(panel, value='20')
                     PHOTOBAND = wx.StaticText(panel, label='Grating')
                     self.PHOTOBANDVAL = wx.Choice(panel, choices=['V+R [0.47-0.81 um] (R=3500)', 'Iz+J [0.8-1.36 um]  (R=3500)', 'H+K [1.45-2.45 um] (R=3500)',
-                                                                  'V [0.5-0.63 um] (R=7500)', 'R [0.63-0.79 um] (R=7500)', 'Iz [0.82-1.03 um] (R=7500)',
-                                                                  'J [1.08-1.36 um] (R=7500)', 'H [1.46-1.83 um] (R=7500)', 'K [1.95-2.45 um] (R=7500)',
-                                                                  'V-high [0.53-0.59 um] (R=20000)', 'R-high [0.61-0.68 um] (R=20000)', 'z [0.82-0.91 um] (R=20000)',
-                                                                  'J-high [1.17-1.29 um] (R=20000)','H-high [1.545-1.715 um] (R=20000)','K-high [2.09-2.32 um] (R=20000)',
+                                                                  'Iz [0.82-1.03 um] (R=7500)','J [1.08-1.36 um] (R=7500)', 'H [1.46-1.83 um] (R=7500)', 'K [1.95-2.45 um] (R=7500)',
+                                                                  'z [0.82-0.91 um] (R=17000)','J-high [1.17-1.29 um] (R=17000)','H-high [1.545-1.715 um] (R=17000)','K-high [2.09-2.32 um] (R=17000)',
                                                                   'None'])
                     DIR = wx.StaticText(panel, label='Output Dir')
                     self.DIRVAL = wx.DirPickerCtrl(panel, path=path_setup('../../Output_cubes/'))
