@@ -197,9 +197,9 @@ if __name__=="__main__":
                     YSPAX = wx.StaticText(panel, label="Y Scale [mas]")
                     self.YSPAXVAL = wx.TextCtrl(panel, value='20')
                     PHOTOBAND = wx.StaticText(panel, label='Grating')
-                    self.PHOTOBANDVAL = wx.Choice(panel, choices=['V+R [0.47-0.81 um] (R=3500)', 'Iz+J [0.8-1.36 um]  (R=3500)', 'H+K [1.45-2.45 um] (R=3500)',
-                                                                  'Iz [0.82-1.03 um] (R=7500)','J [1.08-1.36 um] (R=7500)', 'H [1.46-1.83 um] (R=7500)', 'K [1.95-2.45 um] (R=7500)',
-                                                                  'z [0.82-0.91 um] (R=17000)','J-high [1.17-1.29 um] (R=17000)','H-high [1.545-1.715 um] (R=17000)','K-high [2.09-2.32 um] (R=17000)',
+                    self.PHOTOBANDVAL = wx.Choice(panel, choices=['V+R [0.47-0.82 um] (R=3100)', 'Iz+J [0.8-1.36 um]  (R=3300)', 'H+K [1.45-2.45 um] (R=3300)',
+                                                                  'Iz [0.83-1.05 um] (R=7100)','J [1.05-1.32 um] (R=7100)', 'H [1.43-1.81 um] (R=7100)', 'K [1.95-2.46 um] (R=7100)',
+                                                                  'z [0.82-0.91 um] (R=17200)','J-high [1.19-1.30 um] (R=17200)','H-high [1.54-1.67 um] (R=17200)','K-high [2.09-2.28 um] (R=17200)',
                                                                   'None'])
                     DIR = wx.StaticText(panel, label='Output Dir')
                     self.DIRVAL = wx.DirPickerCtrl(panel, path=path_setup('../../Output_cubes/'))
