@@ -10,3 +10,5 @@ Updated HARMONI and detector transmission files
 Updated ELT mirror reflectivity 18 months
 Updated IR and optical detector QE
 Updated grating spectral resolutions and wavelength ranges
+Added information to README about non-axisymmetric PSFs
+Added explicit check if no PSF is selected 

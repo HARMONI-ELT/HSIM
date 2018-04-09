@@ -183,6 +183,13 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, zenith_ang, telesco
                                                                  spec_nyquist=Spec_nyquist, spec_samp=Spec_samp)
 
     #PSF GENERATION CODE
+    if user_PSF == 'None':
+        print 'WARNING: No PSF has been chosen. HSIM will use the default PSFs for this simulation'
+        condition = raw_input('Do you wish to continue [y], or not [any other key]?: ')
+
+        if condition!='y':
+            raise ValueError('Please select a PSF (see README for details)')
+        
     cube, head, psfspax, psfparams, psfsize, upsf, upsflams = psf_setup(cube, head, lambs, spax,
                                                                         user_PSF, AO, seeing, [D,eps])
 

@@ -182,6 +182,20 @@ CRVAL3 - Value of array element given by CRPIX3 in units of CUNIT3.
 CRPIX3 - Denotes the array element for CRVAL3. Should be set to 1 so CRVAL3 denotes first wavelength value.
 
 
+----------
+NON-AXISYMMETRIC PSFS:
+
+A set of non-axisymmetric PSFs, which are expected to be more realistic, are avaiable on harmonisim and can be found at /home/share/PSF2/ PSFs have been created for each grating, and the PSF sampling scale depends on the spaxel scale desired for the simulation. The following is recommended:
+
+spaxel scale    PSF sampling
+4x4             1mas
+10x10           2mas
+20x20           3mas
+30x60           3mas
+
+These PSFs already include 2mas jitter, however more can be added through command line usage if desired.
+
+
 
 
 
