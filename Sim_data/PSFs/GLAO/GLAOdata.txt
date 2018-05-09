@@ -1,0 +1,8 @@
+##NAME: GLAOdata.txt
+##DATE: 19-09-14
+##TYPE: GLAO PSF parameter data file
+##AUTHOR: Thierry Fusco & Simon Zieleniewski
+##VERSION: 1.0
+##EXTRA: No GLAO PSFs yet
+#Wavelength [um], 0p67" - oh, mh, mw, mq, lh, lp, lw, m2h, m2w, m2q, 0p95" - oh, mh, mw, mq, lh, lp, lw, m2h, m2w, m2q
+0
