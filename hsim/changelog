@@ -12,3 +12,8 @@ Updated IR and optical detector QE
 Updated grating spectral resolutions and wavelength ranges
 Added information to README about non-axisymmetric PSFs
 Added explicit check if no PSF is selected 
+
+---------------------
+
+additional changes to v.115
+Fixed version number and autgor details in PKG-INFO

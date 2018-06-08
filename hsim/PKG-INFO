@@ -1,10 +1,10 @@
 Metadata-Version: 1.0
 Name: hsim
-Version: 114
+Version: 115
 Summary: HARMONI Simulation Pipeline
 Home-page: http://astroweb2.physics.ox.ac.uk/~zieleniewski/
-Author: Simon Zieleniewski & Sarah Kendrew
-Author-email: simon.zieleniewski@physics.ox.ac.uk
+Author: Simon Zieleniewski, Sarah Kendrew & Laurence Routledge
+Author-email: laurence.routledge@physics.ox.ac.uk
 License: UNKNOWN
 Description: UNKNOWN
 Platform: UNKNOWN
