@@ -156,12 +156,11 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 		sigma = 1./(2.*np.pi*jitter)*sysFTO.shape[0]
 		
 		Gauss2D = lambda x, y: 1./(2.*np.pi*sigma**2)*np.exp(-(x**2 + y**2)/(2.*sigma**2))
-		xgrid = np.linspace(1, sysFTO.shape[0], sysFTO.shape[0]) - sysFTO.shape[0]*0.5 - 1
-		ygrid = np.linspace(1, sysFTO.shape[1], sysFTO.shape[1]) - sysFTO.shape[1]*0.5 - 1
+		xgrid = np.linspace(1, sysFTO.shape[0], sysFTO.shape[0]) - sysFTO.shape[0]*0.5 - 0.5
+		ygrid = np.linspace(1, sysFTO.shape[1], sysFTO.shape[1]) - sysFTO.shape[1]*0.5 - 0.5
 		xx, yy = np.meshgrid(xgrid, ygrid)
 		kernel = eclat(Gauss2D(xx, yy))
 		sysFTO = sysFTO*kernel
-		#sysFTO = kernel
 
 	
 	##;;Computation of final PSF
@@ -170,15 +169,25 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 
 	return sysPSF
 
+psfscale = None
+fov = None
+useLTAO = None
+
+# LTAO variables
 pup = None
 stats = None
 psd = None
 xgrid_out = None
 ygrid_out = None
 jitter = None
+diameter = None
+
+# no AO variables
+seeing = None
+air_mass = None
 
 
-def define_psf(air_mass, seeing, _jitter, fov, psfscale):
+def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, LTAO):
 	'''
 	Define parameters used for the PSF generation
 	Inputs:
@@ -188,82 +197,109 @@ def define_psf(air_mass, seeing, _jitter, fov, psfscale):
 		D: telescope diameter [m]
 		fov: number of pixels of the PSF
 		psfscale: pixel size for the PSF [mas]
+		LTAO: True if using LTAO, False seeing limited
 	Outputs:
 		None
 	'''
+	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, useLTAO
+	global seeing, air_mass
 	
-	global pup, stats, psd, xgrid_out, ygrid_out, jitter
+	useLTAO = LTAO
 	
+	fov = _fov
+	psfscale = _psfscale
 	xgrid_out = (np.linspace(0, fov-1, fov) - fov*0.5)*psfscale
 	ygrid_out = (np.linspace(0, fov-1, fov) - fov*0.5)*psfscale
+
+	seeing = _seeing
+	air_mass = _air_mass
 	
-	jitter = _jitter
-	
-	
-	# PSD cubes
-	pup = fits.getdata(os.path.join(psf_path,"ELT_pup.fits"))
-	stats = fits.getdata(os.path.join(psf_path, "ELT_statics.fits"))
-	
-	# Select PSD based on air_mass and seeing
-	try:
-		index_airmass = config_data["PSD_cube"]["air_masses"].index(air_mass)
-	except:
-		raise ValueError('Error: ' + str(air_mass) + ' is not a valid air mass. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["air_masses"]))))
-	
-	try:
-		index_seeing = config_data["PSD_cube"]["seeings"].index(seeing)
-	except:
-		raise ValueError('Error: ' + str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
+	if LTAO:
+		jitter = _jitter
+		diameter = D
 		
-	psd_cube = fits.getdata(os.path.join(psf_path, config_data["PSD_file"]))
-	psd = psd_cube[index_airmass, index_seeing,:,:]
+		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
+			# PSD cubes
+			pup = fits.getdata(os.path.join(psf_path,"ELT_pup.fits"))
+			stats = fits.getdata(os.path.join(psf_path, "ELT_statics.fits"))
+			
+			# Select PSD based on air_mass and seeing
+			try:
+				index_airmass = config_data["PSD_cube"]["air_masses"].index(air_mass)
+			except:
+				raise ValueError('Error: ' + str(air_mass) + ' is not a valid air mass. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["air_masses"]))))
+			
+			try:
+				index_seeing = config_data["PSD_cube"]["seeings"].index(seeing)
+			except:
+				raise ValueError('Error: ' + str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
+				
+			psd_cube = fits.getdata(os.path.join(psf_path, config_data["PSD_file"]))
+			psd = psd_cube[index_airmass, index_seeing,:,:]
+			psd = eclat(psd)
 
-
-	##Test PSF
-	#pup = fits.getdata(os.path.join(psf_path,"demo_pup.fits"))
-	#stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))	
-	#psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))
+		else:
+			#Test PSF
+			pup = fits.getdata(os.path.join(psf_path,"demo_pup.fits"))
+			stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))	
+			psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))
+	
+	else: # no AO Gaussian 
+		print "noAO Gaussian PSF"
+		
 	
 	return
 
 
-def create_psf(lamb, D, psfscale, fov):
+def create_psf(lamb):
 	'''
 	Returns a cube with the PSF for the given lambs generated from the PSD
 	Inputs:
 		lamb: lambda  [um]
-		D: telescope diameter [m]
-		psfscale: pixel size for the PSF [mas]
 	Outputs:
 		cube: PSF
 	'''
 		
-	global pup, stats, psd, xgrid_out, ygrid_out, jitter
+	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, useLTAO
+	global seeing, air_mass
 
-
-	# size of a pixel returned by psd_to_psf
-	pix_psf = lamb*1e-6/(2.*D)*1/(4.85*1e-9) # mas
-	
-	psf = psd_to_psf(psd, pup, D, phase_static = stats, lamb=lamb*1e-6, samp=2., jitter=jitter/pix_psf)
-	
-	area_scale = (pix_psf/psfscale)**2
-	#print area_scale
-	if area_scale > 1:
-		# interpolate PSF
-		xgrid_in = (np.linspace(0, psf.shape[0]-1, psf.shape[0]) - psf.shape[0]*0.5)*pix_psf
-		ygrid_in = (np.linspace(0, psf.shape[1]-1, psf.shape[1]) - psf.shape[1]*0.5)*pix_psf
-		image = interp2d(xgrid_in, ygrid_in, psf, kind='cubic', fill_value=0.)
-		finalpsf = image(xgrid_out, ygrid_out)/area_scale
-	else:
-		# rebin PSF
-		side = int(psf.shape[0]*pix_psf/psfscale/2)*2
-		rebin_psf = frebin2d(psf, (side, side))/area_scale
-		center = side/2
-		finalpsf = rebin_psf[center-fov/2:center+fov/2, center-fov/2:center+fov/2]
+	if useLTAO:
+		# size of a pixel returned by psd_to_psf
+		pix_psf = lamb*1e-6/(2.*diameter)*1/(4.85*1e-9) # mas
 		
-	finalpsf[finalpsf < 0] = 0.
-	#fits.writeto("psf.fits", finalpsf, overwrite=True)
+		psf = psd_to_psf(psd, pup, diameter, phase_static = stats, lamb=lamb*1e-6, samp=2., jitter=jitter/pix_psf)
+		
+		area_scale = (pix_psf/psfscale)**2
+		#print area_scale
+		if area_scale > 1:
+			# interpolate PSF
+			xgrid_in = (np.linspace(0, psf.shape[0]-1, psf.shape[0]) - psf.shape[0]*0.5)*pix_psf
+			ygrid_in = (np.linspace(0, psf.shape[1]-1, psf.shape[1]) - psf.shape[1]*0.5)*pix_psf
+			image = interp2d(xgrid_in, ygrid_in, psf, kind='cubic', fill_value=0.)
+			finalpsf = image(xgrid_out, ygrid_out)/area_scale
+		else:
+			# rebin PSF
+			side = int(psf.shape[0]*pix_psf/psfscale/2)*2
+			rebin_psf = frebin2d(psf, (side, side))/area_scale
+			center = side/2
+			finalpsf = rebin_psf[center-fov/2:center+fov/2, center-fov/2:center+fov/2]
+			
+		finalpsf[finalpsf < 0] = 0.
+		#fits.writeto("psf_orig.fits", psf, overwrite=True)
+		#print np.sum(finalpsf)
+		return finalpsf
 	
-	return finalpsf
-
+	else: # noAO Gaussian PSF
+		# Beckers 1993 ARAA
+		zenit_angle = np.arccos(1./air_mass)
+		seeing_lambda = seeing/((lamb/0.5)**(1./5)*np.cos(zenit_angle)**(3./5))*1000. # mas
+		sigma = seeing_lambda/2.35482
+		
+		Gauss2D = lambda x, y: 1./(2.*np.pi*sigma**2)*np.exp(-(x**2 + y**2)/(2.*sigma**2))*psfscale**2
+		
+		xx, yy = np.meshgrid(xgrid_out, ygrid_out)
+		finalpsf = Gauss2D(xx, yy)
+		#fits.writeto("psf.fits", Gauss2D(xx, yy), overwrite=True)
+		return finalpsf
+	
 

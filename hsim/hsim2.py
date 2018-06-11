@@ -52,7 +52,11 @@ if __name__=="__main__":
 	for o, a in optlist:
 		if o in ("-p", "--proc"):
 			nprocs = int(a)
-			
+		
+		if nprocs <= 0:
+			nprocs = 1
+			print "Using 1 CPU"
+		
 		if nprocs > mp.cpu_count():
 			print 'Only ' + str(mp.cpu_count()) + ' CPUs. Using ' + str(mp.cpu_count())
 			nprocs = mp.cpu_count()
@@ -74,7 +78,7 @@ if __name__=="__main__":
 			break
 
 	for o, a in optlist:
-		if o in ("-c", "--cline") and len(args) != 12:
+		if o in ("-c", "--cline") and len(args) != 13:
 			print ""
 			print 'COMMAND LINE USAGE'
 			print ""
@@ -82,19 +86,20 @@ if __name__=="__main__":
 			print '1. datacube: Input datacube filepath'
 			print '2. DIT: Detector Integration Time [s]'
 			print '3. NDIT: No. of exposures'
-			print '4. grating: [V+R, Iz+J, H+K, Iz, J, H, K, z, J-high, H-high, K-high]'
+			print '4. grating - V+R, Iz+J, H+K, Iz, J, H, K, z, J-high, H-high, K-high'
 			print '5. spax: spatial pixel (spaxel) scale [mas] - 4x4, 10x10, 20x20, 30x60 '
 			print '6. seeing: Atmospheric seeing FWHM [arcsec] - 0.63", 0.71", 0.84", 1.11", 1.32"'
 			print '7. air mass - 1.1, 1.3, 1.5, 2.0'
-			print '8. jitter: Additional telescope PSF blur [mas]'
-			print '9. site temp: Site/telescope temperature [K]'
-			print '10. ADR on/off: (True/False) - atmospheric differential refraction'
-			print '11. noise seed'
-			print '12. background variation [%]'
+			print '8. Moon fractional illumination - 0 0.5 1.0'
+			print '9. jitter: Additional telescope PSF blur [mas]'
+			print '10. site temp: Site/telescope temperature [K]'
+			print '11. ADR on/off: (True/False) - atmospheric differential refraction'
+			print '12. noise seed'
+			print '13. AO mode [LTAO/noAO]'
 			print ""
 			
 			sys.exit()
-		elif o in ("-c", "--cline") and len(args) == 12:
+		elif o in ("-c", "--cline") and len(args) == 13:
 			datacube = str(args[0])
 			DIT = int(args[1])
 			NDIT = int(args[2])
@@ -102,16 +107,17 @@ if __name__=="__main__":
 			spax = str(args[4])
 			seeing = float(args[5])
 			air_mass = float(args[6])
-			jitter = float(args[7])
-			site_temp = float(args[8])
-			adr = str(args[9])
-			noise_seed = int(args[10])
-			back_variation = float(args[11])
+			moon = float(args[7])
+			jitter = float(args[8])
+			site_temp = float(args[9])
+			adr = str(args[10])
+			noise_seed = int(args[11])
+			ao_mode = str(args[12])
 
 			#Start main function
 			main(os.path.join(".", datacube), os.path.join(".", odir), DIT, NDIT, grat, spax, seeing, air_mass, ver,
-				res_jitter=jitter, site_temp=site_temp, adr_switch=adr, back_variation=back_variation,
-				seednum=noise_seed, nprocs=nprocs, keep_debug_plots=debug_plots)
+				res_jitter=jitter, moon=moon, site_temp=site_temp, adr_switch=adr,
+				seednum=noise_seed, nprocs=nprocs, keep_debug_plots=debug_plots, aoMode=ao_mode)
 
 			sys.exit()
 
@@ -190,7 +196,6 @@ if __name__=="__main__":
 				self.SPAXVAL.SetStringSelection('10x10')
 				PHOTOBAND = wx.StaticText(panel, label='Grating')
 				grating_list = ["V+R", "Iz+J", "H+K", "Iz", "J", "H", "K", "H-high", "K-high"]
-				
 				grating_choices = ["{name} [{info.lmin:.2f}-{info.lmax:.2f} um] (R={info.R:.0f})".format(name=_, info=config_data['gratings'][_]) for _ in grating_list]
 				self.PHOTOBANDVAL = wx.Choice(panel, choices=grating_choices)
 				self.PHOTOBANDVAL.SetStringSelection(grating_choices[6])
@@ -218,6 +223,12 @@ if __name__=="__main__":
 				SEEING = wx.StaticText(panel, label="Zenith seeing [arcsec]:")
 				self.SEEINGVAL = wx.Choice(panel, choices=map(str, sorted(config_data["PSD_cube"]["seeings"])))
 				self.SEEINGVAL.SetStringSelection(str(config_data["PSD_cube"]["seeings"][2]))
+				AOMODE = wx.StaticText(panel, label="AO mode")
+				self.AOMODEVAL = wx.Choice(panel, choices=['LTAO', 'noAO'])
+				self.AOMODEVAL.SetStringSelection('LTAO')
+				MOON = wx.StaticText(panel, label="Moon illumination")
+				self.MOONVAL = wx.Choice(panel, choices=map(str, [0, 0.5, 1]))
+				self.MOONVAL.SetStringSelection("0")
 				AIRMASS = wx.StaticText(panel, label="Air mass")
 				self.AIRMASSVAL = wx.Choice(panel, choices=map(str, sorted(config_data["PSD_cube"]["air_masses"])))
 				self.AIRMASSVAL.SetStringSelection(str(config_data["PSD_cube"]["air_masses"][1]))
@@ -226,7 +237,9 @@ if __name__=="__main__":
 
 				fgs.AddMany([(tele), (subtele),
 						(SEEING), (self.SEEINGVAL, 1, wx.EXPAND),
+						(AOMODE), (self.AOMODEVAL, 1, wx.EXPAND),
 						(AIRMASS), (self.AIRMASSVAL, 1, wx.EXPAND),
+						(MOON), (self.MOONVAL, 1, wx.EXPAND),
 						(SITETEMP), (self.SITETEMPVAL, 1, wx.EXPAND)])
 				
 				fgs.AddGrowableCol(1,1)
@@ -244,17 +257,13 @@ if __name__=="__main__":
 				N_PROC = wx.StaticText(panel, label='No. of processors (1-'+str(mp.cpu_count())+')')
 				self.N_PROCVAL = wx.TextCtrl(panel, value=str(mp.cpu_count()-1))
 				RESJIT = wx.StaticText(panel, label="Additional jitter [mas]:")
-				self.RESJITVAL = wx.TextCtrl(panel, value='2')
-				
-				BACKVAR = wx.StaticText(panel, label="Background variation [%]")
-				self.BACKVARVAL = wx.TextCtrl(panel, value='0')
+				self.RESJITVAL = wx.TextCtrl(panel, value='3')
 				ADR = wx.StaticText(panel, label="ADR on/off")
 				self.ADRVAL = wx.CheckBox(panel)
 				self.ADRVAL.SetValue(True)
 
 				fgss.AddMany([(misc), (submisc),
 						(RESJIT), (self.RESJITVAL, 1, wx.EXPAND),
-						(BACKVAR), (self.BACKVARVAL, 1, wx.EXPAND),
 						(ADR), (self.ADRVAL, 1, wx.EXPAND),
 						(N_PROC), (self.N_PROCVAL, 1, wx.EXPAND),
 						(NOISESEED), (self.NOISESEEDVAL, 1, wx.EXPAND)])
@@ -282,19 +291,20 @@ if __name__=="__main__":
 				spaxval = str(self.SPAXVAL.GetStringSelection())
 				photoband = str(self.PHOTOBANDVAL.GetStringSelection()).split(' ')[0]
 				seeingval = float(self.SEEINGVAL.GetStringSelection())
+				aomode = str(self.AOMODEVAL.GetStringSelection()).split(' ')[0]
 				airmassaval = float(self.AIRMASSVAL.GetStringSelection())
+				moon = float(self.MOONVAL.GetStringSelection())
 				resjitval = float(self.RESJITVAL.GetValue())
 				sitetempval = float(self.SITETEMPVAL.GetValue())
 				noiseseedval = int(self.NOISESEEDVAL.GetValue())
 				nprocs = int(self.N_PROCVAL.GetValue())
 				odir = str(self.DIRVAL.GetPath())
-				back_variation = float(self.BACKVARVAL.GetValue())
 				return_adrval = str(self.ADRVAL.GetValue())
 				
 				#start main program
 				main(os.path.join(".", cubefile), os.path.join(".", odir), ditval, nditval, photoband, spaxval, seeingval, airmassaval, ver,
-					res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval, back_variation=back_variation,
-					seednum=noiseseedval, nprocs=nprocs)
+					res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval,
+					seednum=noiseseedval, nprocs=nprocs, aoMode=aomode, moon=moon)
 
 
 			def OnExit(self,e):

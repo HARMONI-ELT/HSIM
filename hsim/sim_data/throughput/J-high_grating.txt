@@ -1,6 +1,6 @@
 # NAME: J-high_grating.txt
-# DATE: 15/01/2018 10:19:23GMT
-# TYPE: Transmission estimate including FPRS, Cryostat, Pre-optics, IFU, Spectrograph and Grating
+# DATE: 22/05/2018 21:29:33BST
+# TYPE: Transmission estimate including Cryostat, Pre-optics, IFU, Spectrograph and Grating
 # VERSION: 1.0
 # ORIGIN: Transmission.xlsx
 # AUTHOR: Fraser Clarke
@@ -37,13 +37,13 @@
 1.100,0.0000e+00
 1.125,0.0000e+00
 1.150,0.0000e+00
-1.175,2.4288e-01
-1.200,4.0861e-01
-1.225,4.3682e-01
-1.250,4.4634e-01
-1.275,4.3865e-01
-1.300,4.1348e-01
-1.325,2.0887e-01
+1.175,2.8124e-01
+1.200,4.7075e-01
+1.225,5.0095e-01
+1.250,5.1018e-01
+1.275,5.0013e-01
+1.300,4.7074e-01
+1.325,2.3773e-01
 1.350,0.0000e+00
 1.375,0.0000e+00
 1.400,0.0000e+00

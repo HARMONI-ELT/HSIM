@@ -1,3 +1,4 @@
+# coding=utf-8
 '''
 Calculates PSF, jitter and telescope background and transmission
 '''
@@ -33,6 +34,7 @@ def telescope_background_emission(wavels, T, emissivity, DIT, debug_plots, outpu
 	Inputs:
 		wavels: array of wavelengths for datacube
 		T: site temperature [K]
+		emissivity: Telescope emissivity modelled as 1 - reflectivity
 		dit: exposure time [s]. This determins how the sky emission
 		
 	Outputs:
@@ -65,7 +67,6 @@ def telescope_background_emission(wavels, T, emissivity, DIT, debug_plots, outpu
 		np.savetxt(output_file + "_tel_em.txt", np.c_[wavels, tele_bg_spec_ph])
 	
 	return tele_bg_spec_ph
-
 
 
 
@@ -104,16 +105,16 @@ def telescope_transmission_curve(wavels, debug_plots, output_file):
 	return cube_tele_trans
 
 
-def process_lambda(i, lamb, image, px, py, pback, psfscale, fov):
+def process_lambda(params, lamb, image, px, py, pback):
 	padding_plane = np.zeros((px, py))
 	#return i, padding_plane
-	psf = create_psf(lamb, config_data["telescope"]["diameter"], psfscale, fov)
-	# np.sum(psf) is < 1, so to recover the same back emission after the convlution we need to 
+	psf = create_psf(lamb)
+	# np.sum(psf) is < 1, so to recover the same back emission after the convolution we need to 
 	# subctract before and then add the back emission. We assume that the back emission is uniform
 	# within the field
 	padding_plane[psf.shape[0]:psf.shape[0]+image.shape[0],psf.shape[1]:psf.shape[1]+image.shape[1]] = image - pback
 	conv_image = fftconvolve(padding_plane, psf) + pback
-	return i, conv_image
+	return params, conv_image
 	
 	
 counter = None
@@ -131,7 +132,7 @@ def save_result(results):
 	result_cube[i,:,:] = conv_image[y0:y1,x0:x1]
 
 
-def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, ncpus, debug_plots=False, output_file=""):
+def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, ncpus, debug_plots=False, output_file="", use_LTAO=True):
 	''' Simulates telescope effects
 	Inputs:
 		cube: Input datacube (RA, DEC, lambda)
@@ -147,9 +148,12 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 		ncpus: no. of CPUs to use
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
+		use_LTAO: True if LTAO is active for this observation
+		
 	Outputs:
 		cube: Cube including telescope background and emission and convolved with PSF
 		back_emission: back_emission including telescope
+		PSF: PSF of the first lambda
 	'''
 	
 	# Get telescope reflectivity
@@ -175,19 +179,19 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	# PSF + Jitter + Instrument PSF
 	print "Define PSF"
 	
-	FWHM_instrument = config_data["instrument_psf"][spax]
+	FWHM_instrument = (config_data["dynamic_instrument_psf"]**2 + config_data["static_instrument_psf"][spax]**2)**0.5
 	sigma_instrument = FWHM_instrument/2.35482
 	sigma_combined = (jitter**2 + sigma_instrument**2)**0.5
 	
-	print "Residual jitter = {:.2f} mas".format(jitter)
+	print "Residual telescope jitter = {:.2f} mas".format(jitter)
 	print "Instrument PSF = {:.2f} mas".format(sigma_instrument)
-	print "Combined = {:.2f} mas".format(sigma_combined)
+	print "-> Combined σ = {:.2f} mas ".format(sigma_combined)
 	
 	psf_size = config_data["spaxel_scale"][spax].psfsize
 	
-	define_psf(air_mass, seeing, sigma_combined, psf_size, config_data["spaxel_scale"][spax].psfscale)
+	define_psf(air_mass, seeing, sigma_combined, config_data["telescope"]["diameter"], psf_size, config_data["spaxel_scale"][spax].psfscale, use_LTAO)
 	lambs = ext_lambs[cube_lamb_mask]
-		
+	
 	# padding with back_emission
 	padding_x = cube.shape[2] + 2*psf_size
 	padding_y = cube.shape[1] + 2*psf_size
@@ -210,7 +214,7 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	
 	bar_str = "[ {:2d}% {:" + str(len(str(len(lambs)))) + "d}/{:" + str(len(str(len(lambs)))) + "d} ]"
 	
-	print 'Using ', ncpus, ' CPUs'
+	print ("Using {:d} CPU" + ("s" if ncpus > 1 else "")).format(ncpus)
 	if ncpus > 1:
 
 		pool = mp.Pool(processes=ncpus)
@@ -220,7 +224,7 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 		llambs = len(lambs)
 		
 		for i in range(len(lambs)):
-			pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i,:,:], padding_x, padding_y, padding_back[i], config_data["spaxel_scale"][spax].psfscale, psf_size), callback=save_result)
+			pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i,:,:], padding_x, padding_y, padding_back[i]), callback=save_result)
 		
 		pool.close()
 		pool.join()
@@ -232,10 +236,11 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 			sys.stdout.write(bar_str.format(int(100.*i/len(lambs)), i, len(lambs)) + "\r")
 			sys.stdout.flush()
 			
-			_, conv_image = process_lambda(i, lambs[i], cube[i,:,:], padding_x, padding_y, padding_back[i], config_data["spaxel_scale"][spax].psfscale, psf_size)
+			_, conv_image = process_lambda(i, lambs[i], cube[i,:,:], padding_x, padding_y, padding_back[i])
 		
 			cube[i,:,:] = conv_image[y0:y1,x0:x1]
+			#break
 	
 	print ""
-	return cube, back_emission
+	return cube, back_emission, create_psf(lambs[0])
 

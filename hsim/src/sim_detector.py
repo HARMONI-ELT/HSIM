@@ -59,6 +59,28 @@ def detector_QE_curve(wavels, grating, debug_plots, output_file):
 	return cube_det_qe
 
 
+def apply_crosstalk(cube, crosstalk):
+	''' Simulates crosstalk detector effects
+	Inputs:
+		cube: Input datacube (RA, DEC, lambda)
+		crosstalk: Fraction of the photons that go to each of the 4 contiguous pixels
+	Outputs:
+		cube: Cube including crosstalk
+	'''
+	
+	print "Applying detector crosstalk"
+	
+	scaled_cube = cube*(1. - crosstalk*4)
+	
+	# crosstalk in the spatial direction
+	spatial_crosstalk = crosstalk*(np.roll(cube, 1, axis=2) + np.roll(cube, -1, axis=2))
+	
+	# crosstalk in the spectral direction
+	spectral_crosstalk = crosstalk*(np.roll(cube, 1, axis=0) + np.roll(cube, -1, axis=0))
+	
+	return scaled_cube + spatial_crosstalk + spectral_crosstalk
+
+ 
 
 def sim_detector(cube, back_emission, lambs, grating, DIT, debug_plots=False, output_file=""):
 	''' Simulates detector effects

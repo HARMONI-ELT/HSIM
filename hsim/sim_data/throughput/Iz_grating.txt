@@ -1,6 +1,6 @@
 # NAME: Iz_grating.txt
-# DATE: 15/01/2018 10:19:22GMT
-# TYPE: Transmission estimate including FPRS, Cryostat, Pre-optics, IFU, Spectrograph and Grating
+# DATE: 22/05/2018 21:29:30BST
+# TYPE: Transmission estimate including Cryostat, Pre-optics, IFU, Spectrograph and Grating
 # VERSION: 1.0
 # ORIGIN: Transmission.xlsx
 # AUTHOR: Fraser Clarke
@@ -24,15 +24,15 @@
 0.775,0.0000e+00
 0.800,0.0000e+00
 0.825,0.0000e+00
-0.850,3.7443e-01
-0.875,3.9729e-01
-0.900,4.1273e-01
-0.925,4.2543e-01
-0.950,4.3111e-01
-0.975,4.3506e-01
-1.000,4.3786e-01
-1.025,4.3567e-01
-1.050,3.9480e-01
+0.850,4.6327e-01
+0.875,4.8986e-01
+0.900,5.0840e-01
+0.925,5.2274e-01
+0.950,5.2857e-01
+0.975,5.3162e-01
+1.000,5.3256e-01
+1.025,5.2744e-01
+1.050,4.7499e-01
 1.075,0.0000e+00
 1.100,0.0000e+00
 1.125,0.0000e+00

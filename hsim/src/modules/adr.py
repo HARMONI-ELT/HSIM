@@ -5,6 +5,7 @@ to datacubes.
 from rebin import *
 import numpy as np
 import matplotlib.pylab as plt
+from scipy.interpolate import interp2d
 
 def apply_adr(cube, header, wave, T, am, correct=False, debug_plots=False, output_file=""):
 	''' calculates the differential refration in MILLI-ARCSEC
