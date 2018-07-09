@@ -1,10 +1,10 @@
 # NAME: H-high_grating.txt
-# DATE: 22/05/2018 21:29:33BST
+# DATE: 09/07/2018 15:14:39BST
 # TYPE: Transmission estimate including Cryostat, Pre-optics, IFU, Spectrograph and Grating
 # VERSION: 1.0
 # ORIGIN: Transmission.xlsx
 # AUTHOR: Fraser Clarke
-# LAST MODIFIED: 2017-11-05T15:43:53Z
+# LAST MODIFIED: 2018-07-09T11:55:37Z
 # GRATING: H R=18000
 # 
 # Wavelength[um],throughput
@@ -51,13 +51,13 @@
 1.450,0.0000e+00
 1.475,0.0000e+00
 1.500,0.0000e+00
-1.525,3.8241e-01
-1.550,5.4288e-01
-1.575,5.6870e-01
-1.600,5.7843e-01
-1.625,5.7666e-01
-1.650,5.6144e-01
-1.675,5.3069e-01
+1.525,3.5348e-01
+1.550,5.0539e-01
+1.575,5.3044e-01
+1.600,5.3889e-01
+1.625,5.3417e-01
+1.650,5.1686e-01
+1.675,4.8394e-01
 1.700,0.0000e+00
 1.725,0.0000e+00
 1.750,0.0000e+00

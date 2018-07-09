@@ -1,6 +1,9 @@
 '''Front-end code for HARMONI simulator
 This handles the GUI and command line interfaces.
 '''
+import matplotlib
+matplotlib.use('Agg')
+
 import getopt
 import sys
 import os
@@ -86,7 +89,7 @@ if __name__=="__main__":
 			print '1. datacube: Input datacube filepath'
 			print '2. DIT: Detector Integration Time [s]'
 			print '3. NDIT: No. of exposures'
-			print '4. grating - V+R, Iz+J, H+K, Iz, J, H, K, z, J-high, H-high, K-high'
+			print '4. grating - V+R, Iz+J, H+K, Iz, J, H, K, z, J-high, H-high, K-high, K-high1, K-high2'
 			print '5. spax: spatial pixel (spaxel) scale [mas] - 4x4, 10x10, 20x20, 30x60 '
 			print '6. seeing: Atmospheric seeing FWHM [arcsec] - 0.63", 0.71", 0.84", 1.11", 1.32"'
 			print '7. air mass - 1.1, 1.3, 1.5, 2.0'
@@ -195,7 +198,7 @@ if __name__=="__main__":
 				self.SPAXVAL = wx.Choice(panel, choices=['4x4', '10x10', '20x20', '30x60'])
 				self.SPAXVAL.SetStringSelection('10x10')
 				PHOTOBAND = wx.StaticText(panel, label='Grating')
-				grating_list = ["V+R", "Iz+J", "H+K", "Iz", "J", "H", "K", "H-high", "K-high"]
+				grating_list = ["V+R", "Iz+J", "H+K", "Iz", "J", "H", "K", "H-high", "K-high", "K-high1", "K-high2"]
 				grating_choices = ["{name} [{info.lmin:.2f}-{info.lmax:.2f} um] (R={info.R:.0f})".format(name=_, info=config_data['gratings'][_]) for _ in grating_list]
 				self.PHOTOBANDVAL = wx.Choice(panel, choices=grating_choices)
 				self.PHOTOBANDVAL.SetStringSelection(grating_choices[6])

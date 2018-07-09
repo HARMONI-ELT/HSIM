@@ -297,7 +297,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		plt.plot(w, e, label="instrument after FPRS", color=colors[4])
 		total_instrument_em += e
 		
-		plt.legend()
+		plt.legend(prop={'size': 6})
 		plt.xlabel(r"wavelength [$\mu$m]")
 		plt.ylabel(r"back emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
 		plt.yscale("log")
@@ -307,19 +307,49 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		plt.clf()
 		w, e = np.loadtxt(base_filename + "_sky_tr.txt", unpack=True)
 		plt.plot(w, e, label="sky", color=colors[0])
+		total_tr_w = w
+		total_tr = e
+
 		w, e = np.loadtxt(base_filename + "_tel_tr.txt", unpack=True)
 		plt.plot(w, e, label="telescope", color=colors[1])
+		if np.sum(np.abs(total_tr_w - w)) != 0.:
+			raise ValueError('Error: Telescope transmission wavelength error. This should never happen.')
+		total_tr *= e
+	
 		if use_LTAO:
 			w, e = np.loadtxt(base_filename + "_ins_LTAOd_tr.txt", unpack=True)
 			plt.plot(w, e, label="LTAO dichroic", color=colors[2])
+			if np.sum(np.abs(total_tr_w - w)) != 0.:
+				raise ValueError('Error: LTAO transmission wavelength error. This should never happen.')
+			total_tr *= e
+
+
 		w, e = np.loadtxt(base_filename + "_ins_FPRS_tr.txt", unpack=True)
 		plt.plot(w, e, label="FPRS", color=colors[3])
+		if np.sum(np.abs(total_tr_w - w)) != 0.:
+			raise ValueError('Error: FPRS transmission wavelength error. This should never happen.')
+		total_tr *= e
+		
 		w, e = np.loadtxt(base_filename + "_ins_tr.txt", unpack=True)
 		plt.plot(w, e, label="instrument after FPRS", color=colors[4])
+		if np.sum(np.abs(total_tr_w - w)) != 0.:
+			raise ValueError('Error: instrument transmission wavelength error. This should never happen.')
+		total_tr *= e
+		
+		# the detector curve has a different wavelength range and spacing
 		w, e = np.loadtxt(base_filename + "_det_qe.txt", unpack=True)
 		plt.plot(w, e, label="detector", color=colors[5])
 		
-		plt.legend()
+		total_trans_interp = interp1d(total_tr_w, total_tr,
+					kind='linear', bounds_error=False, fill_value=0.)
+		total_tr_final_w = w
+		total_tr_final = total_trans_interp(total_tr_final_w)*e
+		plt.plot(total_tr_final_w, total_tr_final, label="Total", color=colors[7])
+		np.savetxt(base_filename + "_total_tr.txt", np.c_[total_tr_final_w, total_tr_final], comments="#", header="\n".join([
+			'TYPE: Total transmission', 
+			'Wavelength [um], Transmission']))
+
+		plt.legend(prop={'size': 6})
 		plt.xlabel(r"wavelength [$\mu$m]")
 		plt.ylabel(r"transmission")
 		plt.savefig(base_filename + "_total_tr.pdf")

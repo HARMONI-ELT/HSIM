@@ -1,10 +1,10 @@
 # NAME: LTAO_dichroic.txt
-# DATE: 22/05/2018 21:29:29BST
+# DATE: 09/07/2018 15:14:36BST
 # TYPE: LTAO dichroic transmission estimate
 # VERSION: 1.0
 # ORIGIN: Transmission.xlsx
 # AUTHOR: Fraser Clarke
-# LAST MODIFIED: 2017-11-05T15:43:53Z
+# LAST MODIFIED: 2018-07-09T11:55:37Z
 # 
 # Wavelength[um],throughput
 0.450,0.0000e+00

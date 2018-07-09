@@ -28,7 +28,8 @@ config_data = {
 			'Iz+J':GratingInfo(0.8105,1.3695, 3300.), 'H+K':GratingInfo(1.4500,2.4500, 3300.),
 			'Iz':GratingInfo(0.8300,1.0500, 7100.),'J':GratingInfo(1.0463,1.3237, 7100.), 'H':GratingInfo(1.4348,1.8151, 7100.), 'K':GratingInfo(1.9514,2.4686, 7100.),
 			'z':GratingInfo(0.8268,0.9032, 17200.), 'J-high':GratingInfo(1.1900,1.3000, 17200.),
-			'H-high':GratingInfo(1.5341,1.6759, 17200.), 'K-high':GratingInfo(2.0933,2.2867, 17200.)
+			'H-high':GratingInfo(1.5341,1.6759, 17200.), 'K-high':GratingInfo(2.0933,2.2867, 17200.),
+			'K-high1':GratingInfo(2.0072,2.1928, 17200.), 'K-high2':GratingInfo(2.1984,2.4016, 17200.)
 			},
 	
 	'spaxel_scale': {'4x4':SpaxelScaleInfo(4., 4., 1., 1000),

@@ -1,10 +1,10 @@
 # NAME: J-high_grating.txt
-# DATE: 22/05/2018 21:29:33BST
+# DATE: 09/07/2018 15:14:39BST
 # TYPE: Transmission estimate including Cryostat, Pre-optics, IFU, Spectrograph and Grating
 # VERSION: 1.0
 # ORIGIN: Transmission.xlsx
 # AUTHOR: Fraser Clarke
-# LAST MODIFIED: 2017-11-05T15:43:53Z
+# LAST MODIFIED: 2018-07-09T11:55:37Z
 # GRATING: J R=18000
 # 
 # Wavelength[um],throughput
@@ -37,13 +37,13 @@
 1.100,0.0000e+00
 1.125,0.0000e+00
 1.150,0.0000e+00
-1.175,2.8124e-01
-1.200,4.7075e-01
-1.225,5.0095e-01
-1.250,5.1018e-01
-1.275,5.0013e-01
-1.300,4.7074e-01
-1.325,2.3773e-01
+1.175,2.4060e-01
+1.200,3.9513e-01
+1.225,4.1225e-01
+1.250,4.1416e-01
+1.275,4.0365e-01
+1.300,3.8064e-01
+1.325,1.9342e-01
 1.350,0.0000e+00
 1.375,0.0000e+00
 1.400,0.0000e+00
