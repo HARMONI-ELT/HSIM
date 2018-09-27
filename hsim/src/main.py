@@ -3,11 +3,11 @@ Code for the bulk framework of the HARMONI
 simulator. This code should show the main functions/processes
 to move from an input datacube (lambda, y, x) to output cubes:
 '''
-
 import collections
 import datetime
 import multiprocessing as mp
 import os.path
+import logging
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -21,13 +21,13 @@ from init_cube import init_cube
 from sim_sky import sim_sky
 from sim_telescope import sim_telescope
 from sim_instrument import sim_instrument
-from sim_detector import sim_detector, apply_crosstalk
+from sim_detector import sim_detector, apply_crosstalk, mask_saturated_pixels
 from modules.adr import apply_adr
 
 from modules.rebin import *
 
 def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, res_jitter=3., moon=0.,
-	 site_temp=280.5, adr_switch='True', seednum=100, nprocs=mp.cpu_count()-1, keep_debug_plots=False, aoMode="LTAO"):
+	 site_temp=280.5, adr_switch='True', det_switch='False', seednum=100, nprocs=mp.cpu_count()-1, keep_debug_plots=False, aoMode="LTAO"):
 	'''
 	Inputs:
 		datacube: Input high resolution datacube (RA, DEC, lambda)
@@ -42,6 +42,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		site_temp: Telescope temperature [K]
 		moon: Fractional Moon illumination
 		adr_switch: Boolean - turn ADR on or off.
+		det_switch: Boolean - use detector systematics (off by default)
 		seednum: ramdom seed number
 		nprocs: Number of processes
 		keep_debug_plots: keep debug plots
@@ -51,7 +52,6 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 
 	'''
 	debug_plots = True
-	#keep_debug_plots = True
 	
 	Conf = collections.namedtuple('Conf', 'name, header, value')
 	simulation_conf = [
@@ -68,31 +68,48 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 			Conf('Temperature', 'HSM_TEMP', site_temp),
 			Conf('Moon', 'HSM_MOON', moon),
 			Conf('ADR', 'HSM_ADR', adr_switch),
+			#Conf('Detectors', 'HSM_DET', det_switch),
 			Conf('Seed', 'HSM_SEED', seednum),
 			Conf('AO', 'HSM_AO', aoMode),
 			Conf('No. of processes', 'HSM_NPRC', nprocs),
 			]
+
+	base_name = os.path.splitext(os.path.basename(datacube))[0]
+	base_filename = os.path.join(outdir, base_name)
+
+	logfile = base_filename + ".log"
+	open(logfile, 'w').close()
+
+	# log to a file
+	logging.basicConfig(filename=logfile, level=logging.DEBUG, format='%(asctime)s  %(levelname)s  %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+	# and also to the terminal
+	logger = logging.getLogger()
+	std = logging.StreamHandler()
+	std.setFormatter(HSIMFormatter())
+	logger.addHandler(std)
 	
+	hsimlog = HSIMLoggingHandler()
+	logger.addHandler(hsimlog)
+	
+	
+	logging.info("Simulation input parameters:")
 	for _ in simulation_conf:
-		print _.name + " = " + str(_.value)
-	print 
+		logging.info(_.name + " = " + str(_.value))
 	
 	if aoMode.upper() == "LTAO":
 		use_LTAO = True
 	elif aoMode.upper() == "NOAO":
 		use_LTAO = False
 	else:
-		raise ValueError('Error: ' + aoMode + ' is not a valid AO mode. Valid options are: LTAO or noAO')
+		logging.error(aoMode + ' is not a valid AO mode. Valid options are: LTAO or noAO')
+		return
 
-	
-	base_name = os.path.splitext(os.path.basename(datacube))[0]
-	base_filename = os.path.join(outdir, base_name)
 
 	np.random.seed(seednum)
 
 	# Read input FITS cube and resample depending on grating and spaxel scale
 	# output is in ph/s/m2/um/arcsec2 units
-	cube, head, lambs = init_cube(datacube, grating, spax)
+	cube, head, lambs, input_spec_res = init_cube(datacube, grating, spax)
 	
 	# Calculate extended lambda range to convolve with the LSF
 	LSF_width = int(config_data["spectral_sampling"]["internal"]/2.35482*config_data['LSF_kernel_size'])
@@ -117,17 +134,17 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	#	- PSF + Jitter
 	#	- Telescope background
 	#	- Telescope transmission
-	cube_exp, back_emission, psf = sim_telescope(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, res_jitter, air_mass, seeing, spax, site_temp, nprocs, debug_plots=debug_plots, output_file=base_filename, use_LTAO=use_LTAO)
+	cube_exp, back_emission, psf, psf_lambda = sim_telescope(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, res_jitter, air_mass, seeing, spax, site_temp, nprocs, debug_plots=debug_plots, output_file=base_filename, use_LTAO=use_LTAO)
 
 	# 3 - Instrument:
 	#	- LSF
 	#	- Instrument background
 	#	- Instrument transmission
-	cube_exp, back_emission = sim_instrument(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, grating, site_temp, debug_plots=debug_plots, output_file=base_filename, LTAO_dichroic=use_LTAO)
+	cube_exp, back_emission = sim_instrument(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, debug_plots=debug_plots, output_file=base_filename, LTAO_dichroic=use_LTAO)
 		
 	# 4 - Rebin cube to output spatial and spectral pixel size
-	print "Rebin data"
-	print "- Output spaxel scale: ", spax 
+	logging.info("Rebin data")
+	logging.info("- Output spaxel scale: " + str(spax))
 	z, y, x = cube_exp.shape
 	
 	# rebin spatial axes
@@ -154,7 +171,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	output_lambs = new_lamb_per_pix*np.arange(int(len(lambs)*scale_z)) + lambs[0]
 	output_cube_spec = np.zeros((len(output_lambs), out_size_y, out_size_x))
 	
-	print "- Output spectral sampling: {:.2f} A".format(new_lamb_per_pix*10000.)
+	logging.info("- Output spectral sampling: {:.2f} A".format(new_lamb_per_pix*10000.))
 	
 	for i in np.arange(0, out_size_x):
 		for j in np.arange(0, out_size_y):
@@ -170,7 +187,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	# correct for ADR
 	if adr_switch == "True":
-		print "- Correcting ADR"
+		logging.info("- Correcting ADR")
 		output_cube_spec = apply_adr(output_cube_spec, head, output_lambs, site_temp, air_mass, correct=True)
 
 	
@@ -193,11 +210,15 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# Generate noiseless outputs
 	# - object + background
 	output_cube_spec = output_cube_spec.astype(np.float32)
+	# - mask saturated pixels
+	output_cube_spec, saturated_obj_back = mask_saturated_pixels(output_cube_spec, grating)
 	
 	# - background - as a cube the 1D background spectrum
 	output_back_emission = output_back_emission.astype(np.float32)
 	output_back_emission.shape = (len(output_back_emission),1,1)
 	output_back_emission_cube = np.zeros_like(output_cube_spec) + output_back_emission
+	# - mask saturated pixels
+	output_back_emission_cube, saturated_back = mask_saturated_pixels(output_back_emission_cube, grating)
 	
 	# - object - back
 	output_cube_spec_wo_back = np.subtract(output_cube_spec, output_back_emission_cube)
@@ -208,7 +229,14 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# A. Object exposure
 	# - object exposure with crosstalk
 	sim_object_plus_back = np.random.poisson(abs(output_cube_spec*NDIT)).astype(np.float32)
-	sim_object_plus_back = apply_crosstalk(sim_object_plus_back, config_data["crosstalk"])
+	# Apply crosstalk only to NIR detectors
+	if grating != "V+R":
+		sim_object_plus_back = apply_crosstalk(sim_object_plus_back, config_data["crosstalk"])
+	
+	if np.sum(saturated_obj_back) > 0:
+		logging.warning(str(np.sum(saturated_obj_back)) + " pixels are saturated in the obj + back frames")
+		sim_object_plus_back[saturated_obj_back] = np.nan
+		
 
 	# - read noise and dark current for object exposure
 	dark_cube = np.zeros_like(output_cube_spec) + dark_current*NDIT
@@ -222,6 +250,11 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# B. Background exposure
 	#- background. No crosstalk since the background is uniform
 	sim_back = np.random.poisson(abs(output_back_emission_cube*NDIT)).astype(np.float32)
+
+	if np.sum(saturated_back) > 0:
+		logging.warning(str(np.sum(saturated_back)) + " pixels are saturated in the back frames")
+		sim_back[saturated_back] = np.nan
+
 	
 	# - read noise and dark current for background exposure
 	sim_read_noise2 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
@@ -236,7 +269,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	
 	
-	print "Pipeline interpolation effects"
+	logging.info("Pipeline interpolation effects")
 	# Convolve the reduced cube with a 1pix FWHM Gaussian to account for the 
 	# interpolation during the data reduction
 	sigma = 1./2.35482 # pix
@@ -259,9 +292,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	noise_cube_total = np.sqrt(noise_cube_object + noise_cube_back + 2.*noise_cube_dark + 2.*noise_cube_read_noise**2)
 	
-
 	#
-	print "Saving output"
+	logging.info("Saving output")
 	if debug_plots:
 		plt.clf()
 
@@ -313,35 +345,38 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		w, e = np.loadtxt(base_filename + "_tel_tr.txt", unpack=True)
 		plt.plot(w, e, label="telescope", color=colors[1])
 		if np.sum(np.abs(total_tr_w - w)) != 0.:
-			raise ValueError('Error: Telescope transmission wavelength error. This should never happen.')
+			logging.error('Telescope transmission wavelength error. This should never happen.')
+			return
 		total_tr *= e
 	
 		if use_LTAO:
 			w, e = np.loadtxt(base_filename + "_ins_LTAOd_tr.txt", unpack=True)
 			plt.plot(w, e, label="LTAO dichroic", color=colors[2])
 			if np.sum(np.abs(total_tr_w - w)) != 0.:
-				raise ValueError('Error: LTAO transmission wavelength error. This should never happen.')
+				logging.error('LTAO transmission wavelength error. This should never happen.')
+				return
 			total_tr *= e
 
 
 		w, e = np.loadtxt(base_filename + "_ins_FPRS_tr.txt", unpack=True)
 		plt.plot(w, e, label="FPRS", color=colors[3])
 		if np.sum(np.abs(total_tr_w - w)) != 0.:
-			raise ValueError('Error: FPRS transmission wavelength error. This should never happen.')
+			logging.error('FPRS transmission wavelength error. This should never happen.')
+			return
 		total_tr *= e
 		
 		w, e = np.loadtxt(base_filename + "_ins_tr.txt", unpack=True)
 		plt.plot(w, e, label="instrument after FPRS", color=colors[4])
 		if np.sum(np.abs(total_tr_w - w)) != 0.:
-			raise ValueError('Error: instrument transmission wavelength error. This should never happen.')
+			logging.error('instrument transmission wavelength error. This should never happen.')
+			return
 		total_tr *= e
 		
 		# the detector curve has a different wavelength range and spacing
 		w, e = np.loadtxt(base_filename + "_det_qe.txt", unpack=True)
 		plt.plot(w, e, label="detector", color=colors[5])
 		
-		total_trans_interp = interp1d(total_tr_w, total_tr,
-					kind='linear', bounds_error=False, fill_value=0.)
+		total_trans_interp = interp1d(total_tr_w, total_tr, kind='linear', bounds_error=False, fill_value=0.)
 		total_tr_final_w = w
 		total_tr_final = total_trans_interp(total_tr_final_w)*e
 		plt.plot(total_tr_final_w, total_tr_final, label="Total", color=colors[7])
@@ -378,6 +413,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# SNR
 	# - Obj/Noise
 	outFile_SNR = base_filename + "_reduced_SNR.fits"
+	# standard deviation cube
+	outFile_std = base_filename + "_std.fits"
 	
 	# Update header
 	for _ in simulation_conf:
@@ -393,12 +430,13 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(outFile_reduced, sim_reduced, "Reduced (O+B+Noise) - (B+Noise)", head)
 	
 	save_fits_cube(outFile_SNR, output_cube_spec_wo_back*NDIT/noise_cube_total, "SNR (O-B)/Noise", head)
+	save_fits_cube(outFile_std, noise_cube_total, "Noise standard deviation", head)
 	
 	# Save PSF
 	head_PSF = head
 	head_PSF['CDELT1'] = spax_scale.psfscale
 	head_PSF['CDELT2'] = spax_scale.psfscale
-	head_PSF['LAMBDA'] = lambs_extended[cube_lamb_mask][0]
+	head_PSF['LAMBDA'] = psf_lambda
 	try:
 		del head_PSF['CDELT3']
 		del head_PSF['CRVAL3']
@@ -411,9 +449,13 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		pass
 	
 	save_fits_cube(base_filename + "_PSF.fits", psf, "PSF", head_PSF)
-
-
-	print 'Simulation Complete'
+	
+	if hsimlog.count_error == 0 and hsimlog.count_warning == 0:
+		logging.info('Simulation OK')
+	else:
+		logging.warning('Simulation with problems - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")
+	
+	
 	return
 	
 
@@ -422,3 +464,29 @@ def save_fits_cube(filename, data, typ, header):
 	fits.writeto(filename, data, header=header, overwrite=True)
 	
 	
+
+class HSIMLoggingHandler(logging.Handler):
+	def __init__(self):
+		self.count_warning = 0
+		self.count_error = 0
+		logging.Handler.__init__(self)
+		
+	def emit(self, record):
+		if record.levelno == logging.WARNING:
+			self.count_warning += 1
+		elif record.levelno >= logging.ERROR:
+			self.count_error += 1
+		
+
+class HSIMFormatter(logging.Formatter):
+
+	def __init__(self):
+		logging.Formatter.__init__(self, "%(message)s")
+
+	def format(self, record):
+		if record.levelno > logging.INFO:
+			self._fmt = "** %(levelname)s ** %(message)s"
+		else:
+			self._fmt = "%(message)s"
+
+		return logging.Formatter.format(self, record)

@@ -2,6 +2,7 @@
 Module to create PSF from PSD
 '''
 import os
+import logging
 
 import numpy as np
 from astropy.io import fits
@@ -55,7 +56,7 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 	L         = D*sampnum #;Physical size of the PSD
 	
 	if dim < 2*npup:
-		raise ValueError("the PSD horizon must at least two time larger than the pupil diameter")
+		raise HSIMError("the PSD horizon must at least two time larger than the pupil diameter")
 	
 
 	convnm = (2*np.pi/(lamb*1e9)) # nm to rad 
@@ -94,7 +95,7 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 	overFoV = fov/FoVnum
 
 	if overFoV != 1:
-		raise ValueError("overFoV != 1 not fully tested")
+		raise HSIMError("overFoV != 1 not fully tested")
 		dimover = float(int(dimnum*overFoV/2)*2)
 		npupover =  float(int(npup*overFoV/2)*2)
 		xxover  = np.arange(dimover)/dimover*dimnum
@@ -117,7 +118,7 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 	if phase_static is not None:
 		npups    = phase_static.shape[0]
 		if npups != npup:
-			raise ValueError("pup and static phase must have the same number of pixels")
+			raise HSIMError("pup and static phase must have the same number of pixels")
 
 		if overFoV != 1:
 			fphase_static = interp2d(np.arange(phase_static.shape[0]), np.arange(phase_static.shape[0]), phase_static, kind='cubic')
@@ -217,7 +218,7 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, LTAO):
 	if LTAO:
 		jitter = _jitter
 		diameter = D
-		
+		logging.info("define LTAO PSF")
 		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
 			# PSD cubes
 			pup = fits.getdata(os.path.join(psf_path,"ELT_pup.fits"))
@@ -227,12 +228,12 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, LTAO):
 			try:
 				index_airmass = config_data["PSD_cube"]["air_masses"].index(air_mass)
 			except:
-				raise ValueError('Error: ' + str(air_mass) + ' is not a valid air mass. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["air_masses"]))))
+				raise HSIMError(str(air_mass) + ' is not a valid air mass. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["air_masses"]))))
 			
 			try:
 				index_seeing = config_data["PSD_cube"]["seeings"].index(seeing)
 			except:
-				raise ValueError('Error: ' + str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
+				raise HSIMError(str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
 				
 			psd_cube = fits.getdata(os.path.join(psf_path, config_data["PSD_file"]))
 			psd = psd_cube[index_airmass, index_seeing,:,:]
@@ -245,17 +246,18 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, LTAO):
 			psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))
 	
 	else: # no AO Gaussian 
-		print "noAO Gaussian PSF"
+		logging.info("define noAO Gaussian PSF")
 		
 	
 	return
 
 
-def create_psf(lamb):
+def create_psf(lamb, Airy=False):
 	'''
 	Returns a cube with the PSF for the given lambs generated from the PSD
 	Inputs:
 		lamb: lambda  [um]
+		Airy: calculate Airy pattern
 	Outputs:
 		cube: PSF
 	'''
@@ -267,7 +269,10 @@ def create_psf(lamb):
 		# size of a pixel returned by psd_to_psf
 		pix_psf = lamb*1e-6/(2.*diameter)*1/(4.85*1e-9) # mas
 		
-		psf = psd_to_psf(psd, pup, diameter, phase_static = stats, lamb=lamb*1e-6, samp=2., jitter=jitter/pix_psf)
+		if not Airy:
+			psf = psd_to_psf(psd, pup, diameter, phase_static = stats, lamb=lamb*1e-6, samp=2., jitter=jitter/pix_psf)
+		else:
+			psf = psd_to_psf(psd*0., pup, diameter, phase_static = None, lamb=lamb*1e-6, samp=2., jitter=0.)
 		
 		area_scale = (pix_psf/psfscale)**2
 		#print area_scale

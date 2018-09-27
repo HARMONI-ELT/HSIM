@@ -4,6 +4,7 @@ Calculates PSF, jitter and telescope background and transmission
 '''
 import os
 import sys
+import logging
 
 import multiprocessing as mp
 
@@ -157,12 +158,12 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	'''
 	
 	# Get telescope reflectivity
-	print "Calculating telescope reflectivity"
+	logging.info("Calculating telescope reflectivity")
 	telescope_reflectivity = telescope_transmission_curve(ext_lambs, debug_plots, output_file)
 	back_emission = back_emission*telescope_reflectivity
 	
 	# Get telescope background
-	print "Calculating telescope background"
+	logging.info("Calculating telescope background")
 	telescope_background = telescope_background_emission(ext_lambs, site_temp, 1. - telescope_reflectivity, DIT, debug_plots, output_file)
 	back_emission = back_emission + telescope_background
 	
@@ -177,15 +178,15 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	
 	
 	# PSF + Jitter + Instrument PSF
-	print "Define PSF"
+	logging.info("Define PSF")
 	
 	FWHM_instrument = (config_data["dynamic_instrument_psf"]**2 + config_data["static_instrument_psf"][spax]**2)**0.5
 	sigma_instrument = FWHM_instrument/2.35482
 	sigma_combined = (jitter**2 + sigma_instrument**2)**0.5
 	
-	print "Residual telescope jitter = {:.2f} mas".format(jitter)
-	print "Instrument PSF = {:.2f} mas".format(sigma_instrument)
-	print "-> Combined σ = {:.2f} mas ".format(sigma_combined)
+	logging.info("Residual telescope jitter = {:.2f} mas".format(jitter))
+	logging.info("Instrument PSF = {:.2f} mas".format(sigma_instrument))
+	logging.info("-> Combined σ = {:.2f} mas ".format(sigma_combined))
 	
 	psf_size = config_data["spaxel_scale"][spax].psfsize
 	
@@ -208,13 +209,13 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	y0 = int((conv_side_y - cube.shape[1])/2.)+1
 	y1 = y0 + cube.shape[1]
 	
-	print "Convolve with PSF"
+	logging.info("Convolve with PSF")
 	
 	global counter, result_cube, bar_str, llambs
 	
 	bar_str = "[ {:2d}% {:" + str(len(str(len(lambs)))) + "d}/{:" + str(len(str(len(lambs)))) + "d} ]"
 	
-	print ("Using {:d} CPU" + ("s" if ncpus > 1 else "")).format(ncpus)
+	logging.info(("Using {:d} CPU" + ("s" if ncpus > 1 else "")).format(ncpus))
 	if ncpus > 1:
 
 		pool = mp.Pool(processes=ncpus)
@@ -241,6 +242,7 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 			cube[i,:,:] = conv_image[y0:y1,x0:x1]
 			#break
 	
-	print ""
-	return cube, back_emission, create_psf(lambs[0])
+	central_lambda = (lambs[0] + lambs[-1])*0.5
+	return cube, back_emission, create_psf(central_lambda), central_lambda
+
 

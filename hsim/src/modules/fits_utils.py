@@ -1,8 +1,9 @@
 '''
 FITS handling functions
 '''
-
+import logging
 import numpy as np
+from ..config import *
 
 def fits_header_check(header):
 	'''Function that checks input FITS datacube header for
@@ -39,12 +40,11 @@ def fits_header_check(header):
 		
 	for i in required_headers:
 		if i not in header:
-			print 'Missing header: ', i
+			logging.error('Missing header: ' + i)
 			missing_headers.append(i)
 	
 	if len(missing_headers) != 0:
-		# print 'Missing headers: ', missing_headers
-		raise HeaderError('Missing headers. Please correct datacube header.')
+		raise HSIMError('Missing headers. Please correct datacube header.')
 	else:
 		if header['CUNIT1'].lower() == 'arcsec':
 			header['CUNIT1'] = 'mas'
@@ -52,24 +52,25 @@ def fits_header_check(header):
 		if header['CUNIT2'].lower() == 'arcsec':
 			header['CUNIT2'] = 'mas'
 			header['CDELT2'] = header['CDELT2']*1000.
-		print 'All required headers present'
+		
+		logging.info('All required headers present')
 
 	if header['CTYPE3'].lower() not in ctype3:
-		raise HeaderError("CTYPE3 must be set to: ", ctype3)
+		raise HSIMError("CTYPE3 must be set to: ", ctype3)
 	if header['CTYPE2'].lower() not in ctype2:
-		raise HeaderError("CTYPE2 must be set to: ", ctype2)
+		raise HSIMError("CTYPE2 must be set to: ", ctype2)
 	if header['CTYPE1'].lower() not in ctype1:
-		raise HeaderError("CTYPE1 must be set to: ", ctype1)
+		raise HSIMError("CTYPE1 must be set to: ", ctype1)
 	if header['CUNIT3'].lower() not in cunit3:
-		raise HeaderError("CUNIT3 must be set to one of: ", cunit3)
+		raise HSIMError("CUNIT3 must be set to one of: ", cunit3)
 	if header['CUNIT2'].lower() not in cunit2:
-		raise HeaderError("CUNIT2 must be set to one of: ", cunit2)
+		raise HSIMError("CUNIT2 must be set to one of: ", cunit2)
 	if header['CUNIT1'].lower() not in cunit1:
-		raise HeaderError("CUNIT1 must be set to one of: ", cunit1)
+		raise HSIMError("CUNIT1 must be set to one of: ", cunit1)
 	if header['FUNITS'] not in funits:
-		raise HeaderError("FUNITS must be set to one of: ", funits)
+		raise HSIMError("FUNITS must be set to one of: ", funits)
 	if header['CDELT3'] <= 0:
-		raise HeaderError("CDELT3 must be positive")
+		raise HSIMError("CDELT3 must be positive")
 	
 	if "CRVAL1" not in header:
 		header["CRVAL1"] = 0
@@ -81,7 +82,7 @@ def fits_header_check(header):
 	if "CRPIX2" not in header:
 		header["CRPIX2"] = 1
 	
-	print 'All header values acceptable'
+	logging.info('All header values acceptable')
 
 
 def wavelength_array(header):
@@ -118,7 +119,8 @@ def wavelength_array(header):
 		lambs *= 1.E-3
 		header['SPECRES'] *= 1.E-3
 	else:
-		raise ValueError('Choose correct units please: microns, angstroms, metres or nm')
+		raise HSIMError('Choose correct units please: microns, angstroms, metres or nm')
+	
 	#Update header with new wavelength units
 	header['CRVAL3'] = lambs[0]
 	header['CDELT3'] = (lambs[1]-lambs[0])
@@ -127,7 +129,3 @@ def wavelength_array(header):
 	return lambs, header
 
 
-
-#Header Error function
-class HeaderError(Exception):
-	pass

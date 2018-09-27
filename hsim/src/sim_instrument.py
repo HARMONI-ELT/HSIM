@@ -2,6 +2,7 @@
 Calculates LSF, instrument background and transmission
 '''
 import os
+import logging
 
 import numpy as np
 import scipy.constants as sp
@@ -161,7 +162,7 @@ def FPRS_transmission_curve(wavels, grating, debug_plots, output_file):
 
 
 
-def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating, site_temp, debug_plots=False, output_file="", LTAO_dichroic=True):
+def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, debug_plots=False, output_file="", LTAO_dichroic=True):
 	''' Simulates instrument effects
 	Inputs:
 		cube: Input datacube (RA, DEC, lambda)
@@ -171,6 +172,7 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 		DIT: Exposure time [s]
 		grating: Spectral grating
 		site_temp: Telescope temperature [K]
+		input_spec_res: Spectral resolution of the input cube [micron]
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
 		LTAO_dichroic: True if the LTAO dichroic is used
@@ -181,7 +183,7 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 	'''
 	
 	# Get instrument transmission
-	print "Calculating HARMONI transmission"
+	logging.info("Calculating HARMONI transmission")
 	# LTAO dichroic if present
 	if LTAO_dichroic:
 		LTAOd_tr = LTAO_dichroic_transmission_curve(ext_lambs, grating, debug_plots, output_file)
@@ -197,9 +199,8 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 	back_emission = back_emission*LTAOd_tr*FPRS_tr*instrument_tr
 	
 	
-	
 	# Get instrument background
-	print "Calculating HARMONI background"
+	logging.info("Calculating HARMONI background")
 
 	# LTAO dichroic if present
 	if LTAO_dichroic:
@@ -227,26 +228,30 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 	cube = np.add(cube, instrument_background_cube)
 	
 	
-	print "Convolve with LSF"
+	logging.info("Convolve with LSF")
 	# Assume Gaussian LSF
 	bandws = config_data['gratings'][grating]
-	new_res = (bandws.lmin + bandws.lmax)/(2.*bandws.R)
-	new_res_pix = new_res/(ext_lambs[1] - ext_lambs[0])
+	new_res = (bandws.lmin + bandws.lmax)/(2.*bandws.R) # micron
+	new_res_pix = (new_res**2 - input_spec_res**2)**0.5/(ext_lambs[1] - ext_lambs[0])
+	logging.info("Output resolution: {:.3f} A".format(new_res*10000.))
+	logging.info("Input resolution: {:.3f} A".format(input_spec_res*10000.))
+	logging.info("LSF FWHM = {:.3f} A".format((new_res**2 - input_spec_res**2)**0.5*10000.))
 	
-	sigma_LSF_pix = new_res_pix/2.35482
-	
-	kernel_LSF = Gaussian1DKernel(stddev = sigma_LSF_pix, x_size = int(sigma_LSF_pix*config_data['LSF_kernel_size']))
-	z, y, x = cube.shape
-	
-	for py in range(y):
-		for px in range(x):
-			spectrum = np.copy(back_emission)
-			spectrum[cube_lamb_mask] = cube[:,py,px]
-			
-			cube[:,py,px] = np.convolve(spectrum, kernel_LSF, mode="same")[cube_lamb_mask]
-	
-	
-	back_emission = np.convolve(back_emission, kernel_LSF, mode="same")
+	if new_res_pix > 0.:
+		sigma_LSF_pix = new_res_pix/2.35482
+		
+		kernel_LSF = Gaussian1DKernel(stddev = sigma_LSF_pix, x_size = int(sigma_LSF_pix*config_data['LSF_kernel_size']))
+		z, y, x = cube.shape
+		
+		for py in range(y):
+			for px in range(x):
+				spectrum = np.copy(back_emission)
+				spectrum[cube_lamb_mask] = cube[:,py,px]
+				
+				cube[:,py,px] = np.convolve(spectrum, kernel_LSF, mode="same")[cube_lamb_mask]
+		
+		
+		back_emission = np.convolve(back_emission, kernel_LSF, mode="same")
 
 	return cube, back_emission
 	

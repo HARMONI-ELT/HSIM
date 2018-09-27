@@ -3,6 +3,8 @@ Calculates the sky transmission and emission at the observed lambda
 and computes the ADR if requested
 '''
 import os
+import logging
+
 import numpy as np
 
 from config import *
@@ -32,7 +34,7 @@ def sky_background(lambs, air_mass, dit, debug_plots, output_file):
 	'''
 	inbuilt_airmasses = [1.1, 1.3, 1.5, 2.0]
 	if air_mass not in inbuilt_airmasses:
-		raise ValueError('Error: ' + str(air_mass) + ' is not a valid air_mass. Valid options are: ' + ",".join([str(_) for _ in inbuilt_airmasses]))
+		raise HSIMError('Error: ' + str(air_mass) + ' is not a valid air_mass. Valid options are: ' + ",".join([str(_) for _ in inbuilt_airmasses]))
 
 
 	#determine the closest data to the airmass value given and find it's location in the data file
@@ -78,7 +80,7 @@ def moon_background(lambs, moon, dit, debug_plots, output_file):
 	'''
 	
 	if moon not in [0., 0.5, 1.0]:
-		raise ValueError('Error: ' + str(moon) + ' is not a valid Moon illumination. Valid options are: 0, 0.5, 1.0')
+		raise HSIMError('Error: ' + str(moon) + ' is not a valid Moon illumination. Valid options are: 0, 0.5, 1.0')
 	
 	if moon > 0.:
 		inbuilt_moon = [0.5, 1.0]
@@ -130,7 +132,7 @@ def sky_transmission(lambs, air_mass, debug_plots, output_file):
 	#convert from zenith angle to airmass
 	inbuilt_airmasses = [1.1, 1.3, 1.5, 2.0]
 	if air_mass not in inbuilt_airmasses:
-		raise ValueError('Error: ' + str(air_mass) + ' is not a valid air_mass. Valid options are: ' + ",".join([str(_) for _ in inbuilt_airmasses]))
+		raise HSIMError('Error: ' + str(air_mass) + ' is not a valid air_mass. Valid options are: ' + ",".join([str(_) for _ in inbuilt_airmasses]))
 
 	#determine the closest data to the airmass value given and find it's location in the data file
 	closest_X = min(inbuilt_airmasses, key=lambda x:abs(x - air_mass))
@@ -182,15 +184,15 @@ def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mas
 	'''
 	
 	# Get sky transmission
-	print "Calculating sky transmission"
+	logging.info("Calculating sky transmission")
 	sky_trans = sky_transmission(ext_lambs, air_mass, debug_plots, output_file)
 	
 	# Get sky emission (lines + continuum)
-	print "Calculating sky emission"
+	logging.info("Calculating sky emission")
 	sky_emission = sky_background(ext_lambs, air_mass, DIT, debug_plots, output_file)
 	
 	# Get moon emission
-	print "Calculating Moon emission"
+	logging.info("Calculating Moon emission")
 	moon_emission = moon_background(ext_lambs, moon, DIT, debug_plots, output_file)
 	back_emission = back_emission + sky_emission + moon_emission
 	
@@ -206,7 +208,7 @@ def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mas
 	
 	# Add atmospheric differential refration
 	if adr_switch == "True":
-		print "Calculating ADR"
+		logging.info("Calculating ADR")
 		lambs = ext_lambs[cube_lamb_mask]
 		cube = apply_adr(cube, header, lambs, site_temp, air_mass, debug_plots=False, output_file=output_file)
 		

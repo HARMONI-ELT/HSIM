@@ -2,6 +2,7 @@
 Calculates detector QE, dark current, read noise
 '''
 import os
+import logging
 
 import numpy as np
 import scipy.constants as sp
@@ -59,6 +60,30 @@ def detector_QE_curve(wavels, grating, debug_plots, output_file):
 	return cube_det_qe
 
 
+def mask_saturated_pixels(cube, grating):
+	''' Mask saturated pixels
+	Inputs:
+		cube: Input datacube (RA, DEC, lambda)
+		grating: Spectral grating
+	Outputs:
+		cube: masked cube
+		mask_pixels: saturated pixels mask
+	'''
+	logging.info("Masking saturated pixels")
+	
+	if grating == "V+R":
+		limit = config_data["saturation"]["vis"]
+	else:
+		limit = config_data["saturation"]["nir"]
+		
+	
+	mask_pixels = cube > limit
+	cube[mask_pixels] = 0.
+	
+	return cube, mask_pixels
+
+	
+
 def apply_crosstalk(cube, crosstalk):
 	''' Simulates crosstalk detector effects
 	Inputs:
@@ -68,7 +93,7 @@ def apply_crosstalk(cube, crosstalk):
 		cube: Cube including crosstalk
 	'''
 	
-	print "Applying detector crosstalk"
+	logging.info("Applying detector crosstalk")
 	
 	scaled_cube = cube*(1. - crosstalk*4)
 	
@@ -99,7 +124,7 @@ def sim_detector(cube, back_emission, lambs, grating, DIT, debug_plots=False, ou
 	'''
 	
 	# Get QE curve
-	print "Calculating detector QE"
+	logging.info("Calculating detector QE")
 	qe_curve = detector_QE_curve(lambs, grating, debug_plots, output_file)
 	back_emission = np.multiply(back_emission, qe_curve)
 	
