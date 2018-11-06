@@ -9,7 +9,10 @@ from astropy.io import fits
 from scipy.interpolate import interp2d
 from astropy.convolution import Gaussian2DKernel
 
-from ..config import *
+try:
+	from ..config import *
+except:
+	from config import *
 
 from misc_utils import path_setup
 from rebin import *
@@ -172,9 +175,9 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 
 psfscale = None
 fov = None
-useLTAO = None
+AO_mode = None
 
-# LTAO variables
+# AO variables
 pup = None
 stats = None
 psd = None
@@ -188,7 +191,7 @@ seeing = None
 air_mass = None
 
 
-def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, LTAO):
+def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 	'''
 	Define parameters used for the PSF generation
 	Inputs:
@@ -198,14 +201,14 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, LTAO):
 		D: telescope diameter [m]
 		fov: number of pixels of the PSF
 		psfscale: pixel size for the PSF [mas]
-		LTAO: True if using LTAO, False seeing limited
+		aoMode: LTAO/SCAO/NOAO
 	Outputs:
 		None
 	'''
-	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, useLTAO
+	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode
 	global seeing, air_mass
 	
-	useLTAO = LTAO
+	AO_mode = _aoMode
 	
 	fov = _fov
 	psfscale = _psfscale
@@ -215,10 +218,10 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, LTAO):
 	seeing = _seeing
 	air_mass = _air_mass
 	
-	if LTAO:
+	if AO_mode in ["LTAO", "SCAO"]:
 		jitter = _jitter
 		diameter = D
-		logging.info("define LTAO PSF")
+		logging.info("define AO PSF")
 		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
 			# PSD cubes
 			pup = fits.getdata(os.path.join(psf_path,"ELT_pup.fits"))
@@ -235,7 +238,7 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, LTAO):
 			except:
 				raise HSIMError(str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
 				
-			psd_cube = fits.getdata(os.path.join(psf_path, config_data["PSD_file"]))
+			psd_cube = fits.getdata(os.path.join(psf_path, config_data["PSD_file"][AO_mode]))
 			psd = psd_cube[index_airmass, index_seeing,:,:]
 			psd = eclat(psd)
 
@@ -262,10 +265,10 @@ def create_psf(lamb, Airy=False):
 		cube: PSF
 	'''
 		
-	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, useLTAO
+	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode
 	global seeing, air_mass
 
-	if useLTAO:
+	if AO_mode in ["LTAO", "SCAO"]:
 		# size of a pixel returned by psd_to_psf
 		pix_psf = lamb*1e-6/(2.*diameter)*1/(4.85*1e-9) # mas
 		

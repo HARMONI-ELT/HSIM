@@ -20,7 +20,8 @@ if __name__=="__main__":
 
 	#Get version number
 	try:
-		with open('PKG-INFO') as f:
+		dir_path = os.path.dirname(os.path.realpath(__file__))
+		with open(dir_path + '/PKG-INFO') as f:
 			ver = f.readlines()[2][:-1].split('Version: ')[1]
 
 	except:
@@ -74,10 +75,10 @@ if __name__=="__main__":
 		print "Output directory '" + odir + "'  does not exist or is not a directory. Exiting."
 		sys.exit()
 	
-	debug_plots = False
+	debug = False
 	for o, a in optlist:
 		if o in ("-d"):
-			debug_plots = True
+			debug = True
 			break
 
 	for o, a in optlist:
@@ -91,14 +92,14 @@ if __name__=="__main__":
 			print '3. NDIT: No. of exposures'
 			print '4. grating - V+R, Iz+J, H+K, Iz, J, H, K, z, H-high, K-short, K-long'
 			print '5. spax: spatial pixel (spaxel) scale [mas] - 4x4, 10x10, 20x20, 30x60 '
-			print '6. seeing: Atmospheric seeing FWHM [arcsec] - 0.63", 0.71", 0.84", 1.11", 1.32"'
+			print '6. seeing: Atmospheric seeing FWHM [arcsec] - 0.43", 0.57", 0.64", 0.72", 1.04"'
 			print '7. air mass - 1.1, 1.3, 1.5, 2.0'
 			print '8. Moon fractional illumination - 0 0.5 1.0'
 			print '9. jitter: Additional telescope PSF blur [mas]'
 			print '10. site temp: Site/telescope temperature [K]'
 			print '11. ADR on/off: (True/False) - atmospheric differential refraction'
 			print '12. noise seed'
-			print '13. AO mode [LTAO/noAO]'
+			print '13. AO mode [LTAO/SCAO//noAO]'
 			#print '14. Use detector systematics (True/False)'
 			print ""
 			
@@ -122,7 +123,7 @@ if __name__=="__main__":
 			#Start main function
 			main(os.path.join(".", datacube), os.path.join(".", odir), DIT, NDIT, grat, spax, seeing, air_mass, ver,
 				res_jitter=jitter, moon=moon, site_temp=site_temp, adr_switch=adr, det_switch='False',
-				seednum=noise_seed, nprocs=nprocs, keep_debug_plots=debug_plots, aoMode=ao_mode)
+				seednum=noise_seed, nprocs=nprocs, debug=debug, aoMode=ao_mode)
 
 			sys.exit()
 
@@ -229,7 +230,7 @@ if __name__=="__main__":
 				self.SEEINGVAL = wx.Choice(panel, choices=map(str, sorted(config_data["PSD_cube"]["seeings"])))
 				self.SEEINGVAL.SetStringSelection(str(config_data["PSD_cube"]["seeings"][2]))
 				AOMODE = wx.StaticText(panel, label="AO mode")
-				self.AOMODEVAL = wx.Choice(panel, choices=['LTAO', 'noAO'])
+				self.AOMODEVAL = wx.Choice(panel, choices=['LTAO', 'SCAO', 'noAO'])
 				self.AOMODEVAL.SetStringSelection('LTAO')
 				MOON = wx.StaticText(panel, label="Moon illumination")
 				self.MOONVAL = wx.Choice(panel, choices=map(str, [0, 0.5, 1]))

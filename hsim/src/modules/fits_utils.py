@@ -108,22 +108,22 @@ def wavelength_array(header):
 	w_units = header['CUNIT3'].lower()
 
 	if w_units == 'microns' or w_units == 'micron':
-		pass
+		factor = 1.
 	elif w_units == 'angstroms' or w_units == 'angstrom':
-		lambs *= 1.E-4
-		header['SPECRES'] *= 1.E-4
+		factor = 1.E-4
 	elif w_units == 'meters' or w_units == 'meter':
-		lambs *= 1.E6
-		header['SPECRES'] *= 1.E6
+		factor = 1.E6
 	elif w_units == 'nm' or w_units == 'nanometers':
-		lambs *= 1.E-3
-		header['SPECRES'] *= 1.E-3
+		factor = 1.E-3
 	else:
 		raise HSIMError('Choose correct units please: microns, angstroms, metres or nm')
 	
+	lambs *= factor
+	header['SPECRES'] *= factor
+	header['CDELT3'] *= factor
+	
 	#Update header with new wavelength units
 	header['CRVAL3'] = lambs[0]
-	header['CDELT3'] = (lambs[1]-lambs[0])
 	header['CUNIT3'] = 'microns'
 
 	return lambs, header

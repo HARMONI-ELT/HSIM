@@ -27,7 +27,7 @@ from modules.adr import apply_adr
 from modules.rebin import *
 
 def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, res_jitter=3., moon=0.,
-	 site_temp=280.5, adr_switch='True', det_switch='False', seednum=100, nprocs=mp.cpu_count()-1, keep_debug_plots=False, aoMode="LTAO"):
+	 site_temp=280.5, adr_switch='True', det_switch='False', seednum=100, nprocs=mp.cpu_count()-1, debug=False, aoMode="LTAO"):
 	'''
 	Inputs:
 		datacube: Input high resolution datacube (RA, DEC, lambda)
@@ -45,13 +45,14 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		det_switch: Boolean - use detector systematics (off by default)
 		seednum: ramdom seed number
 		nprocs: Number of processes
-		keep_debug_plots: keep debug plots
-		aoMode: Adaptive optics mode: "LTAO" or "noAO" for seeing limited
+		debug: keep debug plots and all noise outputs
+		aoMode: Adaptive optics mode: "LTAO", "SCAO", or "noAO" for seeing limited
 
 	Outputs:
 
 	'''
 	debug_plots = True
+	aoMode = aoMode.upper()
 	
 	Conf = collections.namedtuple('Conf', 'name, header, value')
 	simulation_conf = [
@@ -96,12 +97,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	for _ in simulation_conf:
 		logging.info(_.name + " = " + str(_.value))
 	
-	if aoMode.upper() == "LTAO":
-		use_LTAO = True
-	elif aoMode.upper() == "NOAO":
-		use_LTAO = False
-	else:
-		logging.error(aoMode + ' is not a valid AO mode. Valid options are: LTAO or noAO')
+	if aoMode not in ["LTAO", "SCAO", "NOAO"]:
+		logging.error(aoMode + ' is not a valid AO mode. Valid options are: LTAO, SCAO, noAO')
 		return
 
 
@@ -134,13 +131,13 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	#	- PSF + Jitter
 	#	- Telescope background
 	#	- Telescope transmission
-	cube_exp, back_emission, psf, psf_lambda = sim_telescope(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, res_jitter, air_mass, seeing, spax, site_temp, nprocs, debug_plots=debug_plots, output_file=base_filename, use_LTAO=use_LTAO)
+	cube_exp, back_emission, psf, psf_lambda = sim_telescope(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, res_jitter, air_mass, seeing, spax, site_temp, aoMode, nprocs, debug_plots=debug_plots, output_file=base_filename)
 
 	# 3 - Instrument:
 	#	- LSF
 	#	- Instrument background
 	#	- Instrument transmission
-	cube_exp, back_emission = sim_instrument(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, debug_plots=debug_plots, output_file=base_filename, LTAO_dichroic=use_LTAO)
+	cube_exp, back_emission, LSF_width_A = sim_instrument(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=debug_plots, output_file=base_filename)
 		
 	# 4 - Rebin cube to output spatial and spectral pixel size
 	logging.info("Rebin data")
@@ -166,9 +163,12 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	scale_z = config_data["spectral_sampling"]["output"]/config_data["spectral_sampling"]["internal"]
 	
 	lambs = lambs_extended[cube_lamb_mask]
-	new_lamb_per_pix = (lambs[1] - lambs[0])/scale_z
+	new_lamb_per_pix = (lambs[1] - lambs[0])/scale_z # micron
+	LSF_width_pix = int(LSF_width_A/10000./new_lamb_per_pix) + 1
 	
 	output_lambs = new_lamb_per_pix*np.arange(int(len(lambs)*scale_z)) + lambs[0]
+	#output_lambs = output_lambs[LSF_width_pix:-LSF_width_pix]
+	
 	output_cube_spec = np.zeros((len(output_lambs), out_size_y, out_size_x))
 	
 	logging.info("- Output spectral sampling: {:.2f} A".format(new_lamb_per_pix*10000.))
@@ -287,10 +287,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# Calculate noise cube
 	noise_cube_object = abs(output_cube_spec*NDIT) # object+back noise variance
 	noise_cube_back = abs(output_back_emission_cube*NDIT) # back noise variance
-	noise_cube_read_noise = np.sqrt(NDIT)*read_noise # read noise sigma
+	noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*read_noise # read noise sigma
 	noise_cube_dark = dark_cube # dark noise variance
 	
-	noise_cube_total = np.sqrt(noise_cube_object + noise_cube_back + 2.*noise_cube_dark + 2.*noise_cube_read_noise**2)
+	noise_cube_total = np.sqrt(noise_cube_object + 2.*noise_cube_back + 2.*noise_cube_dark + 2.*noise_cube_read_noise**2)
 	
 	#
 	logging.info("Saving output")
@@ -317,9 +317,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 			plt.plot(w, e, label="Moon", color=colors[6])
 			total_telescope_sky_em += e
 		
-		if use_LTAO:
-			w, e = np.loadtxt(base_filename + "_ins_LTAOd_em.txt", unpack=True)
-			plt.plot(w, e, label="LTAO dichroic", color=colors[2])
+		if aoMode != "NOAO":
+			w, e = np.loadtxt(base_filename + "_ins_AOd_em.txt", unpack=True)
+			plt.plot(w, e, label="AO dichroic", color=colors[2])
 			total_instrument_em += e
 		
 		w, e = np.loadtxt(base_filename + "_ins_FPRS_em.txt", unpack=True)
@@ -349,11 +349,11 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 			return
 		total_tr *= e
 	
-		if use_LTAO:
-			w, e = np.loadtxt(base_filename + "_ins_LTAOd_tr.txt", unpack=True)
-			plt.plot(w, e, label="LTAO dichroic", color=colors[2])
+		if aoMode != "NOAO":
+			w, e = np.loadtxt(base_filename + "_ins_AOd_tr.txt", unpack=True)
+			plt.plot(w, e, label="AO dichroic", color=colors[2])
 			if np.sum(np.abs(total_tr_w - w)) != 0.:
-				logging.error('LTAO transmission wavelength error. This should never happen.')
+				logging.error('AO transmission wavelength error. This should never happen.')
 				return
 			total_tr *= e
 
@@ -389,11 +389,11 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		plt.ylabel(r"transmission")
 		plt.savefig(base_filename + "_total_tr.pdf")
 
-		if not keep_debug_plots:
+		if not debug:
 			list_files = ["sky_tr", "sky_em", "moon_em", "tel_tr", "tel_em", "ins_tr", "ins_em", "det_qe", "ins_FPRS_tr", "ins_FPRS_em"]
-			if use_LTAO:
-				list_files.append("ins_LTAOd_tr")
-				list_files.append("ins_LTAOd_em")
+			if aoMode != "NOAO":
+				list_files.append("ins_AOd_tr")
+				list_files.append("ins_AOd_em")
 			for _ in list_files:
 				os.remove(base_filename + "_" + _ + ".txt")
 				os.remove(base_filename + "_" + _ + ".pdf")
@@ -416,6 +416,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# standard deviation cube
 	outFile_std = base_filename + "_std.fits"
 	
+	# 
+	outFile_read_noise = base_filename + "_read_noise.fits"
+	outFile_dark = base_filename + "_dark.fits"
+	
 	# Update header
 	for _ in simulation_conf:
 		head[_.header] = str(_.value)
@@ -431,6 +435,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	save_fits_cube(outFile_SNR, output_cube_spec_wo_back*NDIT/noise_cube_total, "SNR (O-B)/Noise", head)
 	save_fits_cube(outFile_std, noise_cube_total, "Noise standard deviation", head)
+	
+	if debug:
+		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)
+		save_fits_cube(outFile_read_noise, noise_cube_read_noise**2, "read noise variance", head)
 	
 	# Save PSF
 	head_PSF = head

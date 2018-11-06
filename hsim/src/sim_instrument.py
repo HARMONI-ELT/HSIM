@@ -92,39 +92,44 @@ def HARMONI_transmission_curve(wavels, grating, debug_plots, output_file):
 	return cube_inst_trans
 
 
-def LTAO_dichroic_transmission_curve(wavels, grating, debug_plots, output_file):
+def AO_dichroic_transmission_curve(wavels, aoMode, grating, debug_plots, output_file):
 	'''Function that generates a full HARMONI throughput curve.
 
 	Inputs:
 		wavels: array of wavelengths for datacube
+		aoMode: LTAO/SCAO
 		grating: grating choice to set grating throughput curve
 
 	Outputs:
-		cube_ltaod_trans: array of LTAO dichroic throughput
+		cube_aod_trans: array of AO dichroic throughput
 			for each wavelength value in wavels
 	'''
 
-	#Load LTAO dichroic throughput file
-	inst_r = np.genfromtxt(os.path.join(tppath, "LTAO_dichroic.txt"), delimiter=',')
+	#Load AO dichroic throughput file
+	if aoMode in ["LTAO", "SCAO"]:
+		inst_r = np.genfromtxt(os.path.join(tppath, "LTAO_dichroic.txt"), delimiter=',')
+	else:
+		logging.error("AO Dichroic throughput file not found for " + aoMode)
+		return 1.
 
 	#Interpolate as a function of wavelength
-	ltaod_trans_interp = interp1d(inst_r[:,0], inst_r[:,1],
+	aod_trans_interp = interp1d(inst_r[:,0], inst_r[:,1],
 					kind='linear', bounds_error=False, fill_value=0.)
 	
 	#Obtain values for datacube wavelength array
-	cube_ltaod_trans = ltaod_trans_interp(wavels)
+	cube_aod_trans = aod_trans_interp(wavels)
 
 	if debug_plots:
 		plt.clf()
-		plt.plot(wavels, cube_ltaod_trans)
+		plt.plot(wavels, cube_aod_trans)
 		plt.xlabel(r"wavelength [$\mu$m]")
 		plt.ylabel(r"instrument transmission ")
-		plt.savefig(output_file + "_ins_LTAOd_tr.pdf")
-		np.savetxt(output_file + "_ins_LTAOd_tr.txt", np.c_[wavels, cube_ltaod_trans])
+		plt.savefig(output_file + "_ins_AOd_tr.pdf")
+		np.savetxt(output_file + "_ins_AOd_tr.txt", np.c_[wavels, cube_aod_trans])
 
 	
 	
-	return cube_ltaod_trans
+	return cube_aod_trans
 
 
 def FPRS_transmission_curve(wavels, grating, debug_plots, output_file):
@@ -162,7 +167,7 @@ def FPRS_transmission_curve(wavels, grating, debug_plots, output_file):
 
 
 
-def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, debug_plots=False, output_file="", LTAO_dichroic=True):
+def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=False, output_file=""):
 	''' Simulates instrument effects
 	Inputs:
 		cube: Input datacube (RA, DEC, lambda)
@@ -173,22 +178,23 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 		grating: Spectral grating
 		site_temp: Telescope temperature [K]
 		input_spec_res: Spectral resolution of the input cube [micron]
+		aoMode: LTAO/SCAO/NOAO
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
-		LTAO_dichroic: True if the LTAO dichroic is used
 
 	Outputs:
-		cube: Cube including ...
+		cube: cube including instrument effects
 		back_emission: back_emission including telescope
+		LSF_size: width of the LSF [A]
 	'''
 	
 	# Get instrument transmission
 	logging.info("Calculating HARMONI transmission")
 	# LTAO dichroic if present
-	if LTAO_dichroic:
-		LTAOd_tr = LTAO_dichroic_transmission_curve(ext_lambs, grating, debug_plots, output_file)
+	if aoMode in ["LTAO", "SCAO"]:
+		AOd_tr = AO_dichroic_transmission_curve(ext_lambs, aoMode, grating, debug_plots, output_file)
 	else:
-		LTAOd_tr = 1.
+		AOd_tr = 1.
 	
 	# FPRS
 	FPRS_tr = FPRS_transmission_curve(ext_lambs, grating, debug_plots, output_file)
@@ -196,17 +202,17 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 	# instrument after FPRS
 	instrument_tr = HARMONI_transmission_curve(ext_lambs, grating, debug_plots, output_file)
 
-	back_emission = back_emission*LTAOd_tr*FPRS_tr*instrument_tr
+	back_emission = back_emission*AOd_tr*FPRS_tr*instrument_tr
 	
 	
 	# Get instrument background
 	logging.info("Calculating HARMONI background")
 
-	# LTAO dichroic if present
-	if LTAO_dichroic:
-		LTAOd_background = HARMONI_background(ext_lambs, site_temp - config_data['HARMONI_LTAO_diff_temp'], 1. - LTAOd_tr, "LTAOd", DIT, debug_plots, output_file)
+	# AO dichroic if present
+	if aoMode in ["LTAO", "SCAO"]:
+		AOd_background = HARMONI_background(ext_lambs, site_temp - config_data['HARMONI_AO_diff_temp'], 1. - AOd_tr, "AOd", DIT, debug_plots, output_file)
 	else:
-		LTAOd_background = 0.
+		AOd_background = 0.
 
 	# FPRS
 	FPRS_background = HARMONI_background(ext_lambs, site_temp - config_data['HARMONI_FPRS_diff_temp'], 1. - FPRS_tr, "FPRS", DIT, debug_plots, output_file)
@@ -214,15 +220,15 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 	# instrument after FPRS
 	instrument_background = HARMONI_background(ext_lambs, config_data['HARMONI_temp'], 1. - instrument_tr, "", DIT, debug_plots, output_file)
 	
-	back_emission = back_emission + LTAOd_background + FPRS_background + instrument_background
+	back_emission = back_emission + AOd_background + FPRS_background + instrument_background
 	
 	# Add instrument emission/transmission to the input cube
 	
-	instrument_tr_cube = (LTAOd_tr*FPRS_tr*instrument_tr)[cube_lamb_mask]
+	instrument_tr_cube = (AOd_tr*FPRS_tr*instrument_tr)[cube_lamb_mask]
 	instrument_tr_cube.shape = (np.sum(cube_lamb_mask),1,1)
 	cube = np.multiply(cube, instrument_tr_cube)
 
-	total_instrument_background = LTAOd_background + FPRS_background + instrument_background
+	total_instrument_background = AOd_background + FPRS_background + instrument_background
 	instrument_background_cube = total_instrument_background[cube_lamb_mask]
 	instrument_background_cube.shape = (np.sum(cube_lamb_mask),1,1)
 	cube = np.add(cube, instrument_background_cube)
@@ -237,10 +243,13 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 	logging.info("Input resolution: {:.3f} A".format(input_spec_res*10000.))
 	logging.info("LSF FWHM = {:.3f} A".format((new_res**2 - input_spec_res**2)**0.5*10000.))
 	
+	
+	npix_LSF = 0
 	if new_res_pix > 0.:
 		sigma_LSF_pix = new_res_pix/2.35482
-		
-		kernel_LSF = Gaussian1DKernel(stddev = sigma_LSF_pix, x_size = int(sigma_LSF_pix*config_data['LSF_kernel_size']))
+	
+		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
+		kernel_LSF = Gaussian1DKernel(stddev = sigma_LSF_pix, x_size = npix_LSF)
 		z, y, x = cube.shape
 		
 		for py in range(y):
@@ -253,7 +262,7 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 		
 		back_emission = np.convolve(back_emission, kernel_LSF, mode="same")
 
-	return cube, back_emission
+	LSF_size = npix_LSF*(ext_lambs[1] - ext_lambs[0])*10000. # A
+	logging.info("Total LSF width for the convolution: {:.3f} A".format(LSF_size))
 	
-
-	
+	return cube, back_emission, LSF_size

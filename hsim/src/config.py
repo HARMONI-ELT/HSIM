@@ -21,7 +21,7 @@ config_data = {
 	
 	'HARMONI_temp':140., # K
 	'HARMONI_FPRS_diff_temp':20., # Tamb - 20 K for the FPRS
-	'HARMONI_LTAO_diff_temp':5., #  Tamb - 5 K for the LTAO dichroic
+	'HARMONI_AO_diff_temp':5., #  Tamb - 5 K for the AO dichroic
 	
 	'data_dir':"sim_data/",
 		
@@ -52,10 +52,11 @@ config_data = {
 		  '30x60':30.
 		},
 
-	#Each PSD file containts 5 seeings [0.63, 0.71, 0.84 , 1.11 , 1.32] and 4 zenith angles [25,40,48.,60]
-	'PSD_file':"psd_ltao_hsim_6LGS_cn2_all.fits",
+	#Each PSD file containts 5 seeings [0.43, 0.57, 0.64, 0.72, 1.04] and 4 zenith angles [25, 40, 48, 60]
+	'PSD_file':{"LTAO":"psd_ltao_hsim_6LGS_cn2_all.fits", 
+		"SCAO":"psd_SCAO_hsim_6_cn2_all.fits"},
 	'PSD_cube':{'air_masses':[1.1, 1.3, 1.5, 2.0],
-		'seeings':[0.63, 0.71, 0.84, 1.11, 1.32]}
+		'seeings':[0.43, 0.57, 0.64, 0.72, 1.04]}
 
 }
 

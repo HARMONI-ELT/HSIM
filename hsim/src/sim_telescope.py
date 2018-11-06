@@ -133,7 +133,7 @@ def save_result(results):
 	result_cube[i,:,:] = conv_image[y0:y1,x0:x1]
 
 
-def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, ncpus, debug_plots=False, output_file="", use_LTAO=True):
+def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, aoMode, ncpus, debug_plots=False, output_file=""):
 	''' Simulates telescope effects
 	Inputs:
 		cube: Input datacube (RA, DEC, lambda)
@@ -146,10 +146,10 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 		seeing: Atmospheric seeing FWHM [arcsec]
 		spax: spatial pixel (spaxel) scale [mas]
 		site_temp: Telescope temperature [K]
+		aoMode: AO mode: LTAO/SCAO/NOAO
 		ncpus: no. of CPUs to use
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
-		use_LTAO: True if LTAO is active for this observation
 		
 	Outputs:
 		cube: Cube including telescope background and emission and convolved with PSF
@@ -190,7 +190,7 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	
 	psf_size = config_data["spaxel_scale"][spax].psfsize
 	
-	define_psf(air_mass, seeing, sigma_combined, config_data["telescope"]["diameter"], psf_size, config_data["spaxel_scale"][spax].psfscale, use_LTAO)
+	define_psf(air_mass, seeing, sigma_combined, config_data["telescope"]["diameter"], psf_size, config_data["spaxel_scale"][spax].psfscale, aoMode)
 	lambs = ext_lambs[cube_lamb_mask]
 	
 	# padding with back_emission

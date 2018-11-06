@@ -64,7 +64,13 @@ def spectral_res(datacube, head, grating, wavels):
 		
 	elif wavels[0] > bandws.lmin and wavels[-1] < bandws.lmax: # cube wavelength range inside grating choice
 		logging.info('Cube wavelength range within grating range')
-		new_wavels = np.arange(wavels[0], wavels[-1], lamb_per_pix)
+		if len(wavels) > 1:
+			new_wavels = np.arange(wavels[0], wavels[-1], lamb_per_pix)
+		else:
+			logging.warning('Input cube only has 1 slice. This slice will be duplicated in the internal cube')
+			spec_size = 36
+			new_wavels = np.arange(wavels[0] - spec_size*0.5*lamb_per_pix, wavels[0] + spec_size*0.5*lamb_per_pix, lamb_per_pix)
+			wavels = new_wavels
 	
 	elif wavels[0] < bandws.lmin and wavels[-1] < bandws.lmax and wavels[-1] > bandws.lmin: # cube short wavelength longer than grating shortest wavelength
 		logging.warning('Cube shortest wavelength shorter than grating')
@@ -75,16 +81,19 @@ def spectral_res(datacube, head, grating, wavels):
 		new_wavels = np.arange(wavels[0], bandws.lmax, lamb_per_pix)
 		
 	else:
-		raise HSIMError('The wavelength range of the input cube ' + str(wavels[0]) + " - " + str(wavels[1]) + " is not valid for the " + grating + " grating ("  + str(bandws.lmin) + " - " + str(bandws.lmax) + ")")
+		raise HSIMError('The wavelength range of the input cube ' + str(wavels[0]) + " - " + str(wavels[-1]) + " is not valid for the " + grating + " grating ("  + str(bandws.lmin) + " - " + str(bandws.lmax) + ")")
 
 	new_cube = np.zeros((len(new_wavels), y, x), dtype=float)
+	logging.info('Internal input cube size x={x} y={y} z={z}'.format(x=x, y=y, z=len(new_wavels)))
 	
 	# regrid spectrum and conserve flux
-	logging.info('Interpolating data cube - spectral')
-	for i in np.arange(0, x):
-		for j in np.arange(0, y):
-			new_cube[:,j,i] = rebin1d(new_wavels, wavels, datacube[:,j,i])
-	
+	if len(wavels) !=  len(new_wavels):
+		logging.info('Interpolating data cube - spectral')
+		for i in np.arange(0, x):
+			for j in np.arange(0, y):
+				new_cube[:,j,i] = rebin1d(new_wavels, wavels, datacube[:,j,i])
+	else:
+		new_cube = datacube
 	
 	#Update header
 	head['CRVAL3'] = new_wavels[0]

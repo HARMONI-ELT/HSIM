@@ -71,6 +71,7 @@ v204}
 Version & Date & Comments \\
 \hline
 1.0 & 2018-09-27 & HSIM v204 release \\
+1.1 &  &  \\
 \hline
 \end{tabular}
 \end{table*}
@@ -127,18 +128,53 @@ Spaxel scale & input scale\\
 
 Similarly, it is recommended to oversample the spectral dimension of the input cube by a factor of 4 with respect to the nominal resolving power ($R$) of the selected grating (e.g., the spectral sampling for the K-grating $R$=7100 at 2.2$\mu$m should be 0.078\,nm). If your input cube has a different spectral sampling, HSIM will interpolate\slash rebin it. If possible, it is recommend to use input cubes with a spectral resolution a factor of 2 better than the $R$ of the selected grating.
 
-The information on the spatial and spectral sampling of the input cube are passed through the \textsc{fits} file header to HSIM. In particular, the \texttt{CDELT1} and \texttt{CDELT2} header values are used to get the spatial scale, and \texttt{CDELT3} to obtain the spectral sampling. The spectral resolution of the input cube is indicated by \texttt{SPECRES} in wavelength units similar to \texttt{CDELT3}. The units of these values are those indicated by the \texttt{CUNIT1}, \texttt{CUNIT2}, and \texttt{CUNIT3} header values. Currently, for the spatial units (\texttt{CUNIT1} and \texttt{CUNIT2}), the accepted values are \texttt{mas} and \texttt{arcsec}. For the spectral units, \texttt{CUNIT3} and \texttt{SPECRES}, HSIM recognizes the following values: \texttt{angstrom}, \texttt{nanometers}, \texttt{nm}, \texttt{micron}, and \texttt{meter}. The size of the input cube is obtained from \texttt{NAXIS1}, \texttt{NAXIS2}, and \texttt{NAXIS3}.
+The information on the spatial and spectral sampling of the input cube are passed through the \textsc{fits} file header to HSIM (Table~\ref{tab:fits_header} shows a summary of all the header keywords used by HSIM). In particular, the \texttt{CDELT1} and \texttt{CDELT2} header values are used to get the spatial scale, and \texttt{CDELT3} to obtain the spectral sampling. The spectral resolution of the input cube is indicated by \texttt{SPECRES} in wavelength units similar to \texttt{CDELT3}. The units of these values are those indicated by the \texttt{CUNIT1}, \texttt{CUNIT2}, and \texttt{CUNIT3} header values. Currently, for the spatial units (\texttt{CUNIT1} and \texttt{CUNIT2}), the accepted values are \texttt{mas} and \texttt{arcsec}. For the spectral units, \texttt{CUNIT3} and \texttt{SPECRES}, HSIM recognizes the following values: \texttt{angstrom}, \texttt{nanometers}, \texttt{nm}, \texttt{micron}, and \texttt{meter}. The size of the input cube is obtained from \texttt{NAXIS1}, \texttt{NAXIS2}, and \texttt{NAXIS3}.
 
 
 The wavelength of each slice of the data cube are also calculated from the \textsc{fits} header using the following relation:
-\begin{equation}
+\begin{equation}\label{eq:lambda}
 \lambda_i = \texttt{CRVAL3} + \texttt{CDELT3} \times (i - \texttt{CRPIX3})
 \end{equation}
 
 where $i$ is the slice number from 1 to $\texttt{NAXIS3}$. The wavelength range of the input cube and the selected grating should, at least, partially overlap.
 
-Finally, the input data cube should be in surface brightness units. The accepted units are the following:
-\texttt{erg/s/cm2/um/arcsec2}, \texttt{erg/s/cm2/A/arcsec2}, \texttt{J/s/m2/um/arcsec2}, and \texttt{J/s/m2/A/arcsec2}.
+Finally, the input data cube should be in surface brightness units indicated by \texttt{BUNIT}. The accepted units are the following: \texttt{erg/s/cm2/um/arcsec2}, \texttt{erg/s/cm2/A/arcsec2}, \texttt{J/s/m2/um/arcsec2}, and \texttt{J/s/m2/A/arcsec2}.
+
+
+\begin{table*}[h]
+\footnotesize
+\centering
+\caption{\textsc{fits} header keywords used by HSIM}
+\label{tab:fits_header}
+\begin{tabular}{lp{75mm}p{50mm}}
+\hline
+Keyword & Description & Accepted values \\
+\hline
+\multicolumn{3}{c}{Spatial information}\\
+\hline
+NAXIS\{1,2\} & Number of pixels along x-axis and y-axis\\
+CTYPE1 & Type of the spatial x-axis & x, ra \\
+CTYPE2 & Type of the spatial y-axis & y, dec \\
+CDELT\{1,2\} & X and Y pixel size \\
+CUNIT\{1,2\} & Units of CDELT\{1,2\} & mas, arcsec\\
+\hline
+\multicolumn{3}{c}{Spectral information}\\
+\hline
+NAXIS3 & Number of spectral pixels \\
+CTYPE3 & Type of the spectral axis & wavelength \\
+CDELT3 & Size of the spectral pixel \\
+SPECRES & Spectral resolution in wavelength units &  \\
+CRPIX3 & Reference pixel for the spectral axis (see Equation~\ref{eq:lambda}) \\
+CRVAL3 & Wavelength of the reference pixel\\
+CUNIT3 & Units of CDELT3, CRVAL3, and SPECRES & angstrom, nanometers, nm, \hbox{micron}, meter \\
+\hline
+\multicolumn{3}{c}{Flux units}\\
+\hline
+BUNIT & Flux units of the cube & erg/s/cm2/um/arcsec2, erg/s/cm2/A/arcsec2,
+J/s/m2/um/arcsec2, J/s/m2/A/arcsec2 \\
+\hline
+\end{tabular}
+\end{table*}
 
 
 \subsection{Running HSIM}
@@ -183,14 +219,14 @@ The available HSIM options are listed below. The number before them indicates th
 \item Number of exposures (e.g., \texttt{3}).
 \item Grating: Indicates the HARMONI grating. The available options are the following: \texttt{V+R, Iz+J, H+K, Iz, J, H, K, z, J-high, H-high, K-high, K-high1, K-high2}.
 \item Spaxel Scale: HARMONI spatial scale in mas. The available values are the following: \texttt{4x4, 10x10, 20x20, 30+x60}.
-\item Zenith seeing: Atmospheric seeing FWHM in arcsec. The available values are the following: \texttt{0.63, 0.71, 0.84, 1.11, 1.32}.
+\item Zenith seeing: Atmospheric seeing FWHM in arcsec. The available values are the following: \texttt{0.43, 0.57, 0.64, 0.72, 1.04}.
 \item Air mass: Average air mass during the HARMONI observation. The available values are the following: \texttt{1.1, 1.3, 1.5, 2.0}, which correspond to zenith angles of 25$^{\circ}$, 40$^{\circ}$, 48$^{\circ}$, and 60$^{\circ}$, respectively.
 \item Moon illumination: Fraction of the Moon that is illuminated at the time of the observation. A 30$^{\circ}$ separation between target and Moon is assumed. The available values are the following: \texttt{0, 0.5, 1.0}.
 \item Jitter: Additional telescope PSF blur in mas. Default value is \texttt{3}.
 \item Telescope temperature: Temperature of the site\slash telescope in K. This is used to calculate the telescope and part of the instrument background emission. Default value is \texttt{280}.
 \item ADR on/off: Indicates if the atmospheric differential refraction is simulated. When simulated, the differential refraction is corrected in the output cubes in a way similar to what is expected from the pipieline. Available values are \texttt{True, False}.
 \item Noise seed: Seed used for the random number generator during the simulation. It only affects the observed outputs (see Section~\ref{s:output}).
-\item AO mode: Adaptive optics mode of the observations. The available values are the following: \texttt{LTAO, noAO}. \texttt{LTAO} corresponds to the Laser Tomography Adaptive Optics mode and \texttt{noAO} indicates that no adaptive optics corrections are applied.
+\item AO mode: Adaptive optics mode of the observations. The available values are the following: \texttt{LTAO, SCAO, noAO}. \texttt{LTAO} corresponds to the Laser Tomography Adaptive Optics mode,  \texttt{SCAO} to the Single Conjugate Adaptive Optics mode and \texttt{noAO} indicates that no adaptive optics corrections are applied.
 % \item Detector systematics: Indicates if the detector systematics (i.e., ..) are simulated. It only affects the observed outputs (see Section~\ref{s:output}). Available values are \texttt{True, False}.
 \end{enumerate}
 
