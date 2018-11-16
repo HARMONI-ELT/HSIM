@@ -221,7 +221,7 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 	if AO_mode in ["LTAO", "SCAO"]:
 		jitter = _jitter
 		diameter = D
-		logging.info("define AO PSF")
+		logging.info("define AO PSF - " + AO_mode)
 		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
 			# PSD cubes
 			pup = fits.getdata(os.path.join(psf_path,"ELT_pup.fits"))
@@ -237,13 +237,17 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 				index_seeing = config_data["PSD_cube"]["seeings"].index(seeing)
 			except:
 				raise HSIMError(str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
-				
+			
+			
+			logging.info("Using PSD file: " + config_data["PSD_file"][AO_mode])
+			
 			psd_cube = fits.getdata(os.path.join(psf_path, config_data["PSD_file"][AO_mode]))
 			psd = psd_cube[index_airmass, index_seeing,:,:]
 			psd = eclat(psd)
 
 		else:
 			#Test PSF
+			logging.warning("Using test PSD files")
 			pup = fits.getdata(os.path.join(psf_path,"demo_pup.fits"))
 			stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))	
 			psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))

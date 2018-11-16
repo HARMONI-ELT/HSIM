@@ -29,9 +29,12 @@ config_data = {
 			'Iz+J':GratingInfo(0.8105,1.3695, 3300.), 'H+K':GratingInfo(1.4500,2.4500, 3300.),
 			'Iz':GratingInfo(0.8300,1.0500, 7100.),'J':GratingInfo(1.0463,1.3237, 7100.), 'H':GratingInfo(1.4348,1.8151, 7100.), 'K':GratingInfo(1.9514,2.4686, 7100.),
 			# high-resolution
-			'z':GratingInfo(0.829, 0.902, 17200.), 
+			'z-high':GratingInfo(0.829, 0.902, 17200.),
+			'J-short':GratingInfo(1.012, 1.102, 17200.),
+			'J-long':GratingInfo(1.098, 1.189, 17200.),
+			'J-high':GratingInfo(1.1900, 1.3000, 17200.),
 			'H-high':GratingInfo(1.541, 1.676, 17200.),
-			'K-short':GratingInfo(2.024, 2.202, 17200.), 
+			'K-short':GratingInfo(2.024, 2.202, 17200.),
 			'K-long':GratingInfo(2.197, 2.390, 17200.)
 			},
 	
