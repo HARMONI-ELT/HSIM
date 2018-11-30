@@ -200,11 +200,11 @@ def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mas
 	# Add sky emission/transmission to the input cube
 	sky_trans_cube = sky_trans[cube_lamb_mask]
 	sky_trans_cube.shape = (np.sum(cube_lamb_mask),1,1)
-	cube = np.multiply(cube, sky_trans_cube)
+	cube *= sky_trans_cube
 
 	sky_emission_cube = sky_emission[cube_lamb_mask] + moon_emission[cube_lamb_mask]
 	sky_emission_cube.shape = (np.sum(cube_lamb_mask),1,1)
-	cube = np.add(cube, sky_emission_cube)
+	cube += sky_emission_cube
 	
 	# Add atmospheric differential refration
 	if adr_switch == "True":

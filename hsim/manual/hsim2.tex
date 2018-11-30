@@ -236,10 +236,11 @@ HSIM stores the results of the simulation in the specified output directory (the
 
 \begin{enumerate}
 \setlength\itemsep{-0.5ex}
-\item \texttt{\_noiseless\_obj\_plus\_back.fits}. Data cube containing the expected number of electrons per pixel detected by HARMONI due to the target and the background (sky, telescope, and instrument) emissions.
+\item \texttt{\_noiseless\_obj\_plus\_back.fits}. Data cube containing the expected number of electrons per pixel detected by HARMONI due to the target and the background (sky, telescope, and instrument) emissions. \textbf{Cross-talk is not applied to the noiseless outputs. Therefore, their LSF is slightly narrower than that of the observed and reduced outputs.}
 \item \texttt{\_noiseless\_obj.fits}. Expected number of electrons per pixel solely due to the target.
 \item \texttt{\_noiseless\_back.fits}. Expected number of electrons per pixel from the background sources (sky, telescope, and instrument).
 \item \texttt{\_observed\_obj\_plus\_back.fits}. Simulated observed data cube taking into account the photon noise, read noise, dark current, and cross-talk.
+\item \texttt{\_observed\_back.fits}. Simulated observed sky background taking into account the photon noise, read noise, dark current, and cross-talk.
 \item \texttt{\_reduced.fits}. Simulated reduced data cube created by subtracting a simulated sky observation  to the \texttt{\_observed\_obj\_plus\_back.fits} data cube.
 \item \texttt{\_reduced\_SNR.fits}. Signal to noise ratio of the reduced data cube per pixel.
 \item \texttt{\_std.fits}. Noise standard deviation. Includes object and sky noise (Poisson) and dark current and read noise (Gaussian).

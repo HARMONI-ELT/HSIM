@@ -226,12 +226,12 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 	
 	instrument_tr_cube = (AOd_tr*FPRS_tr*instrument_tr)[cube_lamb_mask]
 	instrument_tr_cube.shape = (np.sum(cube_lamb_mask),1,1)
-	cube = np.multiply(cube, instrument_tr_cube)
+	cube *= instrument_tr_cube
 
 	total_instrument_background = AOd_background + FPRS_background + instrument_background
 	instrument_background_cube = total_instrument_background[cube_lamb_mask]
 	instrument_background_cube.shape = (np.sum(cube_lamb_mask),1,1)
-	cube = np.add(cube, instrument_background_cube)
+	cube += instrument_background_cube
 	
 	
 	logging.info("Convolve with LSF")

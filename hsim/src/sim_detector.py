@@ -129,7 +129,7 @@ def sim_detector(cube, back_emission, lambs, grating, DIT, debug_plots=False, ou
 	back_emission = np.multiply(back_emission, qe_curve)
 	
 	qe_curve.shape = (len(lambs),1,1)
-	cube = np.multiply(cube, qe_curve)
+	cube *= qe_curve
 
 	# read noise
 	if grating == "V+R":

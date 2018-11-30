@@ -214,6 +214,9 @@ def init_cube(datacube, grating, spax):
 		except:
 			raise HSIMError('Please use FITS input file - ' + str(datacube))
 	
+	if np.isnan(np.sum(cube)):
+		raise HSIMError('NaN values are not allowed in the input cube')
+	
 	#Check that datacube has required headers to be processed in simulator
 	#Required headers = ['CDELT1/2/3'], ['CRVAL3'], ['NAXIS1/2/3'], ['FUNITS'], ['CRPIX3'],
 	#['CTYPE1/2/3'] = 'RA, DEC, WAVELENGTH, ['CUNIT1/2/3'] = MAS, MAS, microns/angstroms/etc,

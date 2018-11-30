@@ -170,11 +170,11 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	# Add telescope emission/transmission to the input cube
 	tel_reflectivity_cube = telescope_reflectivity[cube_lamb_mask]
 	tel_reflectivity_cube.shape = (np.sum(cube_lamb_mask),1,1)
-	cube = np.multiply(cube, tel_reflectivity_cube)
+	cube *= tel_reflectivity_cube
 
 	tel_background_cube = telescope_background[cube_lamb_mask]
 	tel_background_cube.shape = (np.sum(cube_lamb_mask),1,1)
-	cube = np.add(cube, tel_background_cube)
+	cube += tel_background_cube
 	
 	
 	# PSF + Jitter + Instrument PSF

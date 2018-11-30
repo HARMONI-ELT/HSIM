@@ -138,7 +138,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	#	- Instrument background
 	#	- Instrument transmission
 	cube_exp, back_emission, LSF_width_A = sim_instrument(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=debug_plots, output_file=base_filename)
-		
+	
 	# 4 - Rebin cube to output spatial and spectral pixel size
 	logging.info("Rebin data")
 	logging.info("- Output spaxel scale: " + str(spax))
@@ -248,8 +248,12 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	
 	# B. Background exposure
-	#- background. No crosstalk since the background is uniform
+	#- background with crosstalk
 	sim_back = np.random.poisson(abs(output_back_emission_cube*NDIT)).astype(np.float32)
+	# Apply crosstalk only to NIR detectors
+	if grating != "V+R":
+		sim_back = apply_crosstalk(sim_back, config_data["crosstalk"])
+
 
 	if np.sum(saturated_back) > 0:
 		logging.warning(str(np.sum(saturated_back)) + " pixels are saturated in the back frames")
@@ -266,7 +270,6 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	# C. Calculate reduced cube: object - background exposure
 	sim_reduced = sim_total - sim_total_only_back
-	
 	
 	
 	logging.info("Pipeline interpolation effects")
@@ -430,8 +433,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(outFile_noiseless_background, output_back_emission_cube*NDIT, "Noiseless B", head)
 	save_fits_cube(outFile_noiseless_object, output_cube_spec_wo_back*NDIT, "Noiseless O", head)
 	
-	save_fits_cube(outFile_observed, sim_total, "Observed O+B+Noise", head)
-	save_fits_cube(outFile_reduced, sim_reduced, "Reduced (O+B+Noise) - (B+Noise)", head)
+	save_fits_cube(outFile_observed, sim_total, "Observed O+B1+Noise1", head)
+	save_fits_cube(outFile_observed_back, sim_total_only_back, "Observed B2+Noise2", head)
+	save_fits_cube(outFile_reduced, sim_reduced, "Reduced (O+B1+Noise1) - (B2+Noise2)", head)
 	
 	save_fits_cube(outFile_SNR, output_cube_spec_wo_back*NDIT/noise_cube_total, "SNR (O-B)/Noise", head)
 	save_fits_cube(outFile_std, noise_cube_total, "Noise standard deviation", head)
