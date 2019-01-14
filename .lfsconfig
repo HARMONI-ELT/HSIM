@@ -1,0 +1,2 @@
+[remote "origin"]
+	lfsurl = git@gitlab.physics.ox.ac.uk:routledge/HSIM.git
