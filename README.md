@@ -16,11 +16,10 @@ The required Python modules are:
 - astropy 2.0.4
 - numpy 1.14.1
 - scipy 1.0.0
-- matplotlib 2.1.2  
-- wxPython > 3.0  
+- matplotlib 2.1.2
+- wxPython > 3.0
 
 The code has been tested with the indicated package version, although more recent releases of these packages are likely to work as well.
-   
 
 ## Tips & Tricks ##
 We point out here several useful tips that have emerged from our extensive development process.
