@@ -463,7 +463,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(base_filename + "_PSF.fits", psf, "PSF", head_PSF)
 	
 	if hsimlog.count_error == 0 and hsimlog.count_warning == 0:
-		logging.info('Simulation OK')
+		logging.info('Simulation OK - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")
 	else:
 		logging.warning('Simulation with problems - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")
 	

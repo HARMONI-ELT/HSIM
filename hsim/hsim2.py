@@ -70,11 +70,7 @@ if __name__=="__main__":
 		if o in ("-o", "--odit"):
 			odir = a
 			break
-	
-	if not os.path.exists(odir) or not os.path.isdir(odir):
-		print "Output directory '" + odir + "'  does not exist or is not a directory. Exiting."
-		sys.exit()
-	
+		
 	debug = False
 	for o, a in optlist:
 		if o in ("-d"):
@@ -105,6 +101,10 @@ if __name__=="__main__":
 			
 			sys.exit()
 		elif o in ("-c", "--cline") and len(args) == 13:
+			if not os.path.exists(odir) or not os.path.isdir(odir):
+				print "Output directory '" + odir + "'  does not exist or is not a directory. Exiting."
+				sys.exit()
+
 			datacube = str(args[0])
 			DIT = int(args[1])
 			NDIT = int(args[2])

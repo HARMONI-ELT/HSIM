@@ -210,7 +210,7 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 
 	# AO dichroic if present
 	if aoMode in ["LTAO", "SCAO"]:
-		AOd_background = HARMONI_background(ext_lambs, site_temp - config_data['HARMONI_AO_diff_temp'], 1. - AOd_tr, "AOd", DIT, debug_plots, output_file)
+		AOd_background = HARMONI_background(ext_lambs, site_temp - config_data['HARMONI_AO_diff_temp'][aoMode], 1. - AOd_tr, "AOd", DIT, debug_plots, output_file)
 	else:
 		AOd_background = 0.
 
