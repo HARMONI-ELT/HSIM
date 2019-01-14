@@ -6,7 +6,7 @@ HSIM2 is programmed in Python and the source code can be found at https://github
 
 The purpose of HSIM is to perform in-depth simulations for several key science cases, as part of the design and development of the HARMONI integral field spectrograph. The goal is to be able to simulate the performance of the instrument folding in detailed parameters including the ELT AO performance, atmospheric effects and rrealistic detector statistics. 
 
-For updated information on how to run HSIM2, you can read the manual [hsim2.pdf](tree/master/hsim/manual/hsim2.pdf)
+For updated information on how to run HSIM2, you can read the manual [hsim2.pdf](hsim2.pdf)
 
 
 ## System Requirements
