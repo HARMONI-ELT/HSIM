@@ -310,11 +310,11 @@ if __name__=="__main__":
 				nprocs = int(self.N_PROCVAL.GetValue())
 				odir = str(self.DIRVAL.GetPath())
 				return_adrval = str(self.ADRVAL.GetValue())
-				return_detval = str(self.DETVAL.GetValue())
+				#return_detval = str(self.DETVAL.GetValue())
 				
 				#start main program
 				main(os.path.join(".", cubefile), os.path.join(".", odir), ditval, nditval, photoband, spaxval, seeingval, airmassaval, ver,
-					res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval, det_switch=return_detval,
+					res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval,
 					seednum=noiseseedval, nprocs=nprocs, aoMode=aomode, moon=moon)
 
 
