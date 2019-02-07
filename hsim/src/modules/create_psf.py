@@ -201,7 +201,7 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 		D: telescope diameter [m]
 		fov: number of pixels of the PSF
 		psfscale: pixel size for the PSF [mas]
-		aoMode: LTAO/SCAO/NOAO
+		aoMode: LTAO/SCAO/NOAO/AIRY
 	Outputs:
 		None
 	'''
@@ -218,39 +218,47 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 	seeing = _seeing
 	air_mass = _air_mass
 	
-	if AO_mode in ["LTAO", "SCAO"]:
+	if AO_mode in ["LTAO", "SCAO", "AIRY"]:
 		jitter = _jitter
 		diameter = D
 		logging.info("define AO PSF - " + AO_mode)
 		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
 			# PSD cubes
 			pup = fits.getdata(os.path.join(psf_path,"ELT_pup.fits"))
-			stats = fits.getdata(os.path.join(psf_path, "ELT_statics.fits"))
 			
-			# Select PSD based on air_mass and seeing
-			try:
-				index_airmass = config_data["PSD_cube"]["air_masses"].index(air_mass)
-			except:
-				raise HSIMError(str(air_mass) + ' is not a valid air mass. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["air_masses"]))))
-			
-			try:
-				index_seeing = config_data["PSD_cube"]["seeings"].index(seeing)
-			except:
-				raise HSIMError(str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
-			
-			
-			logging.info("Using PSD file: " + config_data["PSD_file"][AO_mode])
-			
-			psd_cube = fits.getdata(os.path.join(psf_path, config_data["PSD_file"][AO_mode]))
-			psd = psd_cube[index_airmass, index_seeing,:,:]
-			psd = eclat(psd)
-
+			if AO_mode == "AIRY":
+				stats = None
+				psd = np.zeros((2048, 2048))
+			else:
+				stats = fits.getdata(os.path.join(psf_path, "ELT_statics.fits"))
+				
+				# Select PSD based on air_mass and seeing
+				try:
+					index_airmass = config_data["PSD_cube"]["air_masses"].index(air_mass)
+				except:
+					raise HSIMError(str(air_mass) + ' is not a valid air mass. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["air_masses"]))))
+				
+				try:
+					index_seeing = config_data["PSD_cube"]["seeings"].index(seeing)
+				except:
+					raise HSIMError(str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
+				
+				
+				logging.info("Using PSD file: " + config_data["PSD_file"][AO_mode])
+				
+				psd_cube = fits.getdata(os.path.join(psf_path, config_data["PSD_file"][AO_mode]))
+				psd = psd_cube[index_airmass, index_seeing,:,:]
+				psd = eclat(psd)
 		else:
 			#Test PSF
 			logging.warning("Using test PSD files")
 			pup = fits.getdata(os.path.join(psf_path,"demo_pup.fits"))
-			stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))	
-			psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))
+			if AO_mode == "AIRY":
+				stats = np.zeros(pup.shape)
+				psd = np.zeros((640, 640))
+			else:
+				stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))	
+				psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))
 	
 	else: # no AO Gaussian 
 		logging.info("define noAO Gaussian PSF")
@@ -272,7 +280,7 @@ def create_psf(lamb, Airy=False):
 	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode
 	global seeing, air_mass
 
-	if AO_mode in ["LTAO", "SCAO"]:
+	if AO_mode in ["LTAO", "SCAO", "AIRY"]:
 		# size of a pixel returned by psd_to_psf
 		pix_psf = lamb*1e-6/(2.*diameter)*1/(4.85*1e-9) # mas
 		

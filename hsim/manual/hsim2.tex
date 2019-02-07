@@ -226,7 +226,7 @@ The available HSIM options are listed below. The number before them indicates th
 \item Telescope temperature: Temperature of the site\slash telescope in K. This is used to calculate the telescope and part of the instrument background emission. Typical value is \texttt{280}.
 \item ADR on/off: Indicates if the atmospheric differential refraction is simulated. When simulated, the differential refraction is corrected in the output cubes in a way similar to what is expected from the pipieline. Available values are \texttt{True, False}.
 \item Noise seed: Seed used for the random number generator during the simulation. It only affects the observed outputs (see Section~\ref{s:output}).
-\item AO mode: Adaptive optics mode of the observations. The available values are the following: \texttt{LTAO, SCAO, noAO}. \texttt{LTAO} corresponds to the Laser Tomography Adaptive Optics mode,  \texttt{SCAO} to the Single Conjugate Adaptive Optics mode and \texttt{noAO} indicates that no adaptive optics corrections are applied.
+\item AO mode: Adaptive optics mode of the observations. The available values are the following: \texttt{LTAO, SCAO, noAO, Airy}. \texttt{LTAO} corresponds to the Laser Tomography Adaptive Optics mode,  \texttt{SCAO} to the Single Conjugate Adaptive Optics mode, \texttt{noAO} indicates that no adaptive optics corrections are applied, and \texttt{Airy} uses the diffraction limit of the ELT.
 % \item Detector systematics: Indicates if the detector systematics (i.e., ..) are simulated. It only affects the observed outputs (see Section~\ref{s:output}). Available values are \texttt{True, False}.
 \end{enumerate}
 

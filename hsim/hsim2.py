@@ -95,7 +95,7 @@ if __name__=="__main__":
 			print '10. site temp: Site/telescope temperature [K]'
 			print '11. ADR on/off: (True/False) - atmospheric differential refraction'
 			print '12. noise seed'
-			print '13. AO mode [LTAO/SCAO//noAO]'
+			print '13. AO mode [LTAO/SCAO//noAO/Airy]'
 			#print '14. Use detector systematics (True/False)'
 			print ""
 			
@@ -230,7 +230,7 @@ if __name__=="__main__":
 				self.SEEINGVAL = wx.Choice(panel, choices=map(str, sorted(config_data["PSD_cube"]["seeings"])))
 				self.SEEINGVAL.SetStringSelection(str(config_data["PSD_cube"]["seeings"][2]))
 				AOMODE = wx.StaticText(panel, label="AO mode")
-				self.AOMODEVAL = wx.Choice(panel, choices=['LTAO', 'SCAO', 'noAO'])
+				self.AOMODEVAL = wx.Choice(panel, choices=['LTAO', 'SCAO', 'noAO', 'Airy'])
 				self.AOMODEVAL.SetStringSelection('LTAO')
 				MOON = wx.StaticText(panel, label="Moon illumination")
 				self.MOONVAL = wx.Choice(panel, choices=map(str, [0, 0.5, 1]))

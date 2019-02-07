@@ -97,8 +97,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	for _ in simulation_conf:
 		logging.info(_.name + " = " + str(_.value))
 	
-	if aoMode not in ["LTAO", "SCAO", "NOAO"]:
-		logging.error(aoMode + ' is not a valid AO mode. Valid options are: LTAO, SCAO, noAO')
+	if aoMode not in ["LTAO", "SCAO", "NOAO", "AIRY"]:
+		logging.error(aoMode + ' is not a valid AO mode. Valid options are: LTAO, SCAO, noAO, Airy')
 		return
 
 
@@ -320,7 +320,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 			plt.plot(w, e, label="Moon", color=colors[6])
 			total_telescope_sky_em += e
 		
-		if aoMode != "NOAO":
+		if aoMode not in ["NOAO", "AIRY"]:
 			w, e = np.loadtxt(base_filename + "_ins_AOd_em.txt", unpack=True)
 			plt.plot(w, e, label="AO dichroic", color=colors[2])
 			total_instrument_em += e
@@ -352,7 +352,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 			return
 		total_tr *= e
 	
-		if aoMode != "NOAO":
+		if aoMode not in ["NOAO", "AIRY"]:
 			w, e = np.loadtxt(base_filename + "_ins_AOd_tr.txt", unpack=True)
 			plt.plot(w, e, label="AO dichroic", color=colors[2])
 			if np.sum(np.abs(total_tr_w - w)) != 0.:
@@ -394,7 +394,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 
 		if not debug:
 			list_files = ["sky_tr", "sky_em", "moon_em", "tel_tr", "tel_em", "ins_tr", "ins_em", "det_qe", "ins_FPRS_tr", "ins_FPRS_em"]
-			if aoMode != "NOAO":
+			if aoMode not in ["NOAO", "AIRY"]:
 				list_files.append("ins_AOd_tr")
 				list_files.append("ins_AOd_em")
 			for _ in list_files:

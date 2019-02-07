@@ -146,7 +146,7 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 		seeing: Atmospheric seeing FWHM [arcsec]
 		spax: spatial pixel (spaxel) scale [mas]
 		site_temp: Telescope temperature [K]
-		aoMode: AO mode: LTAO/SCAO/NOAO
+		aoMode: AO mode: LTAO/SCAO/NOAO/AIRY
 		ncpus: no. of CPUs to use
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
