@@ -21,7 +21,7 @@ from init_cube import init_cube
 from sim_sky import sim_sky
 from sim_telescope import sim_telescope
 from sim_instrument import sim_instrument
-from sim_detector import sim_detector, apply_crosstalk, mask_saturated_pixels
+from sim_detector import sim_detector, apply_crosstalk, mask_saturated_pixels, apply_crosstalk_1d
 from modules.adr import apply_adr
 
 from modules.rebin import *
@@ -382,9 +382,11 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		total_trans_interp = interp1d(total_tr_w, total_tr, kind='linear', bounds_error=False, fill_value=0.)
 		total_tr_final_w = w
 		total_tr_final = total_trans_interp(total_tr_final_w)*e
+		if grating != "V+R":
+			total_tr_final = apply_crosstalk_1d(total_tr_final, config_data["crosstalk"])
 		plt.plot(total_tr_final_w, total_tr_final, label="Total", color=colors[7])
 		np.savetxt(base_filename + "_total_tr.txt", np.c_[total_tr_final_w, total_tr_final], comments="#", header="\n".join([
-			'TYPE: Total transmission', 
+			'TYPE: Total transmission.' + ("" if grating == "V+R" else ' Detector crosstalk applied.'), 
 			'Wavelength [um], Transmission']))
 
 		plt.legend(prop={'size': 6})

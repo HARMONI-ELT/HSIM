@@ -123,7 +123,7 @@ def AO_dichroic_transmission_curve(wavels, aoMode, grating, debug_plots, output_
 		plt.clf()
 		plt.plot(wavels, cube_aod_trans)
 		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"instrument transmission ")
+		plt.ylabel(r"instrument transmission")
 		plt.savefig(output_file + "_ins_AOd_tr.pdf")
 		np.savetxt(output_file + "_ins_AOd_tr.txt", np.c_[wavels, cube_aod_trans])
 
@@ -158,7 +158,7 @@ def FPRS_transmission_curve(wavels, grating, debug_plots, output_file):
 		plt.clf()
 		plt.plot(wavels, cube_fprs_trans)
 		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"instrument transmission ")
+		plt.ylabel(r"instrument transmission")
 		plt.savefig(output_file + "_ins_FPRS_tr.pdf")
 		np.savetxt(output_file + "_ins_FPRS_tr.txt", np.c_[wavels, cube_fprs_trans])
 
