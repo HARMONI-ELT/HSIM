@@ -233,16 +233,9 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 				stats = fits.getdata(os.path.join(psf_path, "ELT_statics.fits"))
 				
 				# Select PSD based on air_mass and seeing
-				try:
-					index_airmass = config_data["PSD_cube"]["air_masses"].index(air_mass)
-				except:
-					raise HSIMError(str(air_mass) + ' is not a valid air mass. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["air_masses"]))))
-				
-				try:
-					index_seeing = config_data["PSD_cube"]["seeings"].index(seeing)
-				except:
-					raise HSIMError(str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
-				
+
+				index_airmass = config_data["PSD_cube"]["air_masses"].index(air_mass)
+				index_seeing = config_data["PSD_cube"]["seeings"].index(seeing)
 				
 				logging.info("Using PSD file: " + config_data["PSD_file"][AO_mode])
 				

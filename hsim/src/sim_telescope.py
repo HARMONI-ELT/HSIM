@@ -13,11 +13,11 @@ import scipy.constants as sp
 from scipy.interpolate import interp1d
 from scipy.signal import fftconvolve
 
-from config import *
+from src.config import *
 
-from modules.create_psf import create_psf, define_psf
-from modules.misc_utils import path_setup
-from modules.blackbody import *
+from src.modules.create_psf import create_psf, define_psf
+from src.modules.misc_utils import path_setup
+from src.modules.blackbody import *
 
 import matplotlib.pylab as plt
 
@@ -84,10 +84,10 @@ def telescope_transmission_curve(wavels, debug_plots, output_file):
 	'''
 
 	#Load telescope reflectivity file
-	tele_r = np.genfromtxt(os.path.join(tppath,'ELT_mirror_reflectivity.txt'), delimiter=',')
+	tele_r = np.genfromtxt(os.path.join(tppath, 'ELT_mirror_reflectivity.txt'), delimiter=',')
 
 	#Interpolate as a function of wavelength
-	tele_trans_interp = interp1d(tele_r[:,0], tele_r[:,1],
+	tele_trans_interp = interp1d(tele_r[:, 0], tele_r[:, 1],
 				kind='linear', bounds_error=False, fill_value=0.)
 	#Obtain values for datacube wavelength array
 	cube_tele_trans = tele_trans_interp(wavels)
@@ -113,7 +113,7 @@ def process_lambda(params, lamb, image, px, py, pback):
 	# np.sum(psf) is < 1, so to recover the same back emission after the convolution we need to 
 	# subctract before and then add the back emission. We assume that the back emission is uniform
 	# within the field
-	padding_plane[psf.shape[0]:psf.shape[0]+image.shape[0],psf.shape[1]:psf.shape[1]+image.shape[1]] = image - pback
+	padding_plane[psf.shape[0]:psf.shape[0]+image.shape[0], psf.shape[1]:psf.shape[1]+image.shape[1]] = image - pback
 	conv_image = fftconvolve(padding_plane, psf) + pback
 	return params, conv_image
 	
@@ -130,7 +130,7 @@ def save_result(results):
 	sys.stdout.flush()
 
 	(i, x0, x1, y0, y1), conv_image = results
-	result_cube[i,:,:] = conv_image[y0:y1,x0:x1]
+	result_cube[i, :, :] = conv_image[y0:y1, x0:x1]
 
 
 def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, aoMode, ncpus, debug_plots=False, output_file=""):
@@ -169,11 +169,11 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	
 	# Add telescope emission/transmission to the input cube
 	tel_reflectivity_cube = telescope_reflectivity[cube_lamb_mask]
-	tel_reflectivity_cube.shape = (np.sum(cube_lamb_mask),1,1)
+	tel_reflectivity_cube.shape = (np.sum(cube_lamb_mask), 1, 1)
 	cube *= tel_reflectivity_cube
 
 	tel_background_cube = telescope_background[cube_lamb_mask]
-	tel_background_cube.shape = (np.sum(cube_lamb_mask),1,1)
+	tel_background_cube.shape = (np.sum(cube_lamb_mask), 1, 1)
 	cube += tel_background_cube
 	
 	
@@ -186,7 +186,7 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	
 	logging.info("Residual telescope jitter = {:.2f} mas".format(jitter))
 	logging.info("Instrument PSF = {:.2f} mas".format(sigma_instrument))
-	logging.info("-> Combined σ = {:.2f} mas ".format(sigma_combined))
+	logging.info("-> Combined σ = {:.2f} mas".format(sigma_combined))
 	
 	psf_size = config_data["spaxel_scale"][spax].psfsize
 	
@@ -225,7 +225,7 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 		llambs = len(lambs)
 		
 		for i in range(len(lambs)):
-			pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i,:,:], padding_x, padding_y, padding_back[i]), callback=save_result)
+			pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i, :, :], padding_x, padding_y, padding_back[i]), callback=save_result)
 		
 		pool.close()
 		pool.join()
@@ -237,9 +237,9 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 			sys.stdout.write(bar_str.format(int(100.*i/len(lambs)), i, len(lambs)) + "\r")
 			sys.stdout.flush()
 			
-			_, conv_image = process_lambda(i, lambs[i], cube[i,:,:], padding_x, padding_y, padding_back[i])
+			_, conv_image = process_lambda(i, lambs[i], cube[i, :, :], padding_x, padding_y, padding_back[i])
 		
-			cube[i,:,:] = conv_image[y0:y1,x0:x1]
+			cube[i, :, :] = conv_image[y0:y1, x0:x1]
 			#break
 	
 	central_lambda = (lambs[0] + lambs[-1])*0.5

@@ -16,15 +16,15 @@ from astropy.io import fits
 
 import matplotlib.pylab as plt
 
-from config import *
-from init_cube import init_cube
-from sim_sky import sim_sky
-from sim_telescope import sim_telescope
-from sim_instrument import sim_instrument
-from sim_detector import sim_detector, apply_crosstalk, mask_saturated_pixels, apply_crosstalk_1d
-from modules.adr import apply_adr
+from src.config import *
+from src.init_cube import init_cube
+from src.sim_sky import sim_sky
+from src.sim_telescope import sim_telescope
+from src.sim_instrument import sim_instrument
+from src.sim_detector import sim_detector, apply_crosstalk, mask_saturated_pixels, apply_crosstalk_1d
+from src.modules.adr import apply_adr
 
-from modules.rebin import *
+from src.modules.rebin import *
 
 def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, res_jitter=3., moon=0.,
 	 site_temp=280.5, adr_switch='True', det_switch='False', seednum=100, nprocs=mp.cpu_count()-1, debug=False, aoMode="LTAO"):
@@ -53,7 +53,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	'''
 	debug_plots = True
 	aoMode = aoMode.upper()
-	
+
 	Conf = collections.namedtuple('Conf', 'name, header, value')
 	simulation_conf = [
 			Conf('HSIM Version', 'HSM_VER', version),
@@ -88,17 +88,25 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	std = logging.StreamHandler()
 	std.setFormatter(HSIMFormatter())
 	logger.addHandler(std)
-	
+
 	hsimlog = HSIMLoggingHandler()
 	logger.addHandler(hsimlog)
-	
-	
+
+
 	logging.info("Simulation input parameters:")
 	for _ in simulation_conf:
 		logging.info(_.name + " = " + str(_.value))
-	
+
 	if aoMode not in ["LTAO", "SCAO", "NOAO", "AIRY"]:
 		logging.error(aoMode + ' is not a valid AO mode. Valid options are: LTAO, SCAO, noAO, Airy')
+		return
+
+	if air_mass not in config_data["PSD_cube"]["air_masses"]:
+		logging.error(str(air_mass) + ' is not a valid air mass. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["air_masses"]))))
+		return
+
+	if seeing not in  config_data["PSD_cube"]["seeings"]:
+		logging.error(str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
 		return
 
 
@@ -107,25 +115,25 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# Read input FITS cube and resample depending on grating and spaxel scale
 	# output is in ph/s/m2/um/arcsec2 units
 	cube, head, lambs, input_spec_res = init_cube(datacube, grating, spax)
-	
+
 	# Calculate extended lambda range to convolve with the LSF
 	LSF_width = int(config_data["spectral_sampling"]["internal"]/2.35482*config_data['LSF_kernel_size'])
 	lambs_extended_index = (np.arange(LSF_width)+1)*(lambs[1] - lambs[0])
-	
+
 	lambs_extended = np.concatenate(((lambs[0] - lambs_extended_index)[::-1], lambs, lambs[-1] + lambs_extended_index))
 	cube_lamb_mask = np.concatenate(([False]*len(lambs_extended_index), [True]*len(lambs), [False]*len(lambs_extended_index)))
-	
+
 	# calculate the cube in photons for a single exposure
 	# in ph/m2/um/arcsec2
 	cube_exp = cube*DIT
 	back_emission = np.zeros(len(lambs_extended))
-	
+
 	# 1 - Atmosphere: 
 	#	- Sky emission (lines + continuum)
 	#	- Sky transmission
 	#	- Moon
 	#	- Atmospheric differential refration
-	cube_exp, back_emission = sim_sky(cube_exp, back_emission, head, lambs_extended, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, debug_plots=debug_plots, output_file=base_filename)
+	cube_exp, back_emission = sim_sky(cube_exp, back_emission, head, lambs_extended, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, input_spec_res, debug_plots=debug_plots, output_file=base_filename)
 	
 	# 2 - Telescope:
 	#	- PSF + Jitter
@@ -153,7 +161,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	output_cube = np.zeros((z, out_size_y, out_size_x))
 	
 	for k in np.arange(0, z):
-		output_cube[k,:,:] = frebin2d(cube_exp[k,:,:], (out_size_x, out_size_y))
+		output_cube[k, :, :] = frebin2d(cube_exp[k, :, :], (out_size_x, out_size_y))
 	
 	# and update header
 	head['CDELT1'] = spax_scale.xscale
@@ -164,7 +172,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	lambs = lambs_extended[cube_lamb_mask]
 	new_lamb_per_pix = (lambs[1] - lambs[0])/scale_z # micron
-	LSF_width_pix = int(LSF_width_A/10000./new_lamb_per_pix) + 1
+#	LSF_width_pix = int(LSF_width_A/10000./new_lamb_per_pix) + 1
 	
 	output_lambs = new_lamb_per_pix*np.arange(int(len(lambs)*scale_z)) + lambs[0]
 	#output_lambs = output_lambs[LSF_width_pix:-LSF_width_pix]
@@ -175,7 +183,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	for i in np.arange(0, out_size_x):
 		for j in np.arange(0, out_size_y):
-			output_cube_spec[:,j,i] = rebin1d(output_lambs, lambs, output_cube[:,j,i])
+			output_cube_spec[:, j, i] = rebin1d(output_lambs, lambs, output_cube[:, j, i])
 	
 	output_back_emission = rebin1d(output_lambs, lambs_extended, back_emission)
 	
@@ -215,7 +223,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	# - background - as a cube the 1D background spectrum
 	output_back_emission = output_back_emission.astype(np.float32)
-	output_back_emission.shape = (len(output_back_emission),1,1)
+	output_back_emission.shape = (len(output_back_emission), 1, 1)
 	output_back_emission_cube = np.zeros_like(output_cube_spec) + output_back_emission
 	# - mask saturated pixels
 	output_back_emission_cube, saturated_back = mask_saturated_pixels(output_back_emission_cube, grating)
@@ -284,7 +292,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	kernel = Gauss2D(xx, yy)
 	z, y, x = sim_reduced.shape
 	for pz in range(z):
-		sim_reduced[pz,:,:] = convolve2d(sim_reduced[pz,:,:], kernel, mode="same", boundary="wrap")
+		sim_reduced[pz, :, :] = convolve2d(sim_reduced[pz, :, :], kernel, mode="same", boundary="wrap")
 
 	
 	# Calculate noise cube
@@ -336,7 +344,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		plt.xlabel(r"wavelength [$\mu$m]")
 		plt.ylabel(r"back emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
 		plt.yscale("log")
-		plt.text(0.1, 0.2, "HARMONI/(Telescope+Sky) = {:.2f}".format(np.nanmedian(total_instrument_em/total_telescope_sky_em)), transform = ax.transAxes)
+		plt.text(0.1, 0.2, "HARMONI/(Telescope+Sky) = {:.2f}".format(np.nanmedian(total_instrument_em/total_telescope_sky_em)), transform=ax.transAxes)
 		plt.savefig(base_filename + "_total_em.pdf")
 
 		plt.clf()

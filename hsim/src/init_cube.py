@@ -46,11 +46,12 @@ def spectral_res(datacube, head, grating, wavels):
 	
 	input_spec_res = head['SPECRES'] # micron
 	if input_spec_res > new_res:
-		logging.warning("The input spectral resolution is lower than the HARMONI grating resolution. Assuming input resolution = HARMONI resolution")
+		logging.warning("The input cube spectral resolution is lower than the HARMONI grating resolution. Assuming input resolution = HARMONI resolution")
 		input_spec_res = new_res
 	elif input_spec_res > 0.5*new_res:
-		logging.warning("The input spectral resolution is lower than 2 times the HARMONI grating resolution")
-
+		logging.warning("The input cube spectral resolution is lower than 2 times the HARMONI grating resolution")
+	elif input_spec_res == 0.:
+		logging.warning("The input cube spectral resolution is not defined")
 	
 	logging.info('Input resolution = %.1f A' % (input_spec_res*10000.))
 	logging.info('Input sampling = %.1f A' % (head['CDELT3']*10000.))

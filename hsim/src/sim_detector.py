@@ -5,14 +5,12 @@ import os
 import logging
 
 import numpy as np
-import scipy.constants as sp
 from scipy.interpolate import interp1d
-from astropy.convolution import Gaussian1DKernel
 
-from config import *
+from src.config import *
 
-from modules.misc_utils import path_setup
-from modules.blackbody import *
+from src.modules.misc_utils import path_setup
+from src.modules.blackbody import *
 
 import matplotlib.pylab as plt
 
@@ -42,7 +40,7 @@ def detector_QE_curve(wavels, grating, debug_plots, output_file):
 
 
 	#Interpolate as a function of wavelength
-	det_qe_interp = interp1d(det_qe[:,0], det_qe[:,1],
+	det_qe_interp = interp1d(det_qe[:, 0], det_qe[:, 1],
 				kind='linear', bounds_error=False, fill_value=0.)
 	#Obtain values for datacube wavelength array
 	cube_det_qe = det_qe_interp(wavels)/100.
@@ -148,7 +146,7 @@ def sim_detector(cube, back_emission, lambs, grating, DIT, debug_plots=False, ou
 	qe_curve = detector_QE_curve(lambs, grating, debug_plots, output_file)
 	back_emission = np.multiply(back_emission, qe_curve)
 	
-	qe_curve.shape = (len(lambs),1,1)
+	qe_curve.shape = (len(lambs), 1, 1)
 	cube *= qe_curve
 
 	# read noise

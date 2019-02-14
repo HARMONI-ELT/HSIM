@@ -1,22 +1,19 @@
 '''Front-end code for HARMONI simulator
 This handles the GUI and command line interfaces.
 '''
-import matplotlib
-matplotlib.use('Agg')
-
 import getopt
 import sys
 import os
-
 import multiprocessing as mp
-
 import os.path
+import matplotlib
+matplotlib.use('Agg')
 
 from src.main import main
 from src.config import config_data
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
 	#Get version number
 	try:
@@ -56,21 +53,21 @@ if __name__=="__main__":
 	for o, a in optlist:
 		if o in ("-p", "--proc"):
 			nprocs = int(a)
-		
+
 		if nprocs <= 0:
 			nprocs = 1
 			print "Using 1 CPU"
-		
+
 		if nprocs > mp.cpu_count():
 			print 'Only ' + str(mp.cpu_count()) + ' CPUs. Using ' + str(mp.cpu_count())
 			nprocs = mp.cpu_count()
-			
+
 	odir = 'output_cubes'
 	for o, a in optlist:
 		if o in ("-o", "--odit"):
 			odir = a
 			break
-		
+
 	debug = False
 	for o, a in optlist:
 		if o in ("-d"):
@@ -98,7 +95,7 @@ if __name__=="__main__":
 			print '13. AO mode [LTAO/SCAO//noAO/Airy]'
 			#print '14. Use detector systematics (True/False)'
 			print ""
-			
+
 			sys.exit()
 		elif o in ("-c", "--cline") and len(args) == 13:
 			if not os.path.exists(odir) or not os.path.isdir(odir):
@@ -168,19 +165,19 @@ if __name__=="__main__":
 				titlefont = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
 
 				# Set up the menu.
-				filemenu  = wx.Menu()
-				menuAbout = filemenu.Append(wx.ID_ABOUT, "&About"," Information about this program")
-				menuExit  = filemenu.Append(wx.ID_EXIT,"&Exit"," Terminate the program")
+				filemenu = wx.Menu()
+				menuAbout = filemenu.Append(wx.ID_ABOUT, "&About", " Information about this program")
+				menuExit = filemenu.Append(wx.ID_EXIT, "&Exit", " Terminate the program")
 
 				# Creating the menubar.
 				menuBar = wx.MenuBar()
-				menuBar.Append(filemenu,"&File") # Adding the "filemenu" to the MenuBar
+				menuBar.Append(filemenu, "&File") # Adding the "filemenu" to the MenuBar
 				self.SetMenuBar(menuBar)  # Adding the MenuBar to the Frame content.
 
 				# Events.
 				self.Bind(wx.EVT_MENU, self.OnExit, menuExit)
 				self.Bind(wx.EVT_MENU, self.OnAbout, menuAbout)
-				
+
 				vbox = wx.BoxSizer(wx.VERTICAL)
 				hbox = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -207,7 +204,7 @@ if __name__=="__main__":
 				self.PHOTOBANDVAL.SetStringSelection(grating_choices[6])
 				DIR = wx.StaticText(panel, label='Output dir')
 				self.DIRVAL = wx.DirPickerCtrl(panel, path=os.path.join(".", "output_cubes/"))
-				
+
 				fg.AddMany([(inst), (subinst), (INPUTCUBE),
 						(self.INPUTCUBEVAL, 1, wx.EXPAND),
 						(DIR), (self.DIRVAL, 1, wx.EXPAND),
@@ -215,11 +212,11 @@ if __name__=="__main__":
 						(NDIT), (self.NDITVAL, 1, wx.EXPAND),
 						(SPAX), (self.SPAXVAL, 1, wx.EXPAND),
 						(PHOTOBAND), (self.PHOTOBANDVAL, 1, wx.EXPAND),])
-				
-				fg.AddGrowableCol(1,1)
+
+				fg.AddGrowableCol(1, 1)
 
 				hbox.Add(fg, flag=wx.ALL|wx.EXPAND, border=10)
-				
+
 				#Telescope parameters
 				fgs = wx.FlexGridSizer(*grid_size)
 
@@ -247,11 +244,11 @@ if __name__=="__main__":
 						(AIRMASS), (self.AIRMASSVAL, 1, wx.EXPAND),
 						(MOON), (self.MOONVAL, 1, wx.EXPAND),
 						(SITETEMP), (self.SITETEMPVAL, 1, wx.EXPAND)])
-				
-				fgs.AddGrowableCol(1,1)
+
+				fgs.AddGrowableCol(1, 1)
 
 				hbox.Add(fgs, flag=wx.ALL|wx.EXPAND, border=10)
-				
+
 				#Misc. parameters
 				fgss = wx.FlexGridSizer(*grid_size)
 
@@ -278,10 +275,10 @@ if __name__=="__main__":
 						(N_PROC), (self.N_PROCVAL, 1, wx.EXPAND),
 						(NOISESEED), (self.NOISESEEDVAL, 1, wx.EXPAND)])
 
-				fgss.AddGrowableCol(1,1)
+				fgss.AddGrowableCol(1, 1)
 
 				hbox.Add(fgss, flag=wx.ALL|wx.EXPAND, border=10)
-				
+
 				vbox.Add(hbox, flag=wx.ALL|wx.EXPAND, border=10)
 
 				button = wx.Button(panel, 10, "Commence simulation")
@@ -289,11 +286,11 @@ if __name__=="__main__":
 				vbox.Add(button, flag=wx.ALL|wx.CENTER, border=10)
 
 				panel.SetSizer(vbox)
-				
+
 				vbox.SetSizeHints(self)
 
 
-			def OnClick(self,event):
+			def OnClick(self, event):
 				#Extract parameters for simulation run:
 				cubefile = str(self.INPUTCUBEVAL.GetPath())
 				ditval = float(self.DITVAL.GetValue())
@@ -311,17 +308,17 @@ if __name__=="__main__":
 				odir = str(self.DIRVAL.GetPath())
 				return_adrval = str(self.ADRVAL.GetValue())
 				#return_detval = str(self.DETVAL.GetValue())
-				
+
 				#start main program
 				main(os.path.join(".", cubefile), os.path.join(".", odir), ditval, nditval, photoband, spaxval, seeingval, airmassaval, ver,
 					res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval,
 					seednum=noiseseedval, nprocs=nprocs, aoMode=aomode, moon=moon)
 
 
-			def OnExit(self,e):
+			def OnExit(self, e):
 				self.Close(True)  # Close the frame.
 
-			def OnAbout(self,e):
+			def OnAbout(self, e):
 				info = wx.AboutDialogInfo()
 				info.SetName('HSIM')
 				info.SetVersion(ver)
@@ -333,4 +330,3 @@ if __name__=="__main__":
 		app = wx.App()
 		Form1(None, title="HARMONI Simulator Interface")
 		app.MainLoop()
-		

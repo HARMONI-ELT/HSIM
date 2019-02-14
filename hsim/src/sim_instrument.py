@@ -9,10 +9,10 @@ import scipy.constants as sp
 from scipy.interpolate import interp1d
 from astropy.convolution import Gaussian1DKernel
 
-from config import *
+from src.config import *
 
-from modules.misc_utils import path_setup
-from modules.blackbody import *
+from src.modules.misc_utils import path_setup
+from src.modules.blackbody import *
 
 import matplotlib.pylab as plt
 
@@ -73,7 +73,7 @@ def HARMONI_transmission_curve(wavels, grating, debug_plots, output_file):
 	inst_r = np.genfromtxt(os.path.join(tppath, grating+'_grating.txt'), delimiter=',')
 
 	#Interpolate as a function of wavelength
-	inst_trans_interp = interp1d(inst_r[:,0], inst_r[:,1],
+	inst_trans_interp = interp1d(inst_r[:, 0], inst_r[:, 1],
 					kind='linear', bounds_error=False, fill_value=0.)
 	
 	#Obtain values for datacube wavelength array
@@ -113,7 +113,7 @@ def AO_dichroic_transmission_curve(wavels, aoMode, grating, debug_plots, output_
 		return 1.
 
 	#Interpolate as a function of wavelength
-	aod_trans_interp = interp1d(inst_r[:,0], inst_r[:,1],
+	aod_trans_interp = interp1d(inst_r[:, 0], inst_r[:, 1],
 					kind='linear', bounds_error=False, fill_value=0.)
 	
 	#Obtain values for datacube wavelength array
@@ -148,7 +148,7 @@ def FPRS_transmission_curve(wavels, grating, debug_plots, output_file):
 	inst_r = np.genfromtxt(os.path.join(tppath, "FPRS.txt"), delimiter=',')
 
 	#Interpolate as a function of wavelength
-	fprs_trans_interp = interp1d(inst_r[:,0], inst_r[:,1],
+	fprs_trans_interp = interp1d(inst_r[:, 0], inst_r[:, 1],
 					kind='linear', bounds_error=False, fill_value=0.)
 	
 	#Obtain values for datacube wavelength array
@@ -225,12 +225,12 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 	# Add instrument emission/transmission to the input cube
 	
 	instrument_tr_cube = (AOd_tr*FPRS_tr*instrument_tr)[cube_lamb_mask]
-	instrument_tr_cube.shape = (np.sum(cube_lamb_mask),1,1)
+	instrument_tr_cube.shape = (np.sum(cube_lamb_mask), 1, 1)
 	cube *= instrument_tr_cube
 
 	total_instrument_background = AOd_background + FPRS_background + instrument_background
 	instrument_background_cube = total_instrument_background[cube_lamb_mask]
-	instrument_background_cube.shape = (np.sum(cube_lamb_mask),1,1)
+	instrument_background_cube.shape = (np.sum(cube_lamb_mask), 1, 1)
 	cube += instrument_background_cube
 	
 	
@@ -249,15 +249,15 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 		sigma_LSF_pix = new_res_pix/2.35482
 	
 		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
-		kernel_LSF = Gaussian1DKernel(stddev = sigma_LSF_pix, x_size = npix_LSF)
+		kernel_LSF = Gaussian1DKernel(stddev=sigma_LSF_pix, x_size=npix_LSF)
 		z, y, x = cube.shape
 		
 		for py in range(y):
 			for px in range(x):
 				spectrum = np.copy(back_emission)
-				spectrum[cube_lamb_mask] = cube[:,py,px]
+				spectrum[cube_lamb_mask] = cube[:, py, px]
 				
-				cube[:,py,px] = np.convolve(spectrum, kernel_LSF, mode="same")[cube_lamb_mask]
+				cube[:, py, px] = np.convolve(spectrum, kernel_LSF, mode="same")[cube_lamb_mask]
 		
 		
 		back_emission = np.convolve(back_emission, kernel_LSF, mode="same")

@@ -6,27 +6,55 @@ import os
 import logging
 
 import numpy as np
+from astropy.convolution import Gaussian1DKernel
 
-from config import *
-from modules.misc_utils import path_setup
-from modules.rebin import *
-from modules.adr import apply_adr
+from src.config import *
+from src.modules.misc_utils import path_setup
+from src.modules.rebin import *
+from src.modules.adr import apply_adr
 
 import matplotlib.pylab as plt
 
 bgpath = path_setup('../../' + config_data["data_dir"] + 'sky/')
 
-
-def sky_background(lambs, air_mass, dit, debug_plots, output_file):
+def convolve_1d_spectrum(input_lambda, input_flux, output_spec_res):
+	'''Function that convolves a sky spectrum with a Gaussian to 
+	match the input cube spectral resolution.
+	
+	Inputs:
+		input_lambda: input sky spectrum lambda
+		input_flux: input sky spectrum flux
+		output_spec_res: Spectral resolution of the convolved sky spectrum output 
+		
+	Outputs:
+		convolved sky spectrum
+	'''
+	logging.info("Convolve sky to input cube spectral resolution")
+	
+	sky_resolution = np.abs(input_lambda[1] - input_lambda[0])*2.133
+	
+	if output_spec_res > sky_resolution:
+		new_res_pix = (output_spec_res**2 - sky_resolution**2)**0.5/abs(input_lambda[1] - input_lambda[0])
+		sigma_LSF_pix = new_res_pix/2.35482
+		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
+		kernel_LSF = Gaussian1DKernel(stddev=sigma_LSF_pix, x_size=npix_LSF)
+		
+		return np.convolve(input_flux, kernel_LSF, mode="same")	
+		
+	else:
+		logging.warning("Sky spectral resolution (R = {:.0f}) is lower than the input cube spectral resolution (R = {:.0f})".format(np.median(input_lambda)/sky_resolution, np.median(input_lambda)/output_spec_res if output_spec_res != 0 else np.inf))
+		return input_flux
+	
+	
+def sky_background(lambs, air_mass, dit, input_spec_res, debug_plots, output_file):
 	'''Function that generates a sky background curve combining
 	sky continuum, sky thermal emission and sky emission lines.
 	
 	Inputs:
 		lambs: array of wavelengths for datacube
 		air_mass: Air mass of the observation
-
-		dit: exposure time [s]. This determins how the sky emission
-		line amplitudes vary through the exposure.
+		dit: exposure time [s].
+		input_spec_res: Spectral resolution of the input cube [micron]
 		
 	Outputs:
 		sky_radiance: array of total sky background for DIT
@@ -42,10 +70,13 @@ def sky_background(lambs, air_mass, dit, debug_plots, output_file):
 	data_index = inbuilt_airmasses.index(closest_X) + 1
 
 	#load sky transmission & extinction files, then reduce to the columns required
-	sky_em_all_X = np.genfromtxt(os.path.join(bgpath, 'radiance.txt'), delimiter=',')
+	sky_em_all_X = np.genfromtxt(os.path.join(bgpath, 'radiance.txt.gz'), delimiter=',')
 	
-	sky_em_lambda = sky_em_all_X[:,0]
-	sky_em_flux = sky_em_all_X[:,data_index]
+	sky_em_lambda = sky_em_all_X[:, 0]
+	sky_em_flux = sky_em_all_X[:, data_index]
+
+	# Match input cube spectral resolution
+	sky_em_lambda = convolve_1d_spectrum(sky_em_lambda, sky_em_flux, input_spec_res)
 
 	# rebin sky emission
 	sky_radiance = dit*rebin1d(lambs, sky_em_lambda, sky_em_flux)
@@ -65,14 +96,14 @@ def sky_background(lambs, air_mass, dit, debug_plots, output_file):
 	return sky_radiance
 
 
-def moon_background(lambs, moon, dit, debug_plots, output_file):
+def moon_background(lambs, moon, dit, input_spec_res, debug_plots, output_file):
 	'''Function that generates a moon background curve
 	
 	Inputs:
 		lambs: array of wavelengths for datacube
 		moon: Fractional moon illumination
-
 		dit: exposure time [s]. This determins how the sky emission
+		input_spec_res: Spectral resolution of the input cube [micron]
 		
 	Outputs:
 		sky_radiance: array of total sky background for DIT
@@ -86,14 +117,17 @@ def moon_background(lambs, moon, dit, debug_plots, output_file):
 		inbuilt_moon = [0.5, 1.0]
 
 		#determine the closest data to the airmass value given and find it's location in the data file
-		closest_X = min(inbuilt_moon, key=lambda x:abs(x - moon))
+		closest_X = min(inbuilt_moon, key=lambda x: abs(x - moon))
 		data_index = inbuilt_moon.index(closest_X) + 1
 
 		#load sky transmission & extinction files, then reduce to the columns required
-		moon_em_all_X = np.genfromtxt(os.path.join(bgpath, 'moon.txt'), delimiter=',')
+		moon_em_all_X = np.genfromtxt(os.path.join(bgpath, 'moon.txt.gz'), delimiter=',')
 		
-		moon_em_lambda = moon_em_all_X[:,0]
-		moon_em_flux = moon_em_all_X[:,data_index]
+		moon_em_lambda = moon_em_all_X[:, 0]
+		moon_em_flux = moon_em_all_X[:, data_index]
+
+		# Match input cube spectral resolution
+		moon_em_flux = convolve_1d_spectrum(moon_em_lambda, moon_em_flux, input_spec_res)
 
 		# rebin moon emission
 		moon_radiance = dit*rebin1d(lambs, moon_em_lambda, moon_em_flux)
@@ -117,13 +151,14 @@ def moon_background(lambs, moon, dit, debug_plots, output_file):
 
 
 #Sky throughput curve generated just using wavelength array.
-def sky_transmission(lambs, air_mass, debug_plots, output_file):
+def sky_transmission(lambs, air_mass, input_spec_res, debug_plots, output_file):
 	'''Function that generates a full throughput curve combining
 	sky transmission & sky extinctionp.
 
 	Inputs:
 		lambs: array of wavelengths for datacube
 		air_mass: Air mass of the observation
+		input_spec_res: Spectral resolution of the input cube [micron]
 
 	Outputs:
 		cube_total_sky_trans: array of total throughput
@@ -135,14 +170,17 @@ def sky_transmission(lambs, air_mass, debug_plots, output_file):
 		raise HSIMError('Error: ' + str(air_mass) + ' is not a valid air_mass. Valid options are: ' + ",".join([str(_) for _ in inbuilt_airmasses]))
 
 	#determine the closest data to the airmass value given and find it's location in the data file
-	closest_X = min(inbuilt_airmasses, key=lambda x:abs(x - air_mass))
+	closest_X = min(inbuilt_airmasses, key=lambda x: abs(x - air_mass))
 	data_index = inbuilt_airmasses.index(closest_X) + 1
 
 	#load sky transmission & extinction files, then reduce to the columns required
-	sky_trans_all_X = np.genfromtxt(os.path.join(bgpath, 'transmission.txt'), delimiter=',')
+	sky_trans_all_X = np.genfromtxt(os.path.join(bgpath, 'transmission.txt.gz'), delimiter=',')
 	
-	sky_tr_lambda = sky_trans_all_X[:,0]
-	sky_tr = sky_trans_all_X[:,data_index]
+	sky_tr_lambda = sky_trans_all_X[:, 0]
+	sky_tr = sky_trans_all_X[:, data_index]
+
+	# Match input cube spectral resolution
+	sky_tr = convolve_1d_spectrum(sky_tr_lambda, sky_tr, input_spec_res)
 
 	final_tr = rebin1d(lambs, sky_tr_lambda, sky_tr)
 
@@ -163,7 +201,7 @@ def sky_transmission(lambs, air_mass, debug_plots, output_file):
 
 
 
-def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, debug_plots=False, output_file=""):
+def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, input_spec_res, debug_plots=False, output_file=""):
 	''' Simulates sky effects
 	Inputs:
 		cube: Input datacube (RA, DEC, lambda)
@@ -176,6 +214,7 @@ def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mas
 		moon: Fractional moon illumination
 		site_temp: Telescope temperature [K]
 		adr_switch: Boolean - turn ADR on or off
+		input_spec_res: Spectral resolution of the input cube [micron]
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
 	Outputs:
@@ -185,25 +224,25 @@ def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mas
 	
 	# Get sky transmission
 	logging.info("Calculating sky transmission")
-	sky_trans = sky_transmission(ext_lambs, air_mass, debug_plots, output_file)
+	sky_trans = sky_transmission(ext_lambs, air_mass, input_spec_res, debug_plots, output_file)
 	
 	# Get sky emission (lines + continuum)
 	logging.info("Calculating sky emission")
-	sky_emission = sky_background(ext_lambs, air_mass, DIT, debug_plots, output_file)
+	sky_emission = sky_background(ext_lambs, air_mass, DIT, input_spec_res, debug_plots, output_file)
 	
 	# Get moon emission
 	logging.info("Calculating Moon emission")
-	moon_emission = moon_background(ext_lambs, moon, DIT, debug_plots, output_file)
+	moon_emission = moon_background(ext_lambs, moon, DIT, input_spec_res, debug_plots, output_file)
 	back_emission = back_emission + sky_emission + moon_emission
 	
 
 	# Add sky emission/transmission to the input cube
 	sky_trans_cube = sky_trans[cube_lamb_mask]
-	sky_trans_cube.shape = (np.sum(cube_lamb_mask),1,1)
+	sky_trans_cube.shape = (np.sum(cube_lamb_mask), 1, 1)
 	cube *= sky_trans_cube
 
 	sky_emission_cube = sky_emission[cube_lamb_mask] + moon_emission[cube_lamb_mask]
-	sky_emission_cube.shape = (np.sum(cube_lamb_mask),1,1)
+	sky_emission_cube.shape = (np.sum(cube_lamb_mask), 1, 1)
 	cube += sky_emission_cube
 	
 	# Add atmospheric differential refration
