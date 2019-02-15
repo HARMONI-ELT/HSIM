@@ -42,31 +42,31 @@ def eclat(imag, inverse = False):
 #d'etoiles et la postion de la galaxie
 def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb = 2.2*1.e-6, jitter=0.):
 	#;FUNCTION psd_to_psf, dsp, pup, local_L, osamp
-	#;; computation of a PSF from a residual phase PSD and a pupil shape 
-	#;;PSD: 2D array with PSD values (in nm2 per freq at the PSF wavelength)  
-	#;;pup: 2D array representing the pupill 
-	#;;Samp: final PSF sampling (number of pixel in the diffraction). Min = 2 ! 
-	#;;FoV  : PSF FoV (in arcsec) 
-	#;;lambda : PSF wavelength in m 
-	#;;D = pupil diameter  
-	#;;phase_static in nm 
+	#;; computation of a PSF from a residual phase PSD and a pupil shape
+	#;;PSD: 2D array with PSD values (in nm2 per freq at the PSF wavelength)
+	#;;pup: 2D array representing the pupill
+	#;;Samp: final PSF sampling (number of pixel in the diffraction). Min = 2 !
+	#;;FoV  : PSF FoV (in arcsec)
+	#;;lambda : PSF wavelength in m
+	#;;D = pupil diameter
+	#;;phase_static in nm
 	#;-
 	
 	dim       = psd.shape[0]
 	npup      = pup.shape[0]
 	
-	sampnum   = float(dim)/npup   #;numerical sampling related to PSD vs pup dimension 
+	sampnum   = float(dim)/npup   #;numerical sampling related to PSD vs pup dimension
 	L         = D*sampnum #;Physical size of the PSD
 	
 	if dim < 2*npup:
 		raise HSIMError("the PSD horizon must at least two time larger than the pupil diameter")
 	
 
-	convnm = (2*np.pi/(lamb*1e9)) # nm to rad 
+	convnm = (2*np.pi/(lamb*1e9)) # nm to rad
 
-	#;; from PSD to structure function 
+	#;; from PSD to structure function
 	Bg        = np.fft.fft2(psd*convnm**2)/L**2
-	##;;creation of the structure function 
+	##;;creation of the structure function
 	Dphi      = np.real(2*(Bg[0, 0]-Bg))
 	Dphi      = eclat(Dphi)
 
@@ -90,7 +90,7 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 		#print 'input sampling = ', str(sampin) , ' ---  output sampling = ', str(sampout),' --- max num sampling = ', str(sampnum)
 
 	
-	#;increasing the FoV PSF means oversampling the pupil 
+	#;increasing the FoV PSF means oversampling the pupil
 	FoVnum    =  1./2.*(lamb/(sampnum*D))*dim/(4.85*1.e-6)
 	if fov is None:
 		fov = FoVnum
@@ -134,7 +134,7 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 	#print 'input FoV = ', str(fov) , ' ---  output FoV = ', str(FoVnum*float(dimover)/dimnum), ' ---  Num FoV = ', str(FoVnum)
 
 	#if fov > 2*FoVnum:
-		#print 'Warning : Potential alisiang issue .. I recommend to create initial PSD and pupil with a larger numbert of pixel' 
+		#print 'Warning : Potential alisiang issue .. I recommend to create initial PSD and pupil with a larger numbert of pixel'
 
 
 	##;creation of a diff limited OTF (pupil autocorrelation)
@@ -148,10 +148,10 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 	dlFTO     = np.real(np.fft.ifft2(np.abs(np.fft.fft2(tab))**2))
 	dlFTO     = eclat(np.abs(dlFTO)/np.sum(pup))
 	
-	##;creation of AO OTF 
+	##;creation of AO OTF
 	aoFTO     = np.exp(-Dphi2/2.)
 	
-	##;;Computation of final OTF 
+	##;;Computation of final OTF
 	sysFTO = aoFTO*dlFTO
 	sysFTO = eclat(sysFTO)
 
@@ -169,7 +169,7 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 	
 	##;;Computation of final PSF
 	sysPSF = np.real(eclat((np.fft.fft2(sysFTO))))
-	sysPSF = sysPSF/np.sum(sysPSF) #normalisation to 1 
+	sysPSF = sysPSF/np.sum(sysPSF) #normalisation to 1
 
 	return sysPSF
 
@@ -253,7 +253,7 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 				stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))	
 				psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))
 	
-	else: # no AO Gaussian 
+	else: # no AO Gaussian
 		logging.info("define noAO Gaussian PSF")
 		
 	
@@ -314,5 +314,5 @@ def create_psf(lamb, Airy=False):
 		finalpsf = Gauss2D(xx, yy)
 		#fits.writeto("psf.fits", Gauss2D(xx, yy), overwrite=True)
 		return finalpsf
-	
+
 
