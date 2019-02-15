@@ -167,11 +167,12 @@ def FPRS_transmission_curve(wavels, grating, debug_plots, output_file):
 
 
 
-def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=False, output_file=""):
+def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=False, output_file=""):
 	''' Simulates instrument effects
 	Inputs:
 		cube: Input datacube (RA, DEC, lambda)
-		back_emission: Input background emission outside of the FoV
+		back_emission: Input background emission
+		transmission: Input transmission
 		ext_lambs: extended lambda array [um]
 		cube_lamb_mask: mask array to get the lambs of the cube
 		DIT: Exposure time [s]
@@ -203,6 +204,7 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 	instrument_tr = HARMONI_transmission_curve(ext_lambs, grating, debug_plots, output_file)
 
 	back_emission = back_emission*AOd_tr*FPRS_tr*instrument_tr
+	transmission = transmission*AOd_tr*FPRS_tr*instrument_tr
 	
 	
 	# Get instrument background
@@ -261,8 +263,9 @@ def sim_instrument(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, grating,
 		
 		
 		back_emission = np.convolve(back_emission, kernel_LSF, mode="same")
+		transmission = np.convolve(transmission, kernel_LSF, mode="same")
 
 	LSF_size = npix_LSF*(ext_lambs[1] - ext_lambs[0])*10000. # A
 	logging.info("Total LSF width for the convolution: {:.3f} A".format(LSF_size))
 	
-	return cube, back_emission, LSF_size
+	return cube, back_emission, transmission, LSF_size

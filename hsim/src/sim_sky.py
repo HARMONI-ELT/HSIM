@@ -39,7 +39,7 @@ def convolve_1d_spectrum(input_lambda, input_flux, output_spec_res):
 		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
 		kernel_LSF = Gaussian1DKernel(stddev=sigma_LSF_pix, x_size=npix_LSF)
 		
-		return np.convolve(input_flux, kernel_LSF, mode="same")	
+		return np.convolve(input_flux, kernel_LSF, mode="same")
 		
 	else:
 		logging.warning("Sky spectral resolution (R = {:.0f}) is lower than the input cube spectral resolution (R = {:.0f})".format(np.median(input_lambda)/sky_resolution, np.median(input_lambda)/output_spec_res if output_spec_res != 0 else np.inf))
@@ -76,7 +76,7 @@ def sky_background(lambs, air_mass, dit, input_spec_res, debug_plots, output_fil
 	sky_em_flux = sky_em_all_X[:, data_index]
 
 	# Match input cube spectral resolution
-	sky_em_lambda = convolve_1d_spectrum(sky_em_lambda, sky_em_flux, input_spec_res)
+	sky_em_flux = convolve_1d_spectrum(sky_em_lambda, sky_em_flux, input_spec_res)
 
 	# rebin sky emission
 	sky_radiance = dit*rebin1d(lambs, sky_em_lambda, sky_em_flux)
@@ -153,7 +153,7 @@ def moon_background(lambs, moon, dit, input_spec_res, debug_plots, output_file):
 #Sky throughput curve generated just using wavelength array.
 def sky_transmission(lambs, air_mass, input_spec_res, debug_plots, output_file):
 	'''Function that generates a full throughput curve combining
-	sky transmission & sky extinctionp.
+	sky transmission & sky extinction.
 
 	Inputs:
 		lambs: array of wavelengths for datacube
@@ -201,11 +201,12 @@ def sky_transmission(lambs, air_mass, input_spec_res, debug_plots, output_file):
 
 
 
-def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, input_spec_res, debug_plots=False, output_file=""):
+def sim_sky(cube, back_emission, transmission, header, ext_lambs, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, input_spec_res, debug_plots=False, output_file=""):
 	''' Simulates sky effects
 	Inputs:
 		cube: Input datacube (RA, DEC, lambda)
-		back_emission: Input background emission outside of the FoV
+		back_emission: Input background emission
+		transmission: Input transmission
 		header: FITS header
 		ext_lambs: extended lambda array [um]
 		cube_lamb_mask: mask array to get the lambs of the cube
@@ -225,6 +226,7 @@ def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mas
 	# Get sky transmission
 	logging.info("Calculating sky transmission")
 	sky_trans = sky_transmission(ext_lambs, air_mass, input_spec_res, debug_plots, output_file)
+	transmission *= sky_trans
 	
 	# Get sky emission (lines + continuum)
 	logging.info("Calculating sky emission")
@@ -252,5 +254,5 @@ def sim_sky(cube, back_emission, header, ext_lambs, cube_lamb_mask, DIT, air_mas
 		cube = apply_adr(cube, header, lambs, site_temp, air_mass, debug_plots=False, output_file=output_file)
 		
 		
-	return cube, back_emission
+	return cube, back_emission, transmission
 

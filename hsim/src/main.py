@@ -126,26 +126,27 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# calculate the cube in photons for a single exposure
 	# in ph/m2/um/arcsec2
 	cube_exp = cube*DIT
-	back_emission = np.zeros(len(lambs_extended))
+	back_emission = np.zeros(len(lambs_extended)) # Background exposure
+	transmission = np.ones(len(lambs_extended)) # Telluric correction
 
 	# 1 - Atmosphere: 
 	#	- Sky emission (lines + continuum)
 	#	- Sky transmission
 	#	- Moon
 	#	- Atmospheric differential refration
-	cube_exp, back_emission = sim_sky(cube_exp, back_emission, head, lambs_extended, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, input_spec_res, debug_plots=debug_plots, output_file=base_filename)
+	cube_exp, back_emission, transmission = sim_sky(cube_exp, back_emission, transmission, head, lambs_extended, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, input_spec_res, debug_plots=debug_plots, output_file=base_filename)
 	
 	# 2 - Telescope:
 	#	- PSF + Jitter
 	#	- Telescope background
 	#	- Telescope transmission
-	cube_exp, back_emission, psf, psf_lambda = sim_telescope(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, res_jitter, air_mass, seeing, spax, site_temp, aoMode, nprocs, debug_plots=debug_plots, output_file=base_filename)
+	cube_exp, back_emission, transmission, psf, psf_lambda = sim_telescope(cube_exp, back_emission, transmission, lambs_extended, cube_lamb_mask, DIT, res_jitter, air_mass, seeing, spax, site_temp, aoMode, nprocs, debug_plots=debug_plots, output_file=base_filename)
 
 	# 3 - Instrument:
 	#	- LSF
 	#	- Instrument background
 	#	- Instrument transmission
-	cube_exp, back_emission, LSF_width_A = sim_instrument(cube_exp, back_emission, lambs_extended, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=debug_plots, output_file=base_filename)
+	cube_exp, back_emission, transmission, LSF_width_A = sim_instrument(cube_exp, back_emission, transmission, lambs_extended, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=debug_plots, output_file=base_filename)
 	
 	# 4 - Rebin cube to output spatial and spectral pixel size
 	logging.info("Rebin data")
@@ -172,10 +173,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	lambs = lambs_extended[cube_lamb_mask]
 	new_lamb_per_pix = (lambs[1] - lambs[0])/scale_z # micron
-#	LSF_width_pix = int(LSF_width_A/10000./new_lamb_per_pix) + 1
 	
 	output_lambs = new_lamb_per_pix*np.arange(int(len(lambs)*scale_z)) + lambs[0]
-	#output_lambs = output_lambs[LSF_width_pix:-LSF_width_pix]
 	
 	output_cube_spec = np.zeros((len(output_lambs), out_size_y, out_size_x))
 	
@@ -186,6 +185,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 			output_cube_spec[:, j, i] = rebin1d(output_lambs, lambs, output_cube[:, j, i])
 	
 	output_back_emission = rebin1d(output_lambs, lambs_extended, back_emission)
+	output_transmission = rebin1d(output_lambs, lambs_extended, transmission)
 	
 	# and update header
 	head['CRVAL3'] = output_lambs[0]
@@ -211,7 +211,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	#	- QE
 	#	- Dark
 	#	- Read noise
-	output_cube_spec, output_back_emission, read_noise, dark_current = sim_detector(output_cube_spec, output_back_emission, output_lambs, grating, DIT, debug_plots=debug_plots, output_file=base_filename)
+	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current = sim_detector(output_cube_spec, output_back_emission, output_transmission, output_lambs, grating, DIT, debug_plots=debug_plots, output_file=base_filename)
 	head['FUNITS'] = "electrons"
 	
 	
@@ -253,7 +253,6 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	# - combine object, read noise and dark current
 	sim_total = sim_object_plus_back + sim_read_noise1 + sim_dark_current1
-	
 	
 	# B. Background exposure
 	#- background with crosstalk
@@ -390,13 +389,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		total_trans_interp = interp1d(total_tr_w, total_tr, kind='linear', bounds_error=False, fill_value=0.)
 		total_tr_final_w = w
 		total_tr_final = total_trans_interp(total_tr_final_w)*e
-		if grating != "V+R":
-			total_tr_final = apply_crosstalk_1d(total_tr_final, config_data["crosstalk"])
-		plt.plot(total_tr_final_w, total_tr_final, label="Total", color=colors[7])
-		np.savetxt(base_filename + "_total_tr.txt", np.c_[total_tr_final_w, total_tr_final], comments="#", header="\n".join([
-			'TYPE: Total transmission.' + ("" if grating == "V+R" else ' Detector crosstalk applied.'), 
-			'Wavelength [um], Transmission']))
 
+		plt.plot(total_tr_final_w, total_tr_final, label="Total", color=colors[7])
+		
 		plt.legend(prop={'size': 6})
 		plt.xlabel(r"wavelength [$\mu$m]")
 		plt.ylabel(r"transmission")
@@ -453,6 +448,19 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	if debug:
 		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)
 		save_fits_cube(outFile_read_noise, noise_cube_read_noise**2, "read noise variance", head)
+	
+
+	# Save transmission
+	np.savetxt(base_filename + "_total_tr.txt", np.c_[output_lambs, output_transmission], comments="#", header="\n".join([
+		'TYPE: Total transmission.',
+		'Wavelength [um], Transmission']))
+	
+	if grating != "V+R":
+		output_transmission = apply_crosstalk_1d(output_transmission, config_data["crosstalk"])
+		np.savetxt(base_filename + "_total_tr_crosstalk.txt", np.c_[output_lambs, output_transmission], comments="#", header="\n".join([
+			'TYPE: Total transmission with detector crosstalk.',
+			'Wavelength [um], Transmission']))
+	
 	
 	# Save PSF
 	head_PSF = head

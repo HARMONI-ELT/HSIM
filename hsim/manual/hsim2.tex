@@ -247,7 +247,8 @@ HSIM stores the results of the simulation in the specified output directory (the
 \item \texttt{\_PSF.fits}. Point spread function at the mean wavelength of the input data cube. The PSF is oversampled by a factor of 4 to 10 with respect to the other output \textsc{fits} data cubes.
 \item \texttt{\_total\_em.pdf}. Plot of the background emission broken up into the individual modeled components. The average HARMONI to telescope$+$sky background ratio is indicated.
 \item \texttt{\_total\_tr.pdf}. Plot of system transmission broken up into the individual modeled components.
-\item \texttt{\_total\_tr.txt}. Total transmission stored as a text file.
+\item \texttt{\_total\_tr.txt}. Total transmission stored as a text file. Cross-talk is not applied (see \_noiseless\_obj\_plus\_back description).
+\item \texttt{\_total\_tr\_crosstalk.txt}. Total transmission stored as a text file with cross-talk applied. Only for the near-IR detector.
 \item \texttt{.log}. Detailed log of the simulation. The last line of this file shows if any problem was found during the simulation.
 \end{enumerate}
 

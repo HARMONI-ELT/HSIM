@@ -125,11 +125,12 @@ def apply_crosstalk_1d(spectrum, crosstalk):
 
  
 
-def sim_detector(cube, back_emission, lambs, grating, DIT, debug_plots=False, output_file=""):
+def sim_detector(cube, back_emission, transmission, lambs, grating, DIT, debug_plots=False, output_file=""):
 	''' Simulates detector effects
 	Inputs:
 		cube: Input datacube (RA, DEC, lambda)
 		back_emission: Input background emission
+		transmission: Input transmission
 		lambs: lambda array [um]
 		grating: Spectral grating
 		debug_plots: Produce debug plots
@@ -144,7 +145,8 @@ def sim_detector(cube, back_emission, lambs, grating, DIT, debug_plots=False, ou
 	# Get QE curve
 	logging.info("Calculating detector QE")
 	qe_curve = detector_QE_curve(lambs, grating, debug_plots, output_file)
-	back_emission = np.multiply(back_emission, qe_curve)
+	back_emission *= qe_curve
+	transmission *= qe_curve
 	
 	qe_curve.shape = (len(lambs), 1, 1)
 	cube *= qe_curve
@@ -166,7 +168,7 @@ def sim_detector(cube, back_emission, lambs, grating, DIT, debug_plots=False, ou
 		dark = config_data["dark_current"]["nir"]
 
 	
-	return cube, back_emission, read_noise, dark*DIT
+	return cube, back_emission, transmission, read_noise, dark*DIT
 	
 
 	

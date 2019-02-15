@@ -133,11 +133,12 @@ def save_result(results):
 	result_cube[i, :, :] = conv_image[y0:y1, x0:x1]
 
 
-def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, aoMode, ncpus, debug_plots=False, output_file=""):
+def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, aoMode, ncpus, debug_plots=False, output_file=""):
 	''' Simulates telescope effects
 	Inputs:
 		cube: Input datacube (RA, DEC, lambda)
-		back_emission: Input background emission outside of the FoV
+		back_emission: Input background emission
+		transmission: Input transmission
 		ext_lambs: extended lambda array [um]
 		cube_lamb_mask: mask array to get the lambs of the cube
 		DIT: Exposure time [s]
@@ -160,12 +161,13 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 	# Get telescope reflectivity
 	logging.info("Calculating telescope reflectivity")
 	telescope_reflectivity = telescope_transmission_curve(ext_lambs, debug_plots, output_file)
-	back_emission = back_emission*telescope_reflectivity
+	back_emission *= telescope_reflectivity
+	transmission *= telescope_reflectivity
 	
 	# Get telescope background
 	logging.info("Calculating telescope background")
 	telescope_background = telescope_background_emission(ext_lambs, site_temp, 1. - telescope_reflectivity, DIT, debug_plots, output_file)
-	back_emission = back_emission + telescope_background
+	back_emission += telescope_background
 	
 	# Add telescope emission/transmission to the input cube
 	tel_reflectivity_cube = telescope_reflectivity[cube_lamb_mask]
@@ -243,6 +245,6 @@ def sim_telescope(cube, back_emission, ext_lambs, cube_lamb_mask, DIT, jitter, a
 			#break
 	
 	central_lambda = (lambs[0] + lambs[-1])*0.5
-	return cube, back_emission, create_psf(central_lambda), central_lambda
+	return cube, back_emission, transmission, create_psf(central_lambda), central_lambda
 
 
