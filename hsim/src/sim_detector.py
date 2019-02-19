@@ -91,7 +91,7 @@ def apply_crosstalk(cube, crosstalk):
 		cube: Cube including crosstalk
 	'''
 	
-	logging.info("Applying detector crosstalk")
+	#logging.info("Applying detector crosstalk")
 	
 	scaled_cube = cube*(1. - crosstalk*4)
 	
@@ -113,7 +113,7 @@ def apply_crosstalk_1d(spectrum, crosstalk):
 		spectrum including crosstalk
 	'''
 	
-	logging.info("Applying detector crosstalk - 1d")
+	#logging.info("Applying detector crosstalk - 1d")
 	
 	scaled_spectrum = spectrum*(1. - crosstalk*2)
 	

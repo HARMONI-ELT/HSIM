@@ -239,6 +239,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	sim_object_plus_back = np.random.poisson(abs(output_cube_spec*NDIT)).astype(np.float32)
 	# Apply crosstalk only to NIR detectors
 	if grating != "V+R":
+		logging.info("Applying detector crosstalk")
 		sim_object_plus_back = apply_crosstalk(sim_object_plus_back, config_data["crosstalk"])
 	
 	if np.sum(saturated_obj_back) > 0:
@@ -284,16 +285,16 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# interpolation during the data reduction
 	sigma = 1./2.35482 # pix
 	kernel_size = 5
-	Gauss2D = lambda x, y: 1./(2.*np.pi*sigma**2)*np.exp(-(x**2 + y**2)/(2.*sigma**2))
+	Gauss2D = lambda x, y: np.exp(-(x**2 + y**2)/(2.*sigma**2))
 	xgrid = np.linspace(1, kernel_size, kernel_size) - kernel_size*0.5 - 0.5
 	ygrid = np.linspace(1, kernel_size, kernel_size) - kernel_size*0.5 - 0.5
 	xx, yy = np.meshgrid(xgrid, ygrid)
 	kernel = Gauss2D(xx, yy)
+	kernel = kernel/np.sum(kernel)
 	z, y, x = sim_reduced.shape
 	for pz in range(z):
-		sim_reduced[pz, :, :] = convolve2d(sim_reduced[pz, :, :], kernel, mode="same", boundary="wrap")
+		sim_reduced[pz, :, :] = convolve2d(sim_reduced[pz, :, :], kernel, mode="same", boundary="fill", fillvalue=0.)
 
-	
 	# Calculate noise cube
 	noise_cube_object = abs(output_cube_spec*NDIT) # object+back noise variance
 	noise_cube_back = abs(output_back_emission_cube*NDIT) # back noise variance
@@ -434,6 +435,12 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	head['HSM_TIME'] = str(datetime.datetime.utcnow())
 	
+	# Apply to the noiseless cubes
+	if grating != "V+R":
+		output_cube_spec = apply_crosstalk(output_cube_spec, config_data["crosstalk"])
+		output_back_emission_cube = apply_crosstalk(output_back_emission_cube, config_data["crosstalk"])
+		output_cube_spec_wo_back = apply_crosstalk(output_cube_spec_wo_back, config_data["crosstalk"])
+	
 	save_fits_cube(outFile_noiseless_object_plus_back, output_cube_spec*NDIT, "Noiseless O+B", head)
 	save_fits_cube(outFile_noiseless_background, output_back_emission_cube*NDIT, "Noiseless B", head)
 	save_fits_cube(outFile_noiseless_object, output_cube_spec_wo_back*NDIT, "Noiseless O", head)
@@ -450,16 +457,13 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		save_fits_cube(outFile_read_noise, noise_cube_read_noise**2, "read noise variance", head)
 	
 
-	# Save transmission
+	# Save transmission with crosstalk
+	if grating != "V+R":
+		output_transmission = apply_crosstalk_1d(output_transmission, config_data["crosstalk"])
+	
 	np.savetxt(base_filename + "_total_tr.txt", np.c_[output_lambs, output_transmission], comments="#", header="\n".join([
 		'TYPE: Total transmission.',
 		'Wavelength [um], Transmission']))
-	
-	if grating != "V+R":
-		output_transmission = apply_crosstalk_1d(output_transmission, config_data["crosstalk"])
-		np.savetxt(base_filename + "_total_tr_crosstalk.txt", np.c_[output_lambs, output_transmission], comments="#", header="\n".join([
-			'TYPE: Total transmission with detector crosstalk.',
-			'Wavelength [um], Transmission']))
 	
 	
 	# Save PSF

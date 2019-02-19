@@ -308,10 +308,11 @@ def create_psf(lamb, Airy=False):
 		seeing_lambda = seeing/((lamb/0.5)**(1./5)*np.cos(zenit_angle)**(3./5))*1000. # mas
 		sigma = seeing_lambda/2.35482
 		
-		Gauss2D = lambda x, y: 1./(2.*np.pi*sigma**2)*np.exp(-(x**2 + y**2)/(2.*sigma**2))*psfscale**2
+		Gauss2D = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*sigma**2))
 		
 		xx, yy = np.meshgrid(xgrid_out, ygrid_out)
 		finalpsf = Gauss2D(xx, yy)
+		finalpsf = finalpsf/np.sum(finalpsf)
 		#fits.writeto("psf.fits", Gauss2D(xx, yy), overwrite=True)
 		return finalpsf
 
