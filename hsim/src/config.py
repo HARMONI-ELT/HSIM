@@ -4,6 +4,7 @@ with keywords.
 '''
 import logging
 import collections
+import sys
 
 GratingInfo = collections.namedtuple('GratingInfo', 'lmin, lmax, R')
 SpaxelScaleInfo = collections.namedtuple('SpaxelScaleInfo', 'xscale, yscale, psfscale, psfsize')
@@ -74,5 +75,6 @@ config_data = {
 class HSIMError(Exception):
 	pass
 	def __init__(self, message):
+		sys.tracebacklimit = 0
 		logging.error(message)
 
