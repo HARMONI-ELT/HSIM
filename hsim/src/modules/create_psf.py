@@ -223,6 +223,11 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 		diameter = D
 		logging.info("define AO PSF - " + AO_mode)
 		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
+			# Check that we have the actual files and not the git LFS links
+			if os.path.getsize(os.path.join(psf_path,"ELT_pup.fits")) < 1024:
+				raise HSIMError("The sim_data/PSF/*fits files are git LFS links. These FITS files are needed to run HSIM.")
+			
+			
 			# PSD cubes
 			pup = fits.getdata(os.path.join(psf_path,"ELT_pup.fits"))
 			
