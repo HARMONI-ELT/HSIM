@@ -20,25 +20,6 @@ from src.config import *
 tppath = path_setup('../../' + config_data["data_dir"] + 'throughput/')
 detpath = path_setup('../../' + config_data["data_dir"] + 'detectors/')
 
-
-def make_det_vals(data, N):
-	np.random.seed(1)
-	rands = np.random.random(N)
-	rands_sort = np.sort(rands)
-	det_vals = interp(data)(rands_sort)
-	np.random.seed(1)
-	np.random.shuffle(det_vals)
-	return det_vals
- 
- 
-#interpolation function
-def interp(data):
-	X = np.sort(data)
-	x_range = np.linspace(0,1,len(X))
-	func = UnivariateSpline(x_range, X, k=4, s=0)
-	return func
-		
-
 #Detector throughput curve generated just using wavelength array.
 def detector_QE_curve(wavels, grating, debug_plots, output_file):
 	'''Function that generates a detector QE curve.
@@ -193,6 +174,26 @@ def sim_detector(cube, back_emission, transmission, lambs, grating, DIT, debug_p
 	
 	return cube, back_emission, transmission, read_noise, dark*DIT
 	
+
+# Detector systematics code
+
+#interpolation function
+def interp(data):
+	X = np.sort(data)
+	x_range = np.linspace(0,1,len(X))
+	func = UnivariateSpline(x_range, X, k=4, s=0)
+	return func
+
+
+def make_det_vals(data, N):
+	np.random.seed(1)
+	rands = np.random.random(N)
+	rands_sort = np.sort(rands)
+	det_vals = interp(data)(rands_sort)
+	np.random.seed(1)
+	np.random.shuffle(det_vals)
+	return det_vals
+
 
 def make_detectors(NDIT):
 	''' Generates an instance of the detectors

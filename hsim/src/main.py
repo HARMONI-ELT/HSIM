@@ -22,9 +22,11 @@ from src.sim_sky import sim_sky
 from src.sim_telescope import sim_telescope
 from src.sim_instrument import sim_instrument
 from src.sim_detector import sim_detector, apply_crosstalk, mask_saturated_pixels, apply_crosstalk_1d
-from src.sim_detector import make_det_instance, add_detectors
 from src.modules.adr import apply_adr
 from src.modules.rebin import *
+
+# Detector systematics
+from src.sim_detector import make_det_instance, add_detectors
 from src.modules.misc_utils import trim_cube
 
 
@@ -225,8 +227,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		sim_dets2 = make_det_instance(NDIT)
 	
 	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current = sim_detector(output_cube_spec, output_back_emission, output_transmission, output_lambs, grating, DIT, debug_plots=debug_plots, output_file=base_filename)
-
 	head['FUNITS'] = "electrons"
+	
 	
 	# Generate noiseless outputs
 	# - object + background
@@ -236,7 +238,6 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	# - background - as a cube the 1D background spectrum
 	output_back_emission = output_back_emission.astype(np.float32)
-
 	output_back_emission.shape = (len(output_back_emission), 1, 1)
 	output_back_emission_cube = np.zeros_like(output_cube_spec) + output_back_emission
 	if det_switch == "True":
@@ -264,7 +265,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		sim_object_plus_back[saturated_obj_back] = np.nan
 
 	dark_cube = np.zeros_like(output_cube_spec) + dark_current*NDIT
-		
+	
 	if det_switch == "False":
 		# - read noise and dark current for object exposure
 		sim_read_noise1 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
@@ -507,7 +508,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(base_filename + "_PSF.fits", psf, "PSF", head_PSF)
 	
 	if hsimlog.count_error == 0 and hsimlog.count_warning == 0:
-		logging.info('Simulation OK')
+		logging.info('Simulation OK - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")
 	else:
 		logging.warning('Simulation with problems - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")
 	

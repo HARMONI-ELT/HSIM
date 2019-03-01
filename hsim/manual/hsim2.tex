@@ -227,7 +227,7 @@ The available HSIM options are listed below. The number before them indicates th
 \item ADR on/off: Indicates if the atmospheric differential refraction is simulated. When simulated, the differential refraction is corrected in the output cubes in a way similar to what is expected from the pipieline. Available values are \texttt{True, False}.
 \item Noise seed: Seed used for the random number generator during the simulation. It only affects the observed outputs (see Section~\ref{s:output}).
 \item AO mode: Adaptive optics mode of the observations. The available values are the following: \texttt{LTAO, SCAO, noAO, Airy}. \texttt{LTAO} corresponds to the Laser Tomography Adaptive Optics mode,  \texttt{SCAO} to the Single Conjugate Adaptive Optics mode, \texttt{noAO} indicates that no adaptive optics corrections are applied, and \texttt{Airy} uses the diffraction limit of the ELT.
-% \item Detector systematics: Indicates if the detector systematics (i.e., ..) are simulated. It only affects the observed outputs (see Section~\ref{s:output}). Available values are \texttt{True, False}.
+\item Detector systematics: Indicates if the detector systematics are simulated. It only affects the observed outputs (see Section~\ref{s:output}). Available values are \texttt{True, False}.
 \end{enumerate}
 
 \subsection{Output Files}\label{s:output}
@@ -236,7 +236,7 @@ HSIM stores the results of the simulation in the specified output directory (the
 
 \begin{enumerate}
 \setlength\itemsep{-0.5ex}
-\item \texttt{\_noiseless\_obj\_plus\_back.fits}. Data cube containing the expected number of electrons per pixel detected by HARMONI due to the target and the background (sky, telescope, and instrument) emissions. Cross-talk is also applied to the noiseless outputs to match the LSF of the observed and reduced outputs cubes.}
+\item \texttt{\_noiseless\_obj\_plus\_back.fits}. Data cube containing the expected number of electrons per pixel detected by HARMONI due to the target and the background (sky, telescope, and instrument) emissions. Cross-talk is also applied to the noiseless outputs to match the LSF of the observed and reduced outputs cubes.
 \item \texttt{\_noiseless\_obj.fits}. Expected number of electrons per pixel solely due to the target.
 \item \texttt{\_noiseless\_back.fits}. Expected number of electrons per pixel from the background sources (sky, telescope, and instrument).
 \item \texttt{\_observed\_obj\_plus\_back.fits}. Simulated observed data cube taking into account the photon noise, read noise, dark current, and cross-talk.

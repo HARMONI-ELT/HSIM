@@ -15,6 +15,7 @@ config_data = {
 	'saturation': {"vis":55000., "nir":55000.}, # e
 	'crosstalk': 0.02, # fraction of photons going to each of the 4 contiguous pixels
 	'side_length': 4096, # length of side of H4RG
+
 	'spectral_sampling':{"output":2.2, "internal":4.}, # spectral sampling of the output cube and internal. Nyquist = 2
 	'LSF_kernel_size':12., # LSF kernel size in sigma units
 	
@@ -22,21 +23,29 @@ config_data = {
 	
 	'HARMONI_temp':140., # K
 	'HARMONI_FPRS_diff_temp':20., # Tamb - 20 K for the FPRS
-	'HARMONI_AO_diff_temp':5., #  Tamb - 5 K for the AO dichroic
+	'HARMONI_AO_diff_temp':{"LTAO":5.,  #  Tamb - 5 K for the LTAO AO dichroic,
+				"SCAO":20.}, #  Tamb - 20 K for the SCAO AO dichroic}
 	
 	'data_dir':"sim_data/",
-		
-	'gratings': {'V+R':GratingInfo(0.4625,0.8200, 3100.), 
-			'Iz+J':GratingInfo(0.8105,1.3695, 3300.), 'H+K':GratingInfo(1.4500,2.4500, 3300.),
-			'Iz':GratingInfo(0.8300,1.0500, 7100.),'J':GratingInfo(1.0463,1.3237, 7100.), 'H':GratingInfo(1.4348,1.8151, 7100.), 'K':GratingInfo(1.9514,2.4686, 7100.),
+	
+	#  HRM-00244
+	'gratings': {	#low resolution
+			'V+R':GratingInfo(0.458, 0.8200, 3100.),
+			'Iz+J':GratingInfo(0.811, 1.369, 3355.),
+			'H+K':GratingInfo(1.450, 2.450, 3355.),
+			# med-resolution
+			'Iz':GratingInfo(0.830, 1.050, 7104.),
+			'J':GratingInfo(1.046, 1.324, 7104.),
+			'H':GratingInfo(1.435, 1.815, 7104.),
+			'K':GratingInfo(1.951, 2.469, 7104.),
 			# high-resolution
-			'z-high':GratingInfo(0.829, 0.902, 17200.),
-			'J-short':GratingInfo(1.012, 1.102, 17200.),
-			'J-long':GratingInfo(1.098, 1.189, 17200.),
-			'J-high':GratingInfo(1.1900, 1.3000, 17200.),
-			'H-high':GratingInfo(1.541, 1.676, 17200.),
-			'K-short':GratingInfo(2.024, 2.202, 17200.),
-			'K-long':GratingInfo(2.197, 2.390, 17200.)
+			'z-high':GratingInfo(0.828, 0.902, 17385.),
+			'J-short':GratingInfo(1.012, 1.102, 17385.),
+			'J-long':GratingInfo(1.098, 1.189, 17385.),
+			'J-high':GratingInfo(1.191, 1.299, 17385.),
+			'H-high':GratingInfo(1.538, 1.678, 17385.),
+			'K-short':GratingInfo(2.017, 2.201, 17385.),
+			'K-long':GratingInfo(2.199, 2.400, 17385.)
 			},
 	
 	'spaxel_scale': {'4x4':SpaxelScaleInfo(4., 4., 1., 1000),
@@ -51,7 +60,7 @@ config_data = {
 	#design image quality, manufacturing and assembly tolerances, vibration, flexure, diff refraction,
 	'dynamic_instrument_psf': 4.8,
 	'static_instrument_psf': {'4x4': 0.,
-			  '10x10':10.,
+    		  '10x10':10.,
 		  '20x20':26.,
 		  '30x60':30.
 		},
