@@ -75,7 +75,7 @@ if __name__ == "__main__":
 			break
 
 	for o, a in optlist:
-		if o in ("-c", "--cline") and len(args) != 13:
+		if o in ("-c", "--cline") and len(args) != 14:
 			print ""
 			print 'COMMAND LINE USAGE'
 			print ""
@@ -85,23 +85,23 @@ if __name__ == "__main__":
 			print '3. NDIT: No. of exposures'
 			print '4. grating - V+R, Iz+J, H+K, Iz, J, H, K, z-high, J-high, H-high, K-short, K-long, J-short, J-long'
 			print '5. spax: spatial pixel (spaxel) scale [mas] - 4x4, 10x10, 20x20, 30x60 '
-			print '6. seeing: Atmospheric seeing FWHM [arcsec] - 0.43", 0.57", 0.64", 0.72", 1.04"'
+			print '6. seeing: Atmospheric seeing FWHM [arcsec] - 0.43, 0.57, 0.64, 0.72, 1.04'
 			print '7. air mass - 1.1, 1.3, 1.5, 2.0'
 			print '8. Moon fractional illumination - 0 0.5 1.0'
 			print '9. jitter: Additional telescope PSF blur [mas]'
 			print '10. site temp: Site/telescope temperature [K]'
-			print '11. ADR on/off: (True/False) - atmospheric differential refraction'
+			print '11. ADR on: (True/False) - atmospheric differential refraction'
 			print '12. noise seed'
 			print '13. AO mode [LTAO/SCAO//noAO/Airy]'
-			#print '14. Use detector systematics (True/False)'
+			print '14. Use detector systematics (True/False)'
 			print ""
 
 			sys.exit()
-		elif o in ("-c", "--cline") and len(args) == 13:
+		elif o in ("-c", "--cline") and len(args) == 14:
 			if not os.path.exists(odir) or not os.path.isdir(odir):
 				print "Output directory '" + odir + "'  does not exist or is not a directory. Exiting."
 				sys.exit()
-
+				
 			datacube = str(args[0])
 			DIT = int(args[1])
 			NDIT = int(args[2])
@@ -115,11 +115,11 @@ if __name__ == "__main__":
 			adr = str(args[10])
 			noise_seed = int(args[11])
 			ao_mode = str(args[12])
-			#systematics = str(args[12])
+			systematics = str(args[13])
 
 			#Start main function
 			main(os.path.join(".", datacube), os.path.join(".", odir), DIT, NDIT, grat, spax, seeing, air_mass, ver,
-				res_jitter=jitter, moon=moon, site_temp=site_temp, adr_switch=adr, det_switch='False',
+				res_jitter=jitter, moon=moon, site_temp=site_temp, adr_switch=adr, det_switch=systematics,
 				seednum=noise_seed, nprocs=nprocs, debug=debug, aoMode=ao_mode)
 
 			sys.exit()
@@ -264,14 +264,14 @@ if __name__ == "__main__":
 				ADR = wx.StaticText(panel, label="ADR on/off")
 				self.ADRVAL = wx.CheckBox(panel)
 				self.ADRVAL.SetValue(True)
-				#DET = wx.StaticText(panel, label="Detector systematics")
-				#self.DETVAL = wx.CheckBox(panel)
-				#self.DETVAL.SetValue(False)
+				DET = wx.StaticText(panel, label="Detector systematics")
+				self.DETVAL = wx.CheckBox(panel)
+				self.DETVAL.SetValue(False)
 
 				fgss.AddMany([(misc), (submisc),
 						(RESJIT), (self.RESJITVAL, 1, wx.EXPAND),
 						(ADR), (self.ADRVAL, 1, wx.EXPAND),
-						#(DET), (self.DETVAL, 1, wx.EXPAND),
+						(DET), (self.DETVAL, 1, wx.EXPAND),
 						(N_PROC), (self.N_PROCVAL, 1, wx.EXPAND),
 						(NOISESEED), (self.NOISESEEDVAL, 1, wx.EXPAND)])
 
@@ -307,11 +307,11 @@ if __name__ == "__main__":
 				nprocs = int(self.N_PROCVAL.GetValue())
 				odir = str(self.DIRVAL.GetPath())
 				return_adrval = str(self.ADRVAL.GetValue())
-				#return_detval = str(self.DETVAL.GetValue())
-
+				return_detval = str(self.DETVAL.GetValue())
+				
 				#start main program
 				main(os.path.join(".", cubefile), os.path.join(".", odir), ditval, nditval, photoband, spaxval, seeingval, airmassaval, ver,
-					res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval,
+					res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval, det_switch=return_detval,
 					seednum=noiseseedval, nprocs=nprocs, aoMode=aomode, moon=moon)
 
 
