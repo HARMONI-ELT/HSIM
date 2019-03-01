@@ -21,8 +21,9 @@ from init_cube import init_cube
 from sim_sky import sim_sky
 from sim_telescope import sim_telescope
 from sim_instrument import sim_instrument
-from sim_detector import sim_detector, apply_crosstalk, mask_saturated_pixels
+from sim_detector import sim_detector, apply_crosstalk, mask_saturated_pixels, make_det_instance, add_detectors
 from modules.adr import apply_adr
+from modules.misc_utils import trim_cube
 
 from modules.rebin import *
 
@@ -69,7 +70,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 			Conf('Temperature', 'HSM_TEMP', site_temp),
 			Conf('Moon', 'HSM_MOON', moon),
 			Conf('ADR', 'HSM_ADR', adr_switch),
-			#Conf('Detectors', 'HSM_DET', det_switch),
+			Conf('Detectors', 'HSM_DET', det_switch),
 			Conf('Seed', 'HSM_SEED', seednum),
 			Conf('AO', 'HSM_AO', aoMode),
 			Conf('No. of processes', 'HSM_NPRC', nprocs),
@@ -203,7 +204,18 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	#	- QE
 	#	- Dark
 	#	- Read noise
-	output_cube_spec, output_back_emission, read_noise, dark_current = sim_detector(output_cube_spec, output_back_emission, output_lambs, grating, DIT, debug_plots=debug_plots, output_file=base_filename)
+
+        # Cut cubes to correct size if using detector systematics and generate detectors 
+        if det_switch == "True":
+                logging.info("Trimming datacubes to correct size")
+                print output_cube_spec.shape
+                output_cube_spec = trim_cube(output_cube_spec)
+                print output_cube_spec.shape
+                logging.info("Generating simulated detectors")
+                sim_dets1 = make_det_instance(NDIT)
+                sim_dets2 = make_det_instance(NDIT)
+	
+        output_cube_spec, output_back_emission, read_noise, dark_current = sim_detector(output_cube_spec, output_back_emission, output_lambs, grating, DIT, debug_plots=debug_plots, output_file=base_filename)                
 	head['FUNITS'] = "electrons"
 	
 	
@@ -216,7 +228,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# - background - as a cube the 1D background spectrum
 	output_back_emission = output_back_emission.astype(np.float32)
 	output_back_emission.shape = (len(output_back_emission),1,1)
-	output_back_emission_cube = np.zeros_like(output_cube_spec) + output_back_emission
+        output_back_emission_cube = np.zeros_like(output_cube_spec) + output_back_emission
+        if det_switch == "True":
+                output_back_emission_cube = trim_cube(output_back_emission_cube)
+                
 	# - mask saturated pixels
 	output_back_emission_cube, saturated_back = mask_saturated_pixels(output_back_emission_cube, grating)
 	
@@ -236,15 +251,18 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	if np.sum(saturated_obj_back) > 0:
 		logging.warning(str(np.sum(saturated_obj_back)) + " pixels are saturated in the obj + back frames")
 		sim_object_plus_back[saturated_obj_back] = np.nan
-		
 
-	# - read noise and dark current for object exposure
-	dark_cube = np.zeros_like(output_cube_spec) + dark_current*NDIT
-	sim_read_noise1 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
-	sim_dark_current1 = np.random.poisson(dark_cube).astype(np.float32)
+        dark_cube = np.zeros_like(output_cube_spec) + dark_current*NDIT
+		
+        if det_switch == "False":
+                # - read noise and dark current for object exposure
+                sim_read_noise1 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
+                sim_dark_current1 = np.random.poisson(dark_cube).astype(np.float32)
 	
-	# - combine object, read noise and dark current
-	sim_total = sim_object_plus_back + sim_read_noise1 + sim_dark_current1
+                # - combine object, read noise and dark current
+                sim_total = sim_object_plus_back + sim_read_noise1 + sim_dark_current1
+        else:
+                sim_total = add_detectors(sim_object_plus_back, sim_dets1)
 	
 	
 	# B. Background exposure
@@ -259,13 +277,15 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		logging.warning(str(np.sum(saturated_back)) + " pixels are saturated in the back frames")
 		sim_back[saturated_back] = np.nan
 
+	if det_switch == "False":
+                # - read noise and dark current for background exposure
+                sim_read_noise2 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
+                sim_dark_current2 = np.random.poisson(dark_cube).astype(np.float32)
 	
-	# - read noise and dark current for background exposure
-	sim_read_noise2 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
-	sim_dark_current2 = np.random.poisson(dark_cube).astype(np.float32)
-	
-	# - combine object, read noise and dark current
-	sim_total_only_back = sim_back + sim_read_noise2 + sim_dark_current2
+                # - combine object, read noise and dark current
+                sim_total_only_back = sim_back + sim_read_noise2 + sim_dark_current2
+        else:
+                sim_total_only_back = add_detectors(sim_back, sim_dets2)
 	
 	
 	# C. Calculate reduced cube: object - background exposure
@@ -463,7 +483,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(base_filename + "_PSF.fits", psf, "PSF", head_PSF)
 	
 	if hsimlog.count_error == 0 and hsimlog.count_warning == 0:
-		logging.info('Simulation OK - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")
+		logging.info('Simulation OK')
 	else:
 		logging.warning('Simulation with problems - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")
 	

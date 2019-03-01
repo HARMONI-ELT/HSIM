@@ -88,7 +88,7 @@ Miguel Pereira Santaella (University of Oxford)
 
 HSIM is a dedicated pipeline for simulating observations with HARMONI on the Extremely Large Telescope. HSIM takes high spectral and spatial resolution input data cubes, encoding physical descriptions of astrophysical sources, and generates mock observed data cubes. The simulations incorporate detailed models of the sky, telescope, instrument, and detectors to produce realistic mock data \citep{Zieleniewski2015}.
 
-HSIM is programmed in Python and the source code can be found at  \url{https://github.com/HARMONI-ELT/HSIM}. It does not require any installation, just download it from \url{....} and unzip. HSIM depends on the following Python packages to work:
+HSIM is programmed in Python and the source code can be found at  \url{https://github.com/szieleniewski/HSIM}. It does not require any installation, just download from \url{????} and unzip. HSIM depends on the following Python packages to work:
 
 \begin{itemize}
 \setlength\itemsep{-0.5ex}
@@ -222,8 +222,8 @@ The available HSIM options are listed below. The number before them indicates th
 \item Zenith seeing: Atmospheric seeing FWHM in arcsec. The available values are the following: \texttt{0.43, 0.57, 0.64, 0.72, 1.04}.
 \item Air mass: Average air mass during the HARMONI observation. The available values are the following: \texttt{1.1, 1.3, 1.5, 2.0}, which correspond to zenith angles of 25$^{\circ}$, 40$^{\circ}$, 48$^{\circ}$, and 60$^{\circ}$, respectively.
 \item Moon illumination: Fraction of the Moon that is illuminated at the time of the observation. A 30$^{\circ}$ separation between target and Moon is assumed. The available values are the following: \texttt{0, 0.5, 1.0}.
-\item Jitter: Additional telescope PSF blur in mas. Typical values are \texttt{2} and \texttt{3} for SCAO and LTAO, respectively.
-\item Telescope temperature: Temperature of the site\slash telescope in K. This is used to calculate the telescope and part of the instrument background emission. Typical value is \texttt{280}.
+\item Jitter: Additional telescope PSF blur in mas. Default value is \texttt{3}.
+\item Telescope temperature: Temperature of the site\slash telescope in K. This is used to calculate the telescope and part of the instrument background emission. Default value is \texttt{280}.
 \item ADR on/off: Indicates if the atmospheric differential refraction is simulated. When simulated, the differential refraction is corrected in the output cubes in a way similar to what is expected from the pipieline. Available values are \texttt{True, False}.
 \item Noise seed: Seed used for the random number generator during the simulation. It only affects the observed outputs (see Section~\ref{s:output}).
 \item AO mode: Adaptive optics mode of the observations. The available values are the following: \texttt{LTAO, SCAO, noAO}. \texttt{LTAO} corresponds to the Laser Tomography Adaptive Optics mode,  \texttt{SCAO} to the Single Conjugate Adaptive Optics mode and \texttt{noAO} indicates that no adaptive optics corrections are applied.
