@@ -228,10 +228,10 @@ def init_cube(datacube, grating, spax):
 	lambs, head = wavelength_array(head)
 	
 	#RESCALE DATACUBE TO CHOSEN SPECTRAL RESOLUTION.
-        cube, head, lambs, input_spec_res = spectral_res(cube, head, grating, lambs)
-        
+	cube, head, lambs, input_spec_res = spectral_res(cube, head, grating, lambs)
+	
 	#RESCALE DATACUBE TO CHOSEN SPATIAL RESOLUTION.
-        cube, head = spatial_res(cube, head, spax)
+	cube, head = spatial_res(cube, head, spax)
 
 	#Energy-to-Photons Conversion factor will depend on head['FUNITS'] value
 	logging.info('Flux units = ' + head['FUNITS'])

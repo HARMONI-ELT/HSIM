@@ -194,7 +194,7 @@ def sim_detector(cube, back_emission, transmission, lambs, grating, DIT, debug_p
 	return cube, back_emission, transmission, read_noise, dark*DIT
 	
 
-def make_detectors(NDIT):   
+def make_detectors(NDIT):
 	''' Generates an instance of the detectors
 	Inputs:
 		NDIT: Number of detector integrations
@@ -273,7 +273,7 @@ def add_detectors(cube, dets):
 	full_datacube = np.zeros((3700,152,204))
 	full_datacube[:cube_shape[0],:cube_shape[1],:cube_shape[2]] += cube
 
-	# slice datacube up into 8 octants  
+	# slice datacube up into 8 octants
 	slice1 = full_datacube[:,:38,:102]
 	slice2 = full_datacube[:,:38,102:]
 	slice3 = full_datacube[:,38:76,:102]
