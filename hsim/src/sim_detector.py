@@ -268,7 +268,6 @@ def add_detectors(cube, dets):
 	'''
 	sim_dets = np.copy(dets)
 	cube_shape = cube.shape
-	print cube_shape
 	
 	# allow for datacube to be smaller than the detectors
 	full_datacube = np.zeros((3700,152,204))

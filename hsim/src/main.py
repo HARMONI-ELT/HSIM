@@ -217,14 +217,15 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	#	- Read noise
 
 	# Cut cubes to correct size if using detector systematics and generate detectors 
-	if det_switch == "True":
+	if det_switch == "True" and grating != "V+R":
 		logging.info("Trimming datacubes to correct size")
-		print output_cube_spec.shape
 		output_cube_spec = trim_cube(output_cube_spec)
-		print output_cube_spec.shape
 		logging.info("Generating simulated detectors")
 		sim_dets1 = make_det_instance(NDIT)
 		sim_dets2 = make_det_instance(NDIT)
+	elif det_switch == "True" and grating == "V+R":
+                logging.warning("IR detector systematics selected for visibile grating. Ignoring detector systematics.")
+                det_switch = "False"
 	
 	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current = sim_detector(output_cube_spec, output_back_emission, output_transmission, output_lambs, grating, DIT, debug_plots=debug_plots, output_file=base_filename)
 	head['FUNITS'] = "electrons"
@@ -297,6 +298,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		sim_total_only_back = sim_back + sim_read_noise2 + sim_dark_current2
 	else:
 		sim_total_only_back = add_detectors(sim_back, sim_dets2)
+
+                # - create cube of detector noise
+                sim_only_dets = np.zeros_like(sim_total)
+                sim_only_dets = add_detectors(sim_only_dets, sim_dets1)
 	
 	
 	# C. Calculate reduced cube: object - background exposure
@@ -447,6 +452,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	outFile_SNR = base_filename + "_reduced_SNR.fits"
 	# standard deviation cube
 	outFile_std = base_filename + "_std.fits"
+
+	# detectors
+        outFile_dets = base_filename + "_dets.fits"
 	
 	# 
 	outFile_read_noise = base_filename + "_read_noise.fits"
@@ -475,6 +483,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(outFile_SNR, output_cube_spec_wo_back*NDIT/noise_cube_total, "SNR (O-B)/Noise", head)
 	save_fits_cube(outFile_std, noise_cube_total, "Noise standard deviation", head)
 	
+        if det_switch:
+                save_fits_cube(outFile_dets, sim_only_dets, "Simulated detectors", head)
+
 	if debug:
 		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)
 		save_fits_cube(outFile_read_noise, noise_cube_read_noise**2, "read noise variance", head)
