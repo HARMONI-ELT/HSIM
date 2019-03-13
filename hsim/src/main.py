@@ -483,7 +483,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(outFile_SNR, output_cube_spec_wo_back*NDIT/noise_cube_total, "SNR (O-B)/Noise", head)
 	save_fits_cube(outFile_std, noise_cube_total, "Noise standard deviation", head)
 	
-        if det_switch:
+        if det_switch == "True":
                 save_fits_cube(outFile_dets, sim_only_dets, "Simulated detectors", head)
 
 	if debug:
