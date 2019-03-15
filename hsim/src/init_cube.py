@@ -85,7 +85,6 @@ def spectral_res(datacube, head, grating, wavels):
 		raise HSIMError('The wavelength range of the input cube ' + str(wavels[0]) + " - " + str(wavels[-1]) + " is not valid for the " + grating + " grating ("  + str(bandws.lmin) + " - " + str(bandws.lmax) + ")")
 
 	new_cube = np.zeros((len(new_wavels), y, x), dtype=float)
-	logging.info('Internal input cube size x={x} y={y} z={z}'.format(x=x, y=y, z=len(new_wavels)))
 	
 	# regrid spectrum and conserve flux
 	if len(wavels) !=  len(new_wavels):
@@ -141,20 +140,26 @@ def spatial_res(datacube, head, spax):
 	
 	logging.info('Internal sampling = %.2f x %.2f mas' % (new_sampling_x, new_sampling_y))
 
+	min_internal_pix = 3.*spax_scale.yscale/spax_scale.psfscale
+	
+	xmax = head['CDELT1']*(x-1)
+	ymax = head['CDELT2']*(y-1)
+	if xmax < min_internal_pix or ymax < min_internal_pix:
+		raise HSIMError('The input cube spatial dimension is too small. Minimum size is {s}x{s} mas'.format(s=int(min_internal_pix*spax_scale.psfscale)))
+	
+
 	if new_sampling_x != head['CDELT1'] or new_sampling_y != head['CDELT2']:
 		
 		# regrid image and conserve flux
-		xmax = head['CDELT1']*(x-1)
-		ymax = head['CDELT2']*(y-1)
-			
+		
 		xgrid_in = np.linspace(0, xmax, x)
 		ygrid_in = np.linspace(0, ymax, y)
-			
+		
 		xgrid_out = np.arange(0, xmax, new_sampling_x)
 		ygrid_out = np.arange(0, ymax, new_sampling_y)
 		
 		new_cube = np.zeros((z, len(ygrid_out), len(xgrid_out)), dtype=float)
-		
+
 		if new_sampling_x < head['CDELT1']:
 			logging.warning('Interpolating data cube - spatial')
 			for k in np.arange(0, z):
@@ -232,6 +237,10 @@ def init_cube(datacube, grating, spax):
 	
 	#RESCALE DATACUBE TO CHOSEN SPATIAL RESOLUTION.
 	cube, head = spatial_res(cube, head, spax)
+
+
+	z, y, x = cube.shape
+	logging.info('Internal input cube size x={x} y={y} z={z}'.format(x=x, y=y, z=z))
 
 	#Energy-to-Photons Conversion factor will depend on head['FUNITS'] value
 	logging.info('Flux units = ' + head['FUNITS'])

@@ -7,6 +7,8 @@ import sys
 import logging
 
 import multiprocessing as mp
+import signal
+import time
 
 import numpy as np
 import scipy.constants as sp
@@ -220,17 +222,34 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 	logging.info(("Using {:d} CPU" + ("s" if ncpus > 1 else "")).format(ncpus))
 	if ncpus > 1:
 
-		pool = mp.Pool(processes=ncpus)
+		def init_worker():
+			signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+		pool = mp.Pool(ncpus, init_worker)
 		
 		counter = 0
 		result_cube = np.zeros_like(cube)
 		llambs = len(lambs)
 		
+		result = []
 		for i in range(len(lambs)):
-			pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i, :, :], padding_x, padding_y, padding_back[i]), callback=save_result)
+			result.append(pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i, :, :], padding_x, padding_y, padding_back[i]), callback=save_result))
 		
-		pool.close()
-		pool.join()
+		
+		try:
+			while True:
+				time.sleep(0.5)
+				if all([r.ready() for r in result]):
+					break
+
+		except KeyboardInterrupt:
+			pool.terminate()
+			pool.join()
+
+		else:
+			pool.close()
+			pool.join()
+			
 		
 		cube = result_cube
 
