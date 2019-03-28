@@ -93,7 +93,7 @@ if __name__ == "__main__":
 			print '11. ADR on: (True/False) - atmospheric differential refraction'
 			print '12. noise seed'
 			print '13. AO mode [LTAO/SCAO//noAO/Airy]'
-			print '14. Use detector systematics (True/False)'
+			print '14. Use IR detector systematics (True/False)'
 			print ""
 
 			sys.exit()

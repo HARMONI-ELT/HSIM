@@ -190,6 +190,8 @@ diameter = None
 seeing = None
 air_mass = None
 
+# user-defined PSF
+user_psf = None
 
 def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 	'''
@@ -207,6 +209,7 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 	'''
 	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode
 	global seeing, air_mass
+	global user_psf
 	
 	AO_mode = _aoMode
 	
@@ -258,9 +261,20 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 				stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))	
 				psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))
 	
-	else: # no AO Gaussian
+	elif AO_mode == "NOAO":
 		logging.info("define noAO Gaussian PSF")
+	else: # user defined PSF
+		logging.info("Reading user defined PSF: " + AO_mode)
+		user_psf, head = fits.getdata(AO_mode, 0, header=True, memmap=True)
 		
+		if user_psf.ndim != 2:
+			raise HSIMError("User PSF must have 2 dimensions.")
+			
+		if head['CDELT1'] != psfscale or head['CDELT2'] != psfscale:
+			raise HSIMError("The PSF pixel scale must be = " + str(psfscale) + " mas.")
+		
+		logging.info("User PSF x={0} y={1} flux={sum}".format(*user_psf.shape, sum=np.sum(user_psf)))
+	
 	
 	return
 
@@ -307,7 +321,7 @@ def create_psf(lamb, Airy=False):
 		#print np.sum(finalpsf)
 		return finalpsf
 	
-	else: # noAO Gaussian PSF
+	elif AO_mode == "NOAO": # noAO Gaussian PSF
 		# Beckers 1993 ARAA
 		zenit_angle = np.arccos(1./air_mass)
 		seeing_lambda = seeing/((lamb/0.5)**(1./5)*np.cos(zenit_angle)**(3./5))*1000. # mas
@@ -320,5 +334,9 @@ def create_psf(lamb, Airy=False):
 		finalpsf = finalpsf/np.sum(finalpsf)
 		#fits.writeto("psf.fits", Gauss2D(xx, yy), overwrite=True)
 		return finalpsf
-
+	else:
+		# user defined PSF
+		return user_psf
+		
+		
 
