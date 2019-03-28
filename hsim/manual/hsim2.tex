@@ -72,7 +72,7 @@ Version & Date & Comments \\
 \hline
 1.0 & 2018-09-27 & HSIM v204 release \\
 1.1 & --- & HSIM v210 release \\
-1.2 & 2019-03-21 & HSIM v211 release \\
+1.2 & 2019-03-28 & HSIM v211 release \\
 \hline
 \end{tabular}
 \end{table*}
@@ -226,7 +226,7 @@ If chosen, HSIM can be run with more detailed detector systematics to simulate s
 \caption{\small HSIM simulated detector.}\label{fig:hsimdet}
 \end{figure*}
 
-The simulated data cube is then sliced up and added to these detectors, in a manner similar to the effect of the image slicer. This ensures that features that appear linear on the detectors no longer appear linear in the output data cube. The simulation is then folded back into a standard data cube to maintain the `cube in, cube out' nature of HSIM
+The simulated data cube is then sliced up and added to these detectors, in a manner similar to the effect of the image slicer. This ensures that features that appear linear on the detectors no longer appear linear in the output data cube. The simulation is then folded back into a standard data cube to maintain the `cube in, cube out' nature of HSIM.
 
 When creating the reduced cube, a separate instance of the detectors is generated and used in the reduction, so the residual features will remain in the reduced cube. A separate cube is returned containing the detectors used in the simulation.
 
