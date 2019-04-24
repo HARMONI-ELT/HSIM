@@ -110,7 +110,7 @@ if __name__ == "__main__":
 			seeing = float(args[5])
 			air_mass = float(args[6])
 			moon = float(args[7])
-			jitter = float(args[8])
+			jitter = str(args[8])
 			site_temp = float(args[9])
 			adr = str(args[10])
 			noise_seed = int(args[11])
@@ -301,7 +301,7 @@ if __name__ == "__main__":
 				aomode = str(self.AOMODEVAL.GetStringSelection()).split(' ')[0]
 				airmassaval = float(self.AIRMASSVAL.GetStringSelection())
 				moon = float(self.MOONVAL.GetStringSelection())
-				resjitval = float(self.RESJITVAL.GetValue())
+				resjitval = str(self.RESJITVAL.GetValue())
 				sitetempval = float(self.SITETEMPVAL.GetValue())
 				noiseseedval = int(self.NOISESEEDVAL.GetValue())
 				nprocs = int(self.N_PROCVAL.GetValue())

@@ -156,10 +156,12 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 	sysFTO = eclat(sysFTO)
 
 	## add Gaussian jitter
-	if jitter > 0:
-		sigma = 1./(2.*np.pi*jitter)*sysFTO.shape[0]
+	if np.sum(jitter) > 0.:
+		sigmax = 1./(2.*np.pi*jitter[0])*sysFTO.shape[0]
+		sigmay = 1./(2.*np.pi*jitter[1])*sysFTO.shape[1]
 		
-		Gauss2D = lambda x, y: 1./(2.*np.pi*sigma**2)*np.exp(-(x**2 + y**2)/(2.*sigma**2))
+		
+		Gauss2D = lambda x, y: 1./(2.*np.pi*sigmax*sigmay)*np.exp(-0.5*((x/sigmax)**2 + (y/sigmay)**2))
 		xgrid = np.linspace(1, sysFTO.shape[0], sysFTO.shape[0]) - sysFTO.shape[0]*0.5 - 0.5
 		ygrid = np.linspace(1, sysFTO.shape[1], sysFTO.shape[1]) - sysFTO.shape[1]*0.5 - 0.5
 		xx, yy = np.meshgrid(xgrid, ygrid)
@@ -299,7 +301,7 @@ def create_psf(lamb, Airy=False):
 		if not Airy:
 			psf = psd_to_psf(psd, pup, diameter, phase_static = stats, lamb=lamb*1e-6, samp=2., jitter=jitter/pix_psf)
 		else:
-			psf = psd_to_psf(psd*0., pup, diameter, phase_static = None, lamb=lamb*1e-6, samp=2., jitter=0.)
+			psf = psd_to_psf(psd*0., pup, diameter, phase_static = None, lamb=lamb*1e-6, samp=2., jitter=np.repeat(0., 2))
 		
 		area_scale = (pix_psf/psfscale)**2
 		#print area_scale

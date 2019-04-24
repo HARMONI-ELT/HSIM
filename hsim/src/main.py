@@ -42,7 +42,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		spax: spatial pixel (spaxel) scale [mas]
 		seeing: Atmospheric seeing FWHM [arcsec]
 		air_mass: Air mass of the observation
-		res_jitter: Residual telescope jitter [mas]
+		res_jitter: Residual telescope jitter. 1 or 2 x separated numbers [mas]
 		site_temp: Telescope temperature [K]
 		moon: Fractional Moon illumination
 		adr_switch: Boolean - turn ADR on or off.
@@ -115,6 +115,19 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		return
 
 
+	try:
+		if "x" in res_jitter:
+			jitter = np.array(map(float, res_jitter.split("x")))
+			if len(jitter) != 2:
+				logging.error(str(res_jitter) + " is not a valid jitter value.")
+				return
+		else:
+			jitter = np.repeat(float(res_jitter), 2)
+		
+	except:
+		logging.error(str(res_jitter) + " is not a valid jitter value.")
+		return
+
 	np.random.seed(seednum)
 
 	# Read input FITS cube and resample depending on grating and spaxel scale
@@ -145,7 +158,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	#	- PSF + Jitter
 	#	- Telescope background
 	#	- Telescope transmission
-	cube_exp, back_emission, transmission, psf, psf_lambda = sim_telescope(cube_exp, back_emission, transmission, lambs_extended, cube_lamb_mask, DIT, res_jitter, air_mass, seeing, spax, site_temp, aoMode, nprocs, debug_plots=debug_plots, output_file=base_filename)
+	cube_exp, back_emission, transmission, psf, psf_lambda = sim_telescope(cube_exp, back_emission, transmission, lambs_extended, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, aoMode, nprocs, debug_plots=debug_plots, output_file=base_filename)
 
 	# 3 - Instrument:
 	#	- LSF

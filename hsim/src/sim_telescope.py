@@ -188,9 +188,9 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 	sigma_instrument = FWHM_instrument/2.35482
 	sigma_combined = (jitter**2 + sigma_instrument**2)**0.5
 	
-	logging.info("Residual telescope jitter = {:.2f} mas".format(jitter))
+	logging.info("Residual telescope jitter = {0:.2f}x{1:.2f} mas".format(*jitter))
 	logging.info("Instrument PSF = {:.2f} mas".format(sigma_instrument))
-	logging.info("-> Combined σ = {:.2f} mas".format(sigma_combined))
+	logging.info("-> Combined σ = {0:.2f}x{1:.2f} mas".format(*sigma_combined))
 	
 	psf_size = config_data["spaxel_scale"][spax].psfsize
 	
