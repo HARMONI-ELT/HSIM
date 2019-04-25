@@ -47,11 +47,11 @@ def rebin1d(xout, xin, yin):
 			#fracion pixel from istart to rstart and fraction
 			#fraction pixel from rstop to istop.
 			if istart == istop:
-				temp[i] = (1.0 - frac1 - frac2)*yin[istart]
+				temp[i] = (1.0 - frac1 - frac2)*yin[istart]/(rstop - rstart)
 			else:
-				temp[i] = np.sum(yin[istart:istop+1]) - frac1*yin[istart] - frac2*yin[istop]
+				temp[i] = (np.sum(yin[istart:istop+1]) - frac1*yin[istart] - frac2*yin[istop])/(rstop - rstart)
 		
-		return np.transpose(temp)/box
+		return np.transpose(temp)
 
 
 

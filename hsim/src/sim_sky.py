@@ -30,7 +30,7 @@ def convolve_1d_spectrum(input_lambda, input_flux, output_spec_res):
 		convolved sky spectrum
 	'''
 	
-	sky_resolution = np.abs(input_lambda[1] - input_lambda[0])*2.133
+	sky_resolution = np.abs(input_lambda[1] - input_lambda[0])
 	
 	if output_spec_res > sky_resolution:
 		logging.info("Convolve sky to input cube spectral resolution")
@@ -75,7 +75,11 @@ def sky_background(lambs, air_mass, dit, input_spec_res, debug_plots, output_fil
 	
 	sky_em_lambda = sky_em_all_X[:, 0]
 	sky_em_flux = sky_em_all_X[:, data_index]
-
+	
+	mask_range_output = (sky_em_lambda > lambs[0]*0.9)*(sky_em_lambda < lambs[-1]*1.1)
+	sky_em_lambda = sky_em_lambda[mask_range_output]
+	sky_em_flux = sky_em_flux[mask_range_output]
+	
 	# Match input cube spectral resolution
 	sky_em_flux = convolve_1d_spectrum(sky_em_lambda, sky_em_flux, input_spec_res)
 
@@ -127,6 +131,10 @@ def moon_background(lambs, moon, dit, input_spec_res, debug_plots, output_file):
 		
 		moon_em_lambda = moon_em_all_X[:, 0]
 		moon_em_flux = moon_em_all_X[:, data_index]
+
+		mask_range_output = (moon_em_lambda > lambs[0]*0.9)*(moon_em_lambda < lambs[-1]*1.1)
+		moon_em_lambda = moon_em_lambda[mask_range_output]
+		moon_em_flux = moon_em_flux[mask_range_output]
 
 		# Match input cube spectral resolution
 		moon_em_flux = convolve_1d_spectrum(moon_em_lambda, moon_em_flux, input_spec_res)
@@ -181,6 +189,10 @@ def sky_transmission(lambs, air_mass, input_spec_res, debug_plots, output_file):
 	sky_tr_lambda = sky_trans_all_X[:, 0]
 	sky_tr = sky_trans_all_X[:, data_index]
 
+	mask_range_output = (sky_tr_lambda > lambs[0]*0.9)*(sky_tr_lambda < lambs[-1]*1.1)
+	sky_tr_lambda = sky_tr_lambda[mask_range_output]
+	sky_tr = sky_tr[mask_range_output]
+
 	# Match input cube spectral resolution
 	sky_tr = convolve_1d_spectrum(sky_tr_lambda, sky_tr, input_spec_res)
 
@@ -197,7 +209,6 @@ def sky_transmission(lambs, air_mass, input_spec_res, debug_plots, output_file):
 		plt.savefig(output_file + "_sky_tr.pdf")
 		np.savetxt(output_file + "_sky_tr.txt", np.c_[lambs, final_tr])
 
-	
 	return final_tr
 	
 
