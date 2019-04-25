@@ -29,12 +29,13 @@ def convolve_1d_spectrum(input_lambda, input_flux, output_spec_res):
 	Outputs:
 		convolved sky spectrum
 	'''
-	logging.info("Convolve sky to input cube spectral resolution")
 	
 	sky_resolution = np.abs(input_lambda[1] - input_lambda[0])*2.133
 	
 	if output_spec_res > sky_resolution:
-		new_res_pix = (output_spec_res**2 - sky_resolution**2)**0.5/abs(input_lambda[1] - input_lambda[0])
+		logging.info("Convolve sky to input cube spectral resolution")
+		
+		new_res_pix = (output_spec_res**2 - sky_resolution**2)**0.5/np.abs(input_lambda[1] - input_lambda[0])
 		sigma_LSF_pix = new_res_pix/2.35482
 		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
 		kernel_LSF = Gaussian1DKernel(stddev=sigma_LSF_pix, x_size=npix_LSF)
@@ -91,6 +92,7 @@ def sky_background(lambs, air_mass, dit, input_spec_res, debug_plots, output_fil
 		plt.ylabel(r"sky emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
 		plt.savefig(output_file + "_sky_em.pdf")
 		np.savetxt(output_file + "_sky_em.txt", np.c_[lambs, sky_radiance])
+
 
 	
 	return sky_radiance

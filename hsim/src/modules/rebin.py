@@ -10,7 +10,9 @@ from scipy.interpolate import interp2d
 from scipy.integrate import quad
 
 def rebin1d(xout, xin, yin):
-	dx_in = xin[1] - xin[0]
+	in0 = int(np.interp(xout[0], xin, range(len(xin))))
+	
+	dx_in = xin[in0+1] - xin[in0]
 	dx_out = xout[1] - xout[0]
 
 	if dx_out < dx_in:
@@ -21,15 +23,21 @@ def rebin1d(xout, xin, yin):
 		temp = np.zeros((len(xout)), dtype=np.float64)
 		#Loop on output values
 		box = float(dx_out)/float(dx_in)
-		in0 = int(np.interp(xout[0], xin, range(len(xin))))
+		
+		in_i = np.interp(xout - dx_out*0.5, xin, range(len(xin)))
 		
 		for i in range(len(xout)):
-			rstart = i*box + in0
+			rstart = in_i[i]
 			istart = int(rstart)
-			rstop = rstart + box
+			if i < len(xout) - 1:
+				rstop = in_i[i+1]
+			else:
+				# for the last one assume the previous box size
+				rstop = in_i[i] + (in_i[i] - in_i[i-1])
+				
 			istop = int(rstop)
-			if istop > len(xin)-1:
-				istop = len(xin)-1
+			if istop > len(xin) - 1:
+				istop = len(xin) - 1
 				
 			frac1 = rstart - istart
 			frac2 = 1.0 - (rstop - istop)
