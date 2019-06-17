@@ -5,8 +5,8 @@ Rebin 1d and 2d arrays
 
 import numpy as np
 
-from scipy.interpolate import interp1d
-from scipy.interpolate import interp2d
+#from scipy.interpolate import interp1d
+#from scipy.interpolate import interp2d
 from scipy.integrate import quad
 
 def rebin1d(xout, xin, yin):
@@ -82,8 +82,8 @@ def frebin2d(array, shape):
 	#First bin in y dimension
 	temp = np.zeros((int(shape[1]), x), dtype=np.float64)
 	#Loop on output image lines
-	#    for i in xrange(0, int(np.round(shape[1],0)), 1):
-	for i in xrange(0, int(shape[1]), 1):
+	#    for i in range(0, int(np.round(shape[1],0)), 1):
+	for i in range(0, int(shape[1]), 1):
 		rstart = i*ybox
 		istart = int(rstart)
 		rstop = rstart + ybox
@@ -108,8 +108,8 @@ def frebin2d(array, shape):
 	#Bin in x dimension
 	result = np.zeros((int(shape[0]), int(shape[1])), dtype=np.float64)
 	#Loop on output image samples
-	#    for i in xrange(0, int(np.round(shape[0],0)), 1):
-	for i in xrange(0, int(shape[0]), 1):
+	#    for i in range(0, int(np.round(shape[0],0)), 1):
+	for i in range(0, int(shape[0]), 1):
 		rstart = i*xbox
 		istart = int(rstart)
 		rstop = rstart + xbox

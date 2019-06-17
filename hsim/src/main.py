@@ -13,6 +13,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import convolve2d
 from astropy.io import fits
+from photutils import aperture_photometry, CircularAperture
 
 import matplotlib.pylab as plt
 
@@ -85,7 +86,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	open(logfile, 'w').close()
 
 	# log to a file
-	logging.basicConfig(filename=logfile, level=logging.DEBUG, format='%(asctime)s  %(levelname)s  %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+	logging.basicConfig(filename=logfile, level=logging.INFO, format='%(asctime)s  %(levelname)s  %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 	# and also to the terminal
 	logger = logging.getLogger()
 	std = logging.StreamHandler()
@@ -158,7 +159,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	#	- PSF + Jitter
 	#	- Telescope background
 	#	- Telescope transmission
-	cube_exp, back_emission, transmission, psf, psf_lambda = sim_telescope(cube_exp, back_emission, transmission, lambs_extended, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, aoMode, nprocs, debug_plots=debug_plots, output_file=base_filename)
+	cube_exp, back_emission, transmission, psf_internal, psf_lambda = sim_telescope(cube_exp, back_emission, transmission, lambs_extended, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, aoMode, nprocs, debug_plots=debug_plots, output_file=base_filename)
 
 	# 3 - Instrument:
 	#	- LSF
@@ -218,8 +219,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 
 	
 	# 5 - Convert to photons per pixel
-	spaxel_area = spax_scale.xscale/1000.*spax_scale.yscale/1000. # [arcsec2]
-	channel_width = new_lamb_per_pix
+	spaxel_area = spax_scale.xscale/1000.*spax_scale.yscale/1000. # arcsec2
+	channel_width = new_lamb_per_pix # micron
 	
 	output_cube_spec = output_cube_spec*spaxel_area*channel_width*config_data["telescope"]["area"]
 	output_back_emission = output_back_emission*spaxel_area*channel_width*config_data["telescope"]["area"]
@@ -313,9 +314,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	else:
 		sim_total_only_back = add_detectors(sim_back, sim_dets2)
 
-                # - create cube of detector noise
-                sim_only_dets = np.zeros_like(sim_total)
-                sim_only_dets = add_detectors(sim_only_dets, sim_dets1)
+		# - create cube of detector noise
+		sim_only_dets = np.zeros_like(sim_total)
+		sim_only_dets = add_detectors(sim_only_dets, sim_dets1)
 	
 	
 	# C. Calculate reduced cube: object - background exposure
@@ -468,7 +469,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	outFile_std = base_filename + "_std.fits"
 
 	# detectors
-        outFile_dets = base_filename + "_dets.fits"
+	outFile_dets = base_filename + "_dets.fits"
 	
 	# 
 	outFile_read_noise = base_filename + "_read_noise.fits"
@@ -480,7 +481,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	head['HSM_TIME'] = str(datetime.datetime.utcnow())
 	
-	# Apply to the noiseless cubes
+	# Apply crosstalk to the noiseless cubes
 	if grating != "V+R":
 		output_cube_spec = apply_crosstalk(output_cube_spec, config_data["crosstalk"])
 		output_back_emission_cube = apply_crosstalk(output_back_emission_cube, config_data["crosstalk"])
@@ -496,9 +497,32 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	save_fits_cube(outFile_SNR, output_cube_spec_wo_back*NDIT/noise_cube_total, "SNR (O-B)/Noise", head)
 	save_fits_cube(outFile_std, noise_cube_total, "Noise standard deviation", head)
+
+
+	# Flux calibration - from electrons to erg/s/cm2/um
 	
-        if det_switch == "True":
-                save_fits_cube(outFile_dets, sim_only_dets, "Simulated detectors", head)
+	# - Calibration star
+	flux_cal_star = 1e-13 # erg/s/cm2/um
+	en2ph_conv_fac = (1.98644582e-25 * 1.e7)/(output_lambs*1.e-6*1.e4)
+	flux_cal_star_photons = flux_cal_star/en2ph_conv_fac #photons/s/cm2/um
+
+	# r=0.5" aperture for the PSF
+	aperture = CircularAperture((spax_scale.psfsize//2, spax_scale.psfsize//2), r=500./spax_scale.psfscale)
+	psf_fraction = aperture_photometry(psf_internal, aperture)
+
+	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission)*psf_fraction['aperture_sum'].data[0] # electrons/s
+	factor_calibration = flux_cal_star/np.median(flux_cal_star_electrons) # erg/s/cm2/um / (electrons/s)
+	
+	outFile_flux_cal_noiseless = base_filename + "_noiseless_obj_flux_cal.fits"
+	outFile_flux_cal_reduced = base_filename + "_reduced_flux_cal.fits"
+	
+	
+	head['FUNITS'] = "erg/s/cm2/um/arcsec2"
+	save_fits_cube(outFile_flux_cal_noiseless, output_cube_spec_wo_back/DIT*factor_calibration/spaxel_area, "Flux cal Noiseless O", head)
+	save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
+	
+	if det_switch == "True":
+		save_fits_cube(outFile_dets, sim_only_dets, "Simulated detectors", head)
 
 	if debug:
 		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)
@@ -515,7 +539,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	
 	# Save PSF
-	head_PSF = head
+	head_PSF = head.copy()
 	head_PSF['CDELT1'] = spax_scale.psfscale
 	head_PSF['CDELT2'] = spax_scale.psfscale
 	head_PSF['LAMBDA'] = psf_lambda
@@ -530,8 +554,75 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	except:
 		pass
 	
-	save_fits_cube(base_filename + "_PSF.fits", psf, "PSF", head_PSF)
+	save_fits_cube(base_filename + "_PSF_internal.fits", psf_internal, "PSF", head_PSF)
 	
+	# - Rebin and Reshape PSF to match the output cube size and spaxel size
+	def rebin_psf(arr, new_shape):
+		shape = (new_shape[0], arr.shape[0] // new_shape[0],
+			new_shape[1], arr.shape[1] // new_shape[1])
+		return arr.reshape(shape).sum(-1).sum(1)
+	
+	psf_info = config_data["spaxel_scale"][spax]
+	
+	# Calcualte the offset needed to keep the PSF center
+	# at the output image center after rebining
+	psf_oversampling = int(round(psf_info.xscale/psf_info.psfscale))
+	psf_spaxel_shape = psf_info.psfsize//psf_oversampling + 1
+	
+	tmp = np.zeros((psf_spaxel_shape*psf_oversampling, psf_spaxel_shape*psf_oversampling))
+	psfcenter = psf_info.psfsize//2 + 1
+	psfcenter_offset = psfcenter % psf_oversampling
+	
+	x0 = psf_oversampling//2 + 1 - psfcenter_offset
+	tmp[x0:x0 + psf_info.psfsize, x0:x0 + psf_info.psfsize] = psf_internal[:, :]
+	
+	psf_spaxel = rebin_psf(tmp, (psf_spaxel_shape, psf_spaxel_shape))
+	
+	if spax == "30x60":
+		# an extre rebin is needed for the y axis
+		if psf_spaxel_shape % 2 == 1:
+			tmp = np.zeros((psf_spaxel_shape + 1, psf_spaxel_shape + 1))
+			final_psf_shape = ((psf_spaxel_shape + 1)//2, psf_spaxel_shape + 1)
+			tmp[1:, 1:] = psf_spaxel
+		else:
+			tmp = psf_spaxel
+			final_psf_shape = (psf_spaxel_shape//2, psf_spaxel_shape)
+		
+		psf_spaxel = rebin_psf(tmp, final_psf_shape)
+	
+	# center PSF on the output array
+	center_x_output = (output_cube_spec.shape[2] - 1) // 2 - (output_cube_spec.shape[2] % 2 - 1)
+	center_y_output = (output_cube_spec.shape[1] - 1) // 2 - (output_cube_spec.shape[1] % 2 - 1)
+	center_x_psf = (psf_spaxel.shape[1] - 1) // 2 - (psf_spaxel.shape[1] % 2 - 1)
+	center_y_psf = (psf_spaxel.shape[0] - 1) // 2 - (psf_spaxel.shape[0] % 2 - 1)
+
+	# adjust y axis
+	tmp = np.zeros((output_cube_spec.shape[1], psf_spaxel.shape[1]))
+	if tmp.shape[0] > psf_spaxel.shape[0]:
+		yi = center_y_output - center_y_psf
+		tmp[yi:yi+psf_spaxel.shape[0], :] = psf_spaxel
+	else:
+		yi = center_y_psf - center_y_output
+		tmp[:, :] = psf_spaxel[yi:yi+tmp.shape[0], :]
+	psf_spaxel = tmp
+
+	# adjust x axis
+	tmp = np.zeros((output_cube_spec.shape[1], output_cube_spec.shape[2]))
+	if tmp.shape[1] > psf_spaxel.shape[1]:
+		xi = center_x_output - center_x_psf
+		tmp[:, xi:xi+psf_spaxel.shape[1]] = psf_spaxel
+	else:
+		xi = center_x_psf - center_x_output
+		tmp[:, :] = psf_spaxel[:, xi:xi+tmp.shape[1]]
+	psf_spaxel = tmp
+	
+	head_PSF['CDELT1'] = spax_scale.xscale
+	head_PSF['CDELT2'] = spax_scale.yscale
+	save_fits_cube(base_filename + "_PSF.fits", psf_spaxel, "PSF", head_PSF)
+	
+	
+
+
 	if hsimlog.count_error == 0 and hsimlog.count_warning == 0:
 		logging.info('Simulation OK - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")
 	else:

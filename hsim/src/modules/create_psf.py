@@ -14,8 +14,8 @@ try:
 except:
 	from config import *
 
-from misc_utils import path_setup
-from rebin import *
+from src.modules.misc_utils import path_setup
+from src.modules.rebin import *
 
 psf_path = path_setup('../../' + config_data["data_dir"] + 'PSF/')
 
@@ -32,8 +32,8 @@ def eclat(imag, inverse = False):
 		
 	sszz = imag.shape
 	
-	gami = np.roll(imag, sens*sszz[0]/2, axis=0)
-	gami = np.roll(gami, sens*sszz[1]/2, axis=1)
+	gami = np.roll(imag, sens*sszz[0]//2, axis=0)
+	gami = np.roll(gami, sens*sszz[1]//2, axis=1)
 	
 	return gami
 

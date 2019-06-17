@@ -10,9 +10,9 @@ import numpy as np
 import scipy.constants as sp
 from scipy.interpolate import interp2d
 
-from modules.fits_utils import *
-from config import *
-from modules.rebin import *
+from src.modules.fits_utils import *
+from src.config import *
+from src.modules.rebin import *
 
 def spectral_res(datacube, head, grating, wavels):
 	'''Function that takes input datacube and rebins it to the

@@ -91,7 +91,7 @@ Laurence Routledge (University of Oxford)
 
 HSIM is a dedicated pipeline for simulating observations with HARMONI on the Extremely Large Telescope. HSIM takes high spectral and spatial resolution input data cubes, encoding physical descriptions of astrophysical sources, and generates mock observed data cubes. The simulations incorporate detailed models of the sky, telescope, instrument, and detectors to produce realistic mock data \citep{Zieleniewski2015}.
 
-HSIM is programmed in Python and the source code can be found at  \url{https://github.com/HARMONI-ELT/HSIM}. It does not require any installation, just download it from \url{....} and unzip. HSIM depends on the following Python packages to work:
+HSIM is programmed in Python3 and the source code can be found at  \url{https://github.com/HARMONI-ELT/HSIM}. It does not require any installation, just download it from \url{....} and unzip. HSIM depends on the following Python packages to work:
 
 \begin{itemize}
 \setlength\itemsep{-0.5ex}
@@ -99,7 +99,8 @@ HSIM is programmed in Python and the source code can be found at  \url{https://g
 \item numpy 1.14.1
 \item scipy 1.0.0
 \item matplotlib 2.1.2
-\item wxPython $>$ 3.0 
+\item photutils 0.3.2
+% \item wxPython $>$ 3.0 
 \end{itemize}
 
 The code has been tested with the indicated package version, although more recent releases of these packages are likely to work as well.
@@ -299,7 +300,8 @@ HSIM stores the results of the simulation in the specified output directory (the
 \item \texttt{\_reduced\_SNR.fits}. Signal to noise ratio of the reduced data cube per pixel.
 \item \texttt{\_dets.fits}. If detector systematics are used, a fits file containing the detectors used in the simulation.
 \item \texttt{\_std.fits}. Noise standard deviation. Includes object and sky noise (Poisson) and dark current and read noise (Gaussian).
-\item \texttt{\_PSF.fits}. Point spread function at the mean wavelength of the input data cube. The PSF is oversampled by a factor of 4 to 10 with respect to the other output \textsc{fits} data cubes.
+\item \texttt{\_PSF.fits}. Point spread function at the mean wavelength of the input data cube. The PSF has the same dimensions and sampling as the output data cubes.
+\item \texttt{\_PSF\_internal.fits}. Oversampled point spread function at the mean wavelength of the input data cube used internally. The PSF is oversampled by a factor of 5 to 20 with respect to the spaxel scale of the output data cubes.
 \item \texttt{\_total\_em.pdf}. Plot of the background emission broken up into the individual modeled components. The average HARMONI to telescope$+$sky background ratio is indicated.
 \item \texttt{\_total\_tr.pdf}. Plot of system transmission broken up into the individual modeled components.
 \item \texttt{\_total\_tr.txt}. Total transmission stored as a text file.

@@ -2,7 +2,7 @@
 to datacubes.
 '''
 
-from rebin import *
+from src.modules.rebin import *
 import numpy as np
 import matplotlib.pylab as plt
 from scipy.interpolate import interp2d

@@ -37,6 +37,7 @@ def fits_header_check(header):
 	#Check for use of BUNIT key
 	if 'BUNIT' in header:
 		header['FUNITS'] = header['BUNIT']
+		del header['BUNIT']
 		
 	for i in required_headers:
 		if i not in header:

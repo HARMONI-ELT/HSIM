@@ -48,10 +48,10 @@ config_data = {
 			'K-long':GratingInfo(2.199, 2.400, 17385.)
 			},
 	
-	'spaxel_scale': {'4x4':SpaxelScaleInfo(4., 4., 1., 1000),
+	'spaxel_scale': {'4x4':SpaxelScaleInfo(4., 4., 0.8, 1250),
 		  '10x10':SpaxelScaleInfo(10., 10., 2., 800),
-		  '20x20':SpaxelScaleInfo(20., 20., 3., 600),
-		  '30x60':SpaxelScaleInfo(30., 60., 3., 600)
+		  '20x20':SpaxelScaleInfo(20., 20., 2.857, 800),
+		  '30x60':SpaxelScaleInfo(30., 60., 3.333, 600)
 		  },
 	
 	
