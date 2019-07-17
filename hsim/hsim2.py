@@ -92,7 +92,7 @@ if __name__ == "__main__":
 			print('10. site temp: Site/telescope temperature [K]')
 			print('11. ADR on: (True/False) - atmospheric differential refraction')
 			print('12. noise seed')
-			print('13. AO mode [LTAO/SCAO//noAO/Airy]')
+			print('13. AO mode [LTAO/SCAO//noAO/Airy/User defined PSF fits file]')
 			print('14. Use IR detector systematics (True/False)')
 			print("")
 

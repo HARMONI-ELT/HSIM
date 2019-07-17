@@ -195,14 +195,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	
 	output_lambs = new_lamb_per_pix*np.arange(int(len(lambs)*scale_z)) + lambs[0]
 	
-	output_cube_spec = np.zeros((len(output_lambs), out_size_y, out_size_x))
-	
 	logging.info("- Output spectral sampling: {:.2f} A".format(new_lamb_per_pix*10000.))
 	
-	for i in np.arange(0, out_size_x):
-		for j in np.arange(0, out_size_y):
-			output_cube_spec[:, j, i] = rebin1d(output_lambs, lambs, output_cube[:, j, i])
-	
+	output_cube_spec = rebin_cube_1d(output_lambs, lambs, output_cube)
 	output_back_emission = rebin1d(output_lambs, lambs_extended, back_emission)
 	output_transmission = rebin1d(output_lambs, lambs_extended, transmission)
 	
@@ -427,7 +422,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		total_tr *= e
 		
 		# the detector curve has a different wavelength range and spacing
-		w, e = np.loadtxt(base_filename + "_det_qe.txt", unpack=True)
+		w, e = np.loadtxt(base_filename + "_det_qe_tr.txt", unpack=True)
 		plt.plot(w, e, label="detector", color=colors[5])
 		
 		total_trans_interp = interp1d(total_tr_w, total_tr, kind='linear', bounds_error=False, fill_value=0.)
@@ -442,7 +437,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		plt.savefig(base_filename + "_total_tr.pdf")
 
 		if not debug:
-			list_files = ["sky_tr", "sky_em", "moon_em", "tel_tr", "tel_em", "ins_tr", "ins_em", "det_qe", "ins_FPRS_tr", "ins_FPRS_em"]
+			list_files = ["sky_tr", "sky_em", "moon_em", "tel_tr", "tel_em", "ins_tr", "ins_em", "det_qe_tr", "ins_FPRS_tr", "ins_FPRS_em"]
 			if aoMode in ["LTAO", "SCAO"]:
 				list_files.append("ins_AOd_tr")
 				list_files.append("ins_AOd_em")

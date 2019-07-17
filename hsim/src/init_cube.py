@@ -14,6 +14,7 @@ from src.modules.fits_utils import *
 from src.config import *
 from src.modules.rebin import *
 
+
 def spectral_res(datacube, head, grating, wavels):
 	'''Function that takes input datacube and rebins it to the
 	chosen spectral resolution. It interpolates all spaxels along wavelength axis
@@ -84,16 +85,14 @@ def spectral_res(datacube, head, grating, wavels):
 	else:
 		raise HSIMError('The wavelength range of the input cube ' + str(wavels[0]) + " - " + str(wavels[-1]) + " is not valid for the " + grating + " grating ("  + str(bandws.lmin) + " - " + str(bandws.lmax) + ")")
 
-	new_cube = np.zeros((len(new_wavels), y, x), dtype=float)
 	
 	# regrid spectrum and conserve flux
 	if len(wavels) !=  len(new_wavels):
 		logging.info('Interpolating data cube - spectral')
-		for i in np.arange(0, x):
-			for j in np.arange(0, y):
-				new_cube[:,j,i] = rebin1d(new_wavels, wavels, datacube[:,j,i])
+		new_cube = rebin_cube_1d(new_wavels, wavels, datacube)
 	else:
 		new_cube = datacube
+	
 	
 	#Update header
 	head['CRVAL3'] = new_wavels[0]
@@ -258,6 +257,8 @@ def init_cube(datacube, grating, spax):
 	en2ph_conv_fac.shape = (len(lambs),1,1)
 	cube = np.divide(cube, en2ph_conv_fac)
 	head['FUNITS'] = 'ph/s/m2/um/arcsec2'
+
+	logging.info('The flux range of the input cube is {:.2e} - {:.2e} ph/s/m2/um/arcsec2'.format(np.min(cube), np.max(cube)))
 
 	return cube, head, lambs, input_spec_res
 

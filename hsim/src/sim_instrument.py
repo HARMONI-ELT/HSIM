@@ -1,170 +1,14 @@
 '''
 Calculates LSF, instrument background and transmission
 '''
-import os
 import logging
 
 import numpy as np
 import scipy.constants as sp
-from scipy.interpolate import interp1d
 from astropy.convolution import Gaussian1DKernel
 
 from src.config import *
-
-from src.modules.misc_utils import path_setup
-from src.modules.blackbody import *
-
-import matplotlib.pylab as plt
-
-tppath = path_setup('../../' + config_data["data_dir"] + 'throughput/')
-
-
-def HARMONI_background(wavels, Temp, emissivity, element, DIT, debug_plots, output_file):
-	'''Function that generates a HARMONI background curve
-	using the Plank BB function as a function of instrument temperature.
-	
-	Inputs:
-		wavels: array of wavelengths for datacube
-		Temp: instrument temperature
-		element: string to identify the HARMONI element for which the emission is calculated
-		emissivity: emissivity
-		DIT: Exposure time [s]
-		
-	Outputs:
-		inst_bg_spec_ph: array of total instrument background
-			[units of photons/m^2/um/arcsec^2]
-			for each wavelength value in wavels
-	'''
-
-	#Blackbody function
-	cube_bb_spec = blackbody(wavels, Temp)
-
-	inst_bg_spec = np.multiply(emissivity, cube_bb_spec)
-	
-	inst_bg_spec_ph = inst_bg_spec/(sp.h*sp.c/(wavels*1.E-6))*DIT
-	
-	if debug_plots:
-		plt.clf()
-		plt.plot(wavels, inst_bg_spec_ph, label="Blackbody T = {:.1f} K".format(Temp))
-		plt.legend()
-		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"instrument emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
-		plt.savefig(output_file + "_ins_"  + (element + "_" if element != "" else "") + "em.pdf")
-		np.savetxt(output_file + "_ins_" + (element + "_" if element != "" else "") + "em.txt", np.c_[wavels, inst_bg_spec_ph])
-	
-	return inst_bg_spec_ph
-
-
-#Instrument throughput curve generated just using wavelength array.
-def HARMONI_transmission_curve(wavels, grating, debug_plots, output_file):
-	'''Function that generates a full HARMONI throughput curve.
-
-	Inputs:
-		wavels: array of wavelengths for datacube
-		grating: grating choice to set grating throughput curve
-
-	Outputs:
-		cube_inst_trans: array of instrument throughput
-			for each wavelength value in wavels
-	'''
-
-	#Load grating throughput file
-	# Cryostat, Pre-optics, IFU, Spectrograph and Grating
-	inst_r = np.genfromtxt(os.path.join(tppath, grating+'_grating.txt'), delimiter=',')
-
-	#Interpolate as a function of wavelength
-	inst_trans_interp = interp1d(inst_r[:, 0], inst_r[:, 1],
-					kind='linear', bounds_error=False, fill_value=0.)
-	
-	#Obtain values for datacube wavelength array
-	cube_inst_trans = inst_trans_interp(wavels)
-
-	if debug_plots:
-		plt.clf()
-		plt.plot(wavels, cube_inst_trans, label="after FPRS")
-		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"instrument transmission ")
-		plt.legend(loc=2)
-		plt.savefig(output_file + "_ins_tr.pdf")
-		np.savetxt(output_file + "_ins_tr.txt", np.c_[wavels, cube_inst_trans])
-
-	
-	return cube_inst_trans
-
-
-def AO_dichroic_transmission_curve(wavels, aoMode, grating, debug_plots, output_file):
-	'''Function that generates a full HARMONI throughput curve.
-
-	Inputs:
-		wavels: array of wavelengths for datacube
-		aoMode: LTAO/SCAO
-		grating: grating choice to set grating throughput curve
-
-	Outputs:
-		cube_aod_trans: array of AO dichroic throughput
-			for each wavelength value in wavels
-	'''
-
-	#Load AO dichroic throughput file
-	if aoMode in ["LTAO", "SCAO"]:
-		inst_r = np.genfromtxt(os.path.join(tppath, "LTAO_dichroic.txt"), delimiter=',')
-	else:
-		logging.error("AO Dichroic throughput file not found for " + aoMode)
-		return 1.
-
-	#Interpolate as a function of wavelength
-	aod_trans_interp = interp1d(inst_r[:, 0], inst_r[:, 1],
-					kind='linear', bounds_error=False, fill_value=0.)
-	
-	#Obtain values for datacube wavelength array
-	cube_aod_trans = aod_trans_interp(wavels)
-
-	if debug_plots:
-		plt.clf()
-		plt.plot(wavels, cube_aod_trans)
-		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"instrument transmission")
-		plt.savefig(output_file + "_ins_AOd_tr.pdf")
-		np.savetxt(output_file + "_ins_AOd_tr.txt", np.c_[wavels, cube_aod_trans])
-
-	
-	
-	return cube_aod_trans
-
-
-def FPRS_transmission_curve(wavels, grating, debug_plots, output_file):
-	'''Function that generates a full HARMONI throughput curve.
-
-	Inputs:
-		wavels: array of wavelengths for datacube
-		grating: grating choice to set grating throughput curve
-
-	Outputs:
-		cube_fprs_trans: array of FPRS throughput
-			for each wavelength value in wavels
-	'''
-
-	#Load FPRS throughput file
-	inst_r = np.genfromtxt(os.path.join(tppath, "FPRS.txt"), delimiter=',')
-
-	#Interpolate as a function of wavelength
-	fprs_trans_interp = interp1d(inst_r[:, 0], inst_r[:, 1],
-					kind='linear', bounds_error=False, fill_value=0.)
-	
-	#Obtain values for datacube wavelength array
-	cube_fprs_trans = fprs_trans_interp(wavels)
-	
-	if debug_plots:
-		plt.clf()
-		plt.plot(wavels, cube_fprs_trans)
-		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"instrument transmission")
-		plt.savefig(output_file + "_ins_FPRS_tr.pdf")
-		np.savetxt(output_file + "_ins_FPRS_tr.txt", np.c_[wavels, cube_fprs_trans])
-
-	
-	return cube_fprs_trans
-
+from src.modules.em_model import *
 
 
 def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=False, output_file=""):
@@ -193,34 +37,37 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	logging.info("Calculating HARMONI transmission")
 	# LTAO dichroic if present
 	if aoMode in ["LTAO", "SCAO"]:
-		AOd_tr = AO_dichroic_transmission_curve(ext_lambs, aoMode, grating, debug_plots, output_file)
+		AOd_tr = load_transmission_curve(ext_lambs, "LTAO_dichroic.txt", debug_plots, [output_file, "ins_AOd"], "AO dichroic transmission")
 	else:
+		logging.warning("AO Dichroic throughput file not found for " + aoMode)
 		AOd_tr = 1.
 	
 	# FPRS
-	FPRS_tr = FPRS_transmission_curve(ext_lambs, grating, debug_plots, output_file)
+	FPRS_tr = load_transmission_curve(ext_lambs, "FPRS.txt", debug_plots, [output_file, "ins_FPRS"], "FPRS transmission")
+	
 	
 	# instrument after FPRS
-	instrument_tr = HARMONI_transmission_curve(ext_lambs, grating, debug_plots, output_file)
+	# Cryostat, Pre-optics, IFU, Spectrograph and Grating
+	instrument_tr = load_transmission_curve(ext_lambs, grating + '_grating.txt', debug_plots, [output_file, "ins"], "instrument transmission")
+	
 
 	back_emission = back_emission*AOd_tr*FPRS_tr*instrument_tr
 	transmission = transmission*AOd_tr*FPRS_tr*instrument_tr
-	
 	
 	# Get instrument background
 	logging.info("Calculating HARMONI background")
 
 	# AO dichroic if present
 	if aoMode in ["LTAO", "SCAO"]:
-		AOd_background = HARMONI_background(ext_lambs, site_temp - config_data['HARMONI_AO_diff_temp'][aoMode], 1. - AOd_tr, "AOd", DIT, debug_plots, output_file)
+		AOd_background = get_background_emission(ext_lambs, site_temp - config_data['HARMONI_AO_diff_temp'][aoMode], 1. - AOd_tr, DIT, debug_plots, [output_file, "ins", "AOd"], "instrument emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
 	else:
 		AOd_background = 0.
 
 	# FPRS
-	FPRS_background = HARMONI_background(ext_lambs, site_temp - config_data['HARMONI_FPRS_diff_temp'], 1. - FPRS_tr, "FPRS", DIT, debug_plots, output_file)
-	
+	FPRS_background = get_background_emission(ext_lambs, site_temp - config_data['HARMONI_FPRS_diff_temp'], 1. - FPRS_tr, DIT, debug_plots, [output_file, "ins", "FPRS"], "instrument emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
+		
 	# instrument after FPRS
-	instrument_background = HARMONI_background(ext_lambs, config_data['HARMONI_temp'], 1. - instrument_tr, "", DIT, debug_plots, output_file)
+	instrument_background = get_background_emission(ext_lambs, config_data['HARMONI_temp'], 1. - instrument_tr, DIT, debug_plots, [output_file, "ins"], "instrument emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
 	
 	back_emission = back_emission + AOd_background + FPRS_background + instrument_background
 	

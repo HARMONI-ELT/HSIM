@@ -2,7 +2,6 @@
 '''
 Calculates PSF, jitter and telescope background and transmission
 '''
-import os
 import sys
 import logging
 
@@ -12,100 +11,12 @@ import time
 
 import numpy as np
 import scipy.constants as sp
-from scipy.interpolate import interp1d
 from scipy.signal import fftconvolve
 
 from src.config import *
 
 from src.modules.create_psf import create_psf, define_psf
-from src.modules.misc_utils import path_setup
-from src.modules.blackbody import *
-
-import matplotlib.pylab as plt
-
-tppath = path_setup('../../' + config_data["data_dir"] + 'throughput/')
-
-
-def telescope_background_emission(wavels, T, emissivity, DIT, debug_plots, output_file):
-	'''Function that generates a telescope background curve
-	using mirror reflectivities, mirror areas and the
-	Plank BB function as a function of site temperature.
-	Telescope modelled as a graybody with eps*BB(T), where
-	eps = emissivity of telescope. Emissivity is computed with
-	mirror reflectivites for 6 mirrors of telescope.
-	
-	Inputs:
-		wavels: array of wavelengths for datacube
-		T: site temperature [K]
-		emissivity: Telescope emissivity modelled as 1 - reflectivity
-		dit: exposure time [s]. This determins how the sky emission
-		
-	Outputs:
-		tele_bg_curve: array of total telescope background
-			[units of photons/m^2/um/arcsec^2]
-			for each wavelength value in wavels
-	'''
-
-	#TELESCOPE emission should be modelled as a graybody: blackbody
-	#multiplied by a constant emissivity. Emissivity is calculated
-	#by (1-R)^(no. of mirros) where R is the mirror reflectivity.
-	#The EELT will have (at least) 6 mirros before entering the
-	#HARMONI cryostat (at which point thermal background is negligible).
-	#Average Paranal night temperature, T = 285K (from ESO website).
-	
-	#Blackbody function
-	cube_bb_spec = blackbody(wavels, T)
-
-	tele_bg_spec = np.multiply(emissivity, cube_bb_spec)
-
-	tele_bg_spec_ph = tele_bg_spec/(sp.h*sp.c/(wavels*1.E-6))*DIT
-
-	if debug_plots:
-		plt.clf()
-		plt.plot(wavels, tele_bg_spec_ph, label="Blackbody T = {:.1f} K".format(T))
-		plt.legend()
-		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"telescope emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
-		plt.savefig(output_file + "_tel_em.pdf")
-		np.savetxt(output_file + "_tel_em.txt", np.c_[wavels, tele_bg_spec_ph])
-	
-	return tele_bg_spec_ph
-
-
-
-#Telescope throughput curve generated just using wavelength array.
-def telescope_transmission_curve(wavels, debug_plots, output_file):
-	'''Function that reads a full telescope throughput curve.
-
-	Inputs:
-		wavels: array of wavelengths for datacube
-
-	Outputs:
-		cube_tele_trans: array of telescope throughput
-			for each wavelength value in wavels
-	'''
-
-	#Load telescope reflectivity file
-	tele_r = np.genfromtxt(os.path.join(tppath, 'ELT_mirror_reflectivity.txt'), delimiter=',')
-
-	#Interpolate as a function of wavelength
-	tele_trans_interp = interp1d(tele_r[:, 0], tele_r[:, 1],
-				kind='linear', bounds_error=False, fill_value=0.)
-	#Obtain values for datacube wavelength array
-	cube_tele_trans = tele_trans_interp(wavels)
-	
-	
-	if debug_plots:
-		plt.clf()
-		plt.plot(wavels, cube_tele_trans)
-		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"telescope transmission ")
-		plt.savefig(output_file + "_tel_tr.pdf")
-		np.savetxt(output_file + "_tel_tr.txt", np.c_[wavels, cube_tele_trans])
-
-
-
-	return cube_tele_trans
+from src.modules.em_model import *
 
 
 def process_lambda(params, lamb, image, px, py, pback):
@@ -149,7 +60,7 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 		seeing: Atmospheric seeing FWHM [arcsec]
 		spax: spatial pixel (spaxel) scale [mas]
 		site_temp: Telescope temperature [K]
-		aoMode: AO mode: LTAO/SCAO/NOAO/AIRY
+		aoMode: AO mode: LTAO/SCAO/NOAO/AIRY/User defined PSF fits file
 		ncpus: no. of CPUs to use
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
@@ -162,13 +73,13 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 	
 	# Get telescope reflectivity
 	logging.info("Calculating telescope reflectivity")
-	telescope_reflectivity = telescope_transmission_curve(ext_lambs, debug_plots, output_file)
+	telescope_reflectivity = load_transmission_curve(ext_lambs, "ELT_mirror_reflectivity.txt", debug_plots, [output_file, "tel"], "telescope transmission")
 	back_emission *= telescope_reflectivity
 	transmission *= telescope_reflectivity
 	
 	# Get telescope background
 	logging.info("Calculating telescope background")
-	telescope_background = telescope_background_emission(ext_lambs, site_temp, 1. - telescope_reflectivity, DIT, debug_plots, output_file)
+	telescope_background = get_background_emission(ext_lambs, site_temp, 1. - telescope_reflectivity, DIT, debug_plots, [output_file, "tel"], "telescope emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
 	back_emission += telescope_background
 	
 	# Add telescope emission/transmission to the input cube

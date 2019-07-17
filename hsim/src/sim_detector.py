@@ -7,17 +7,13 @@ import logging
 import numpy as np
 
 import scipy.constants as sp
-from scipy.interpolate import interp1d, UnivariateSpline
+from scipy.interpolate import UnivariateSpline
 from astropy.convolution import Gaussian1DKernel
-import matplotlib.pylab as plt
 
 from src.modules.misc_utils import path_setup
-from src.modules.blackbody import *
-
 from src.config import *
+from src.modules.em_model import *
 
-
-tppath = path_setup('../../' + config_data["data_dir"] + 'throughput/')
 detpath = path_setup('../../' + config_data["data_dir"] + 'detectors/')
 
 #Detector throughput curve generated just using wavelength array.
@@ -40,26 +36,9 @@ def detector_QE_curve(wavels, grating, debug_plots, output_file):
 	else:
 		detector_QE_file = "H4RG_QE_design.txt"
 		
-	det_qe = np.genfromtxt(os.path.join(tppath, detector_QE_file), delimiter=',')
-
-
-	#Interpolate as a function of wavelength
-	det_qe_interp = interp1d(det_qe[:, 0], det_qe[:, 1],
-				kind='linear', bounds_error=False, fill_value=0.)
-	#Obtain values for datacube wavelength array
-	cube_det_qe = det_qe_interp(wavels)/100.
-
-
-	if debug_plots:
-		plt.clf()
-		plt.plot(wavels, cube_det_qe)
-		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"detector QE")
-		plt.savefig(output_file + "_det_qe.pdf")
-		np.savetxt(output_file + "_det_qe.txt", np.c_[wavels, cube_det_qe])
-
-
-	return cube_det_qe
+		
+	cube_det_qe = load_transmission_curve(wavels, detector_QE_file, debug_plots, [output_file, "det_qe"], "detector QE")
+	return cube_det_qe/100.
 
 
 def mask_saturated_pixels(cube, grating):
@@ -80,6 +59,9 @@ def mask_saturated_pixels(cube, grating):
 		
 	
 	mask_pixels = cube > limit
+	if np.sum(mask_pixels) > 0:
+		logging.warning(str(np.sum(mask_pixels)) + " pixels are saturated in the observed cube")
+		
 	cube[mask_pixels] = 0.
 	
 	return cube, mask_pixels

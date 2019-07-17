@@ -53,6 +53,51 @@ def rebin1d(xout, xin, yin):
 		
 		return np.transpose(temp)
 
+def rebin_cube_1d(xout, xin, cube):
+	in0 = int(np.interp(xout[0], xin, range(len(xin))))
+	
+	dx_in = xin[in0+1] - xin[in0]
+	dx_out = xout[1] - xout[0]
+
+	new_cube = np.zeros((len(xout), cube.shape[1], cube.shape[2]), dtype=float)
+
+	if dx_out < dx_in:
+		# interpolate if output is finer
+		for i in np.arange(0, cube.shape[2]):
+			for j in np.arange(0, cube.shape[1]):
+				new_cube[:,j,i] = np.interp(xout, xin, cube[:,j,i])
+		
+		return new_cube
+	else:
+		# rebin if output is coarser
+		#Loop on output values
+		box = float(dx_out)/float(dx_in)
+		in_i = np.interp(xout - dx_out*0.5, xin, range(len(xin)))
+
+		for i in range(len(xout)):
+			rstart = in_i[i]
+			istart = int(rstart)
+			if i < len(xout) - 1:
+				rstop = in_i[i+1]
+			else:
+				# for the last one assume the previous box size
+				rstop = in_i[i] + (in_i[i] - in_i[i-1])
+				
+			istop = int(rstop)
+			if istop > len(xin) - 1:
+				istop = len(xin) - 1
+				
+			frac1 = rstart - istart
+			frac2 = 1.0 - (rstop - istop)
+
+			#print istart, istop, rstart, rstop
+			#Add pixel values from istart to istop an subtract
+			#fracion pixel from istart to rstart and fraction
+			#fraction pixel from rstop to istop.
+			new_cube[i,:,:] = (np.sum(cube[istart:istop+1,:,:], axis=0) - frac1*cube[istart,:,:] - frac2*cube[istop,:,:])/(rstop - rstart)
+
+		
+		return new_cube
 
 
 def frebin2d(array, shape):

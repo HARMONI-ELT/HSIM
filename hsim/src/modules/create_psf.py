@@ -205,7 +205,7 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 		D: telescope diameter [m]
 		fov: number of pixels of the PSF
 		psfscale: pixel size for the PSF [mas]
-		aoMode: LTAO/SCAO/NOAO/AIRY
+		aoMode: LTAO/SCAO/NOAO/AIRY/User defined PSF fits file
 	Outputs:
 		None
 	'''
@@ -230,7 +230,7 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
 			# Check that we have the actual files and not the git LFS links
 			if os.path.getsize(os.path.join(psf_path,"ELT_pup.fits")) < 1024:
-				raise HSIMError("The sim_data/PSF/*fits files are git LFS links. These FITS files are needed to run HSIM.")
+				raise HSIMError("The sim_data/PSF/*fits files are git LFS links. Please, download the PSF FITS files from http://harmoni-web.physics.ox.ac.uk/large_files/hsim2_212_psf_files.zip")
 			
 			
 			# PSD cubes
