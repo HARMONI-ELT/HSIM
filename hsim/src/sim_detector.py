@@ -8,6 +8,7 @@ import numpy as np
 
 import scipy.constants as sp
 from scipy.interpolate import UnivariateSpline
+from scipy import integrate
 from astropy.convolution import Gaussian1DKernel
 
 from src.modules.misc_utils import path_setup
@@ -37,9 +38,8 @@ def detector_QE_curve(wavels, grating, debug_plots, output_file):
 		detector_QE_file = "H4RG_QE_design.txt"
 		
 		
-	cube_det_qe = load_transmission_curve(wavels, detector_QE_file, debug_plots, [output_file, "det_qe"], "detector QE")
-	return cube_det_qe/100.
-
+	cube_det_qe, orig_qe_lambda, orig_qe = load_transmission_curve(wavels, detector_QE_file, debug_plots, [output_file, "det_qe"], "detector QE", scaling=1/100., full_curve=True)
+	return cube_det_qe, orig_qe_lambda, orig_qe
 
 def mask_saturated_pixels(cube, grating):
 	''' Mask saturated pixels
@@ -126,11 +126,12 @@ def sim_detector(cube, back_emission, transmission, lambs, grating, DIT, debug_p
 		cube: Cube including QE
 		read_noise: read noise for the grating and DIT [e/pix]
 		dark*DIT: dark current  [e/pix]
+		ftot_electron*DIT: thermal background seen by the detector  [e/pix]
 	'''
 	
 	# Get QE curve
 	logging.info("Calculating detector QE")
-	qe_curve = detector_QE_curve(lambs, grating, debug_plots, output_file)
+	qe_curve, orig_qe_lambda, orig_qe = detector_QE_curve(lambs, grating, debug_plots, output_file)
 	back_emission *= qe_curve
 	transmission *= qe_curve
 	
@@ -153,8 +154,23 @@ def sim_detector(cube, back_emission, transmission, lambs, grating, DIT, debug_p
 	else:
 		dark = config_data["dark_current"]["nir"]
 
+
+	# Thermal emission seen by the detector
+	# 15-micron pixels and F/2 camera... (independent of spaxel scale)
+	pixel_area = 15E-6**2 # m2
+	pixel_solid_cryo_mech = 0.2*(360/2./np.pi*3600.)**2 # arcsec**2
+	pixel_solid_rad = 2.0*np.pi*(360/2./np.pi*3600.)**2 # arcsec**2
 	
-	return cube, back_emission, transmission, read_noise, dark*DIT
+	TCryoMech = config_data["HARMONI_cryo_temp"] - 5.
+	Trad = config_data["HARMONI_cryo_temp"]
+	
+	fcryomech = blackbody(orig_qe_lambda, TCryoMech)/(sp.h*sp.c/(orig_qe_lambda*1.E-6))*pixel_solid_cryo_mech # photons/s/um/m2
+	frad = blackbody(orig_qe_lambda, Trad)/(sp.h*sp.c/(orig_qe_lambda*1.E-6))*pixel_solid_rad # photons/s/um/m2
+	ftot = (fcryomech + frad)*pixel_area # photons/um/pixel
+	ftot = ftot*orig_qe  # e/um/pixel
+	ftot_electron = integrate.simps(ftot, orig_qe_lambda) #e/pixel
+	
+	return cube, back_emission, transmission, read_noise, dark*DIT, ftot_electron*DIT
 	
 
 # Detector systematics code

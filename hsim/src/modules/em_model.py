@@ -44,7 +44,7 @@ def blackbody(waves, T):
 
 
 
-def load_transmission_curve(wavels, filename, show_plot, plot_file, plot_label):
+def load_transmission_curve(wavels, filename, show_plot, plot_file, plot_label, scaling=1., full_curve=False):
 	'''Load a transmission curve from a file
 
 	Inputs:
@@ -53,6 +53,7 @@ def load_transmission_curve(wavels, filename, show_plot, plot_file, plot_label):
 		show_plot: plot curve. True/False
 		plot_file: vector with the name of the debug plot
 		plot_label: y label of the plot
+		full_curve: return the curve for the original wavelength range
 
 	Outputs:
 		cube_trans: array of throughput for each wavelength value in wavels
@@ -64,7 +65,7 @@ def load_transmission_curve(wavels, filename, show_plot, plot_file, plot_label):
 	trans_interp = interp1d(data[:, 0], data[:, 1],
 				kind='linear', bounds_error=False, fill_value=0.)
 	#Obtain values for datacube wavelength array
-	cube_trans = trans_interp(wavels)
+	cube_trans = trans_interp(wavels)*scaling
 	
 	
 	if show_plot:
@@ -75,7 +76,10 @@ def load_transmission_curve(wavels, filename, show_plot, plot_file, plot_label):
 		plt.savefig("_".join(plot_file) + "_tr.pdf")
 		np.savetxt("_".join(plot_file) + "_tr.txt", np.c_[wavels, cube_trans])
 
-	return cube_trans
+	if not full_curve:
+		return cube_trans
+	else:
+		return cube_trans, data[:, 0], data[:, 1]*scaling
 
 
 def get_background_emission(wavels, T, emissivity, DIT, show_plot, plot_file, plot_label):

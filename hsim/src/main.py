@@ -4,6 +4,8 @@ simulator. This code should show the main functions/processes
 to move from an input datacube (lambda, y, x) to output cubes:
 '''
 import collections
+import glob
+import re
 import datetime
 import multiprocessing as mp
 import os.path
@@ -86,11 +88,12 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	open(logfile, 'w').close()
 
 	# log to a file
-	logging.basicConfig(filename=logfile, level=logging.INFO, format='%(asctime)s  %(levelname)s  %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+	logging.basicConfig(filename=logfile, level=logging.DEBUG, format='%(asctime)s  %(levelname)s  %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 	# and also to the terminal
 	logger = logging.getLogger()
 	std = logging.StreamHandler()
 	std.setFormatter(HSIMFormatter())
+	std.setLevel(logging.INFO)
 	logger.addHandler(std)
 
 	hsimlog = HSIMLoggingHandler()
@@ -225,6 +228,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	#	- QE
 	#	- Dark
 	#	- Read noise
+	#	- Thermal background
 
 	# Cut cubes to correct size if using detector systematics and generate detectors 
 	if det_switch == "True" and grating != "V+R":
@@ -237,7 +241,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
                 logging.warning("IR detector systematics selected for visibile grating. Ignoring detector systematics.")
                 det_switch = "False"
 	
-	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current = sim_detector(output_cube_spec, output_back_emission, output_transmission, output_lambs, grating, DIT, debug_plots=debug_plots, output_file=base_filename)
+	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current, thermal_background = sim_detector(output_cube_spec, output_back_emission, output_transmission, output_lambs, grating, DIT, debug_plots=debug_plots, output_file=base_filename)
 	head['FUNITS'] = "electrons"
 	
 	
@@ -276,14 +280,16 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		sim_object_plus_back[saturated_obj_back] = np.nan
 
 	dark_cube = np.zeros_like(output_cube_spec) + dark_current*NDIT
+	thermal_cube = np.zeros_like(output_cube_spec) + thermal_background*NDIT
 	
 	if det_switch == "False":
 		# - read noise and dark current for object exposure
 		sim_read_noise1 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
 		sim_dark_current1 = np.random.poisson(dark_cube).astype(np.float32)
+		sim_thermal1 = np.random.poisson(thermal_cube).astype(np.float32)
 	
 		# - combine object, read noise and dark current
-		sim_total = sim_object_plus_back + sim_read_noise1 + sim_dark_current1
+		sim_total = sim_object_plus_back + sim_read_noise1 + sim_dark_current1 + sim_thermal1
 	else:
 		sim_total = add_detectors(sim_object_plus_back, sim_dets1)
 	
@@ -303,9 +309,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		# - read noise and dark current for background exposure
 		sim_read_noise2 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
 		sim_dark_current2 = np.random.poisson(dark_cube).astype(np.float32)
+		sim_thermal2 = np.random.poisson(thermal_cube).astype(np.float32)
 	
 		# - combine object, read noise and dark current
-		sim_total_only_back = sim_back + sim_read_noise2 + sim_dark_current2
+		sim_total_only_back = sim_back + sim_read_noise2 + sim_dark_current2 + sim_thermal2
 	else:
 		sim_total_only_back = add_detectors(sim_back, sim_dets2)
 
@@ -338,27 +345,27 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	noise_cube_back = abs(output_back_emission_cube*NDIT) # back noise variance
 	noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*read_noise # read noise sigma
 	noise_cube_dark = dark_cube # dark noise variance
+	noise_cube_thermal = thermal_cube # thermal noise variance
 	
-	noise_cube_total = np.sqrt(noise_cube_object + 2.*noise_cube_back + 2.*noise_cube_dark + 2.*noise_cube_read_noise**2)
+	noise_cube_total = np.sqrt(noise_cube_object + 2.*noise_cube_back + 2.*noise_cube_dark + 2.*noise_cube_thermal + 2.*noise_cube_read_noise**2)
 	
 	#
 	logging.info("Saving output")
 	if debug_plots:
 		plt.clf()
 
-		colors = [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf']
+		colors = [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf', u'#2dd42d', u'#eaff00', u'#202020', u'#66f2ff']*2
 
 		fig = plt.figure()
 		ax = fig.add_subplot(111)
 		
 		total_telescope_sky_em = np.zeros_like(lambs_extended)
-		total_instrument_em = np.zeros_like(lambs_extended)
 		
 		w, e = np.loadtxt(base_filename + "_sky_em.txt", unpack=True)
-		plt.plot(w, e, label="sky", color=colors[0])
+		plt.plot(w, e, label="sky", color=colors[-1])
 		total_telescope_sky_em += e
 		w, e = np.loadtxt(base_filename + "_tel_em.txt", unpack=True)
-		plt.plot(w, e, label="telescope", color=colors[1])
+		plt.plot(w, e, label="telescope", color=colors[-2])
 		total_telescope_sky_em += e
 
 		if moon > 0.:
@@ -366,60 +373,61 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 			plt.plot(w, e, label="Moon", color=colors[6])
 			total_telescope_sky_em += e
 		
-		if aoMode in ["LTAO", "SCAO"]:
-			w, e = np.loadtxt(base_filename + "_ins_AOd_em.txt", unpack=True)
-			plt.plot(w, e, label="AO dichroic", color=colors[2])
-			total_instrument_em += e
 		
-		w, e = np.loadtxt(base_filename + "_ins_FPRS_em.txt", unpack=True)
-		plt.plot(w, e, label="FPRS", color=colors[3])
-		total_instrument_em += e
-		w, e = np.loadtxt(base_filename + "_ins_em.txt", unpack=True)
-		plt.plot(w, e, label="instrument after FPRS", color=colors[4])
-		total_instrument_em += e
+		# HARMONI parts
+		total_instrument_em = np.zeros_like(lambs_extended)
+		harmoni_files_em = sorted(glob.glob(base_filename + "_HARMONI_*_em.txt"))
+		for harmoni_file, color in zip(harmoni_files_em, colors):
+			# Read part emission
+			w, e = np.loadtxt(harmoni_file, unpack=True)
+			m = re.search('.+HARMONI_(.+)_em.txt', harmoni_file)
+			plt.plot(w, e, label=m.group(1), color=color, ls="--", lw=1.2)
+			# and throuhgput
+			w, t = np.loadtxt(base_filename + "_HARMONI_" + m.group(1) + "_tr.txt", unpack=True)
+			# Compute the total contribution
+			total_instrument_em = total_instrument_em*t + e
 		
+		plt.plot(w, total_instrument_em, label="HARMONI total", color="red")
+		
+		np.savetxt(base_filename + "_total_HARMONI_em.txt", np.c_[w, total_instrument_em], comments="#", header="\n".join([
+			'TYPE: Total emission.',
+			'Wavelength [um], emission']))
+
 		plt.legend(prop={'size': 6})
 		plt.xlabel(r"wavelength [$\mu$m]")
 		plt.ylabel(r"back emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
 		plt.yscale("log")
-		plt.text(0.1, 0.2, "HARMONI/(Telescope+Sky) = {:.2f}".format(np.nanmedian(total_instrument_em/total_telescope_sky_em)), transform=ax.transAxes)
+		#plt.text(0.1, 0.2, "HARMONI/(Telescope+Sky) = {:.2f}".format(np.nanmedian(total_instrument_em/total_telescope_sky_em)), transform=ax.transAxes)
 		plt.savefig(base_filename + "_total_em.pdf")
 
 		plt.clf()
 		w, e = np.loadtxt(base_filename + "_sky_tr.txt", unpack=True)
-		plt.plot(w, e, label="sky", color=colors[0])
+		plt.plot(w, e, label="sky", color=colors[-1])
 		total_tr_w = w
 		total_tr = e
 
 		w, e = np.loadtxt(base_filename + "_tel_tr.txt", unpack=True)
-		plt.plot(w, e, label="telescope", color=colors[1])
+		plt.plot(w, e, label="telescope", color=colors[-2])
 		if np.sum(np.abs(total_tr_w - w)) != 0.:
 			logging.error('Telescope transmission wavelength error. This should never happen.')
 			return
 		total_tr *= e
-	
-		if aoMode in ["SCAO", "LTAO"]:
-			w, e = np.loadtxt(base_filename + "_ins_AOd_tr.txt", unpack=True)
-			plt.plot(w, e, label="AO dichroic", color=colors[2])
-			if np.sum(np.abs(total_tr_w - w)) != 0.:
-				logging.error('AO transmission wavelength error. This should never happen.')
-				return
-			total_tr *= e
-
-
-		w, e = np.loadtxt(base_filename + "_ins_FPRS_tr.txt", unpack=True)
-		plt.plot(w, e, label="FPRS", color=colors[3])
-		if np.sum(np.abs(total_tr_w - w)) != 0.:
-			logging.error('FPRS transmission wavelength error. This should never happen.')
-			return
-		total_tr *= e
 		
-		w, e = np.loadtxt(base_filename + "_ins_tr.txt", unpack=True)
-		plt.plot(w, e, label="instrument after FPRS", color=colors[4])
-		if np.sum(np.abs(total_tr_w - w)) != 0.:
-			logging.error('instrument transmission wavelength error. This should never happen.')
-			return
-		total_tr *= e
+		total_instrument_tr = np.ones_like(total_tr)
+		# HARMONI parts
+		harmoni_files_tr = sorted(glob.glob(base_filename + "_HARMONI_*tr.txt"))
+		for harmoni_file, color in zip(harmoni_files_tr, colors):
+			w, e = np.loadtxt(harmoni_file, unpack=True)
+			m = re.search('.+HARMONI_(.+)_tr.txt', harmoni_file)
+			plt.plot(w, e, label=m.group(1), color=color, ls="--", lw=1.2)
+			total_instrument_tr *= e
+			total_tr *= e
+		
+		plt.plot(w, total_instrument_tr, label="HARMONI total", color="red")
+		
+		np.savetxt(base_filename + "_total_HARMONI_tr.txt", np.c_[w, total_instrument_tr], comments="#", header="\n".join([
+			'TYPE: Total transmission.',
+			'Wavelength [um], transmission']))
 		
 		# the detector curve has a different wavelength range and spacing
 		w, e = np.loadtxt(base_filename + "_det_qe_tr.txt", unpack=True)
@@ -437,13 +445,15 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		plt.savefig(base_filename + "_total_tr.pdf")
 
 		if not debug:
-			list_files = ["sky_tr", "sky_em", "moon_em", "tel_tr", "tel_em", "ins_tr", "ins_em", "det_qe_tr", "ins_FPRS_tr", "ins_FPRS_em"]
-			if aoMode in ["LTAO", "SCAO"]:
-				list_files.append("ins_AOd_tr")
-				list_files.append("ins_AOd_em")
+			list_files = ["sky_tr", "sky_em", "moon_em", "tel_tr", "tel_em", "det_qe_tr"]
 			for _ in list_files:
 				os.remove(base_filename + "_" + _ + ".txt")
 				os.remove(base_filename + "_" + _ + ".pdf")
+				
+			for _ in harmoni_files_em+harmoni_files_tr:
+				filename = _.replace(".txt", "")
+				os.remove(filename + ".txt")
+				os.remove(filename + ".pdf")
 		
 		
 	# Noiseless
@@ -466,9 +476,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	# detectors
 	outFile_dets = base_filename + "_dets.fits"
 	
-	# 
+	#
 	outFile_read_noise = base_filename + "_read_noise.fits"
 	outFile_dark = base_filename + "_dark.fits"
+	outFile_ddetector_thermal = base_filename + "_det_thermal.fits"
 	
 	# Update header
 	for _ in simulation_conf:
@@ -522,6 +533,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	if debug:
 		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)
 		save_fits_cube(outFile_read_noise, noise_cube_read_noise**2, "read noise variance", head)
+		save_fits_cube(outFile_ddetector_thermal, noise_cube_thermal, "detector thermal noise variance", head)
 	
 
 	# Save transmission with crosstalk

@@ -19,12 +19,10 @@ config_data = {
 	'spectral_sampling':{"output":2.2, "internal":4.}, # spectral sampling of the output cube and internal. Nyquist = 2
 	'LSF_kernel_size':12., # LSF kernel size in sigma units
 	
-	'telescope': {'diameter':37., 'obsc':0.3, 'area':932.46}, #diam [m], area [m^2]
+	'telescope': {'diameter':37., 'area':980.0}, #diam [m], area [m^2]
 	
-	'HARMONI_temp':140., # K
 	'HARMONI_FPRS_diff_temp':20., # Tamb - 20 K for the FPRS
-	'HARMONI_AO_diff_temp':{"LTAO":5.,  #  Tamb - 5 K for the LTAO AO dichroic,
-				"SCAO":20.}, #  Tamb - 20 K for the SCAO AO dichroic}
+	'HARMONI_cryo_temp':130., # K
 	
 	'data_dir':"sim_data/",
 	
