@@ -304,7 +304,7 @@ def create_psf(lamb, Airy=False):
 			psf = psd_to_psf(psd*0., pup, diameter, phase_static = None, lamb=lamb*1e-6, samp=2., jitter=np.repeat(0., 2))
 		
 		area_scale = (pix_psf/psfscale)**2
-		#print area_scale
+		#print(area_scale)
 		if area_scale > 1:
 			# interpolate PSF
 			xgrid_in = (np.linspace(0, psf.shape[0]-1, psf.shape[0]) - psf.shape[0]*0.5)*pix_psf
@@ -315,8 +315,8 @@ def create_psf(lamb, Airy=False):
 			# rebin PSF
 			side = int(psf.shape[0]*pix_psf/psfscale/2)*2
 			rebin_psf = frebin2d(psf, (side, side))/area_scale
-			center = side/2
-			finalpsf = rebin_psf[center-fov/2:center+fov/2, center-fov/2:center+fov/2]
+			center = side//2
+			finalpsf = rebin_psf[center-fov//2:center+fov//2, center-fov//2:center+fov//2]
 			
 		finalpsf[finalpsf < 0] = 0.
 		#fits.writeto("psf_orig.fits", psf, overwrite=True)
