@@ -5,6 +5,7 @@ import os
 import logging
 
 import numpy as np
+import scipy.ndimage
 from astropy.io import fits
 from scipy.interpolate import interp2d
 from astropy.convolution import Gaussian2DKernel
@@ -14,8 +15,12 @@ try:
 except:
 	from config import *
 
-from src.modules.misc_utils import path_setup
-from src.modules.rebin import *
+try:
+	from src.modules.misc_utils import path_setup
+	from src.modules.rebin import *
+except:
+	from modules.misc_utils import path_setup
+	from modules.rebin import *
 
 psf_path = path_setup('../../' + config_data["data_dir"] + 'PSF/')
 
@@ -168,6 +173,20 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 		kernel = eclat(Gauss2D(xx, yy))
 		sysFTO = sysFTO*kernel
 
+	# simulate the rotation of the PSF
+	#if rotation_angle is not None:
+		#nsteps = 15
+		#angles = np.linspace(0, rotation_angle, nsteps)
+		
+		#tmpFTO = eclat(sysFTO)
+		
+		#sysFTO_tmp = np.zeros_like(tmpFTO)
+		#for a in angles:
+			#sysFTO_tmp += scipy.ndimage.rotate(tmpFTO, a, reshape=False)
+
+		#sysFTO_tmp /= nsteps
+		#sysFTO = eclat(sysFTO_tmp)
+		
 	
 	##;;Computation of final PSF
 	sysPSF = np.real(eclat((np.fft.fft2(sysFTO))))
@@ -178,6 +197,8 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 psfscale = None
 fov = None
 AO_mode = None
+
+rotation_angle = None
 
 # AO variables
 pup = None
@@ -195,7 +216,7 @@ air_mass = None
 # user-defined PSF
 user_psf = None
 
-def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
+def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode, rotation=None):
 	'''
 	Define parameters used for the PSF generation
 	Inputs:
@@ -209,11 +230,12 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 	Outputs:
 		None
 	'''
-	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode
+	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode, rotation_angle
 	global seeing, air_mass
 	global user_psf
 	
 	AO_mode = _aoMode
+	rotation_angle = rotation
 	
 	fov = _fov
 	psfscale = _psfscale
@@ -263,6 +285,22 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode):
 				stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))	
 				psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))
 	
+	
+		#if rotation_angle is not None:
+			#nsteps = 20
+			#angles = np.linspace(0, rotation_angle, nsteps)
+
+			#tmp_pupil = np.zeros_like(pup)
+			#for a in angles:
+				#tmp_pupil += scipy.ndimage.rotate(pup, a, reshape=False)
+
+			#fits.writeto("t1.fits", pup, overwrite=True)
+			#tmp_pupil /= nsteps
+			#fits.writeto("t2.fits", tmp_pupil, overwrite=True)
+			#pup = tmp_pupil
+	
+	
+	
 	elif AO_mode == "NOAO":
 		logging.info("define noAO Gaussian PSF")
 	else: # user defined PSF
@@ -291,7 +329,7 @@ def create_psf(lamb, Airy=False):
 		cube: PSF
 	'''
 		
-	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode
+	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode, rotation
 	global seeing, air_mass
 
 	if AO_mode in ["LTAO", "SCAO", "AIRY"]:

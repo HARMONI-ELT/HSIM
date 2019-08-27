@@ -42,28 +42,28 @@ class InstrumentPart:
 	def set_number(self, number):
 		self.number = number
 	
-	def calcEmisivity(self, lamb, filename, scaling, dust, n):
+	def calcEmissivity(self, lamb, filename, scaling, dust, n):
 		
 		if n == 0:
-			# if no elements return 0 emisivity
+			# if no elements return 0 emissivity
 			return 0.
 		
-		# Read emisivity from file or use "filename" as a number
+		# Read emissivity from file or use "filename" as a number
 		if type(filename) == str:
 			l, emi = np.loadtxt(tppath + filename, unpack=True, comments="#", delimiter=",")
 		else:
 			l = lamb
 			emi = np.zeros_like(lamb) + filename
 		
-		# Scale emisivity
+		# Scale emissivity
 		emi *= scaling
-		# Add dust emisivity
+		# Add dust emissivity
 		emi += self.emis_dust*dust
-		# Calculate emisivity for n elements
+		# Calculate emissivity for n elements
 		emi = 1. - (1. - emi)**n # ~= n*emi for small emi
 		# Scale depending on the effective area
 		emi = emi*self.area/config_data['telescope']['area']
-		# Interpolate emisivity to output lambda grid
+		# Interpolate emissivity to output lambda grid
 		emi_interp = interp1d(l, emi, kind='linear', bounds_error=False, fill_value=0.)
 		
 		return emi_interp(lamb)
@@ -72,13 +72,13 @@ class InstrumentPart:
 	def calcThroughputAndEmission(self, lamb, DIT, output_file=""):
 	
 		# mirrors
-		emi_mirror = self.global_scaling*self.calcEmisivity(lamb, self.emis_mirror, self.emis_scaling, self.dust_mirror, self.n_mirrors)
+		emi_mirror = self.global_scaling*self.calcEmissivity(lamb, self.emis_mirror, self.emis_scaling, self.dust_mirror, self.n_mirrors)
 		# lenses
-		emi_lens = self.global_scaling*self.calcEmisivity(lamb, self.emis_lens, self.emis_scaling, self.dust_lens, self.n_lenses)
+		emi_lens = self.global_scaling*self.calcEmissivity(lamb, self.emis_lens, self.emis_scaling, self.dust_lens, self.n_lenses)
 		
-		emisivity = 1. - ((1. - emi_mirror)*(1. - emi_lens))
-		throughput = 1. - emisivity
-		emission = emisivity*blackbody(lamb, self.temp) #J/s/m2/lambda(um)/arcsec2
+		emissivity = 1. - ((1. - emi_mirror)*(1. - emi_lens))
+		throughput = 1. - emissivity
+		emission = emissivity*blackbody(lamb, self.temp) #J/s/m2/lambda(um)/arcsec2
 		
 		emission_ph = emission/(sp.h*sp.c/(lamb*1.E-6))*DIT # photons/um/m2/arcsec2
 		
@@ -94,7 +94,7 @@ class InstrumentPart:
 		if self.n_lenses > 0:
 			logging.debug("emis_lens = {} dust_lens = {:5.3f}".format(self.emis_lens, self.dust_lens))
 			
-			
+		logging.debug("lambda = {:7.4f} emissivity = {:6.3f} throughput = {:6.3f} emission_ph = {:.2e}".format(np.median(lamb), np.median(emissivity), np.median(throughput), np.median(emission_ph)))
 
 		plot_file = output_file + "_HARMONI_" + "{:02d}".format(self.number) + "_" + self.name.replace(" ", "_").lower()
 			
@@ -179,8 +179,8 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	# -------------------------
 	# Instrument temperatures
 	TTel = site_temp
-	TCool = TTel - config_data['HARMONI_FPRS_diff_temp']
-	#TCool = 273.15 - 10
+	#TCool = TTel - config_data['HARMONI_FPRS_diff_temp']
+	TCool = 273.15 - 10
 	TCryo = config_data['HARMONI_cryo_temp']
 	TCryoMech = TCryo - 5.
 	TTrap = TCool
@@ -198,8 +198,8 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	
 	logging.debug("HARMONI model. TCool = {:d} K TCryo = {:d} K TCryoMech = {:d} K TTrap  = {:d} K".format(*map(int, [TCool, TCryo, TCryoMech, TTrap])))
 	logging.debug("AreaIns = {:6.1f} m2 AreaTel = {:6.1f} m2".format(AreaIns, AreaTel))
-	logging.debug("edust = {:6.1f} dustfrac = {:6.1f} mindustfrac = {:6.1f}".format(InstrumentPart.edust, dustfrac, InstrumentPart.mindustfrac))
-	logging.debug("ecoldtrap = {:6.1f} rwindow = {:6.1f}".format(ecoldtrap, rwindow))
+	logging.debug("edust = {:6.3f} dustfrac = {:6.3f} mindustfrac = {:6.3f}".format(InstrumentPart.edust, dustfrac, InstrumentPart.mindustfrac))
+	logging.debug("ecoldtrap = {:6.3f} rwindow = {:6.3f}".format(ecoldtrap, rwindow))
 	logging.debug("-------")
 	
 	
@@ -219,9 +219,8 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	harmoni.addPart(InstrumentPart("Window cold trap", TCool, AreaTel, n_mirrors=4, global_scaling=2.*2.0*rwindow))
 	harmoni.addPart(InstrumentPart("Window reflected", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.*0.8*2.0*rwindow, emis_dust=ecoldtrap))
 
-
 	# FPRS
-	harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=4, n_lenses=2))
+	harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=4))
 
 	harmoni.addPart(InstrumentPart("Cryo window", TCool, AreaTel, n_lenses=1, emis_scaling=0.4, dust_lens=InstrumentPart.mindustfrac))
 	harmoni.addPart(InstrumentPart("Cryo window inner dust", TCryo+50., AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=InstrumentPart.mindustfrac))
