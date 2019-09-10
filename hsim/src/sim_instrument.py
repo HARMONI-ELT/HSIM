@@ -179,8 +179,8 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	# -------------------------
 	# Instrument temperatures
 	TTel = site_temp
-	#TCool = TTel - config_data['HARMONI_FPRS_diff_temp']
-	TCool = 273.15 - 10
+	TCool = TTel - config_data['HARMONI_FPRS_diff_temp']
+	#TCool = 273.15 - 10
 	TCryo = config_data['HARMONI_cryo_temp']
 	TCryoMech = TCryo - 5.
 	TTrap = TCool
