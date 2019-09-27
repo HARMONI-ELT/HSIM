@@ -40,7 +40,6 @@ config_data = {
 			'z-high':GratingInfo(0.828, 0.902, 17385.),
 			'J-short':GratingInfo(1.012, 1.102, 17385.),
 			'J-long':GratingInfo(1.098, 1.189, 17385.),
-			'J-high':GratingInfo(1.191, 1.299, 17385.),
 			'H-high':GratingInfo(1.538, 1.678, 17385.),
 			'K-short':GratingInfo(2.017, 2.201, 17385.),
 			'K-long':GratingInfo(2.199, 2.400, 17385.)
