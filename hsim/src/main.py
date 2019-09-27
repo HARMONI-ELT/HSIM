@@ -15,7 +15,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import convolve2d
 from astropy.io import fits
-from photutils import aperture_photometry, CircularAperture
+##from photutils import aperture_photometry, CircularAperture
 
 import matplotlib.pylab as plt
 
@@ -29,7 +29,7 @@ from src.modules.adr import apply_adr
 from src.modules.rebin import *
 
 # Detector systematics
-from src.sim_detector import make_det_instance, add_detectors
+from src.sim_detector import get_dets, add_detectors
 from src.modules.misc_utils import trim_cube
 
 
@@ -235,8 +235,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		logging.info("Trimming datacubes to correct size")
 		output_cube_spec = trim_cube(output_cube_spec)
 		logging.info("Generating simulated detectors")
-		sim_dets1 = make_det_instance(NDIT)
-		sim_dets2 = make_det_instance(NDIT)
+		sim_dets1 = get_dets()
+		sim_dets2 = get_dets()
 	elif det_switch == "True" and grating == "V+R":
                 logging.warning("IR detector systematics selected for visibile grating. Ignoring detector systematics.")
                 det_switch = "False"
@@ -505,27 +505,27 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(outFile_std, noise_cube_total, "Noise standard deviation", head)
 
 
-	# Flux calibration - from electrons to erg/s/cm2/um
-	
-	# - Calibration star
-	flux_cal_star = 1e-13 # erg/s/cm2/um
-	en2ph_conv_fac = (1.98644582e-25 * 1.e7)/(output_lambs*1.e-6*1.e4)
-	flux_cal_star_photons = flux_cal_star/en2ph_conv_fac #photons/s/cm2/um
-
-	# r=0.5" aperture for the PSF
-	aperture = CircularAperture((spax_scale.psfsize//2, spax_scale.psfsize//2), r=500./spax_scale.psfscale)
-	psf_fraction = aperture_photometry(psf_internal, aperture)
-
-	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission)*psf_fraction['aperture_sum'].data[0] # electrons/s
-	factor_calibration = flux_cal_star/np.median(flux_cal_star_electrons) # erg/s/cm2/um / (electrons/s)
-	
-	outFile_flux_cal_noiseless = base_filename + "_noiseless_obj_flux_cal.fits"
-	outFile_flux_cal_reduced = base_filename + "_reduced_flux_cal.fits"
-	
-	
-	head['FUNITS'] = "erg/s/cm2/um/arcsec2"
-	save_fits_cube(outFile_flux_cal_noiseless, output_cube_spec_wo_back/DIT*factor_calibration/spaxel_area, "Flux cal Noiseless O", head)
-	save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
+##	# Flux calibration - from electrons to erg/s/cm2/um
+##	
+##	# - Calibration star
+##	flux_cal_star = 1e-13 # erg/s/cm2/um
+##	en2ph_conv_fac = (1.98644582e-25 * 1.e7)/(output_lambs*1.e-6*1.e4)
+##	flux_cal_star_photons = flux_cal_star/en2ph_conv_fac #photons/s/cm2/um
+##
+##	# r=0.5" aperture for the PSF
+##	aperture = CircularAperture((spax_scale.psfsize//2, spax_scale.psfsize//2), r=500./spax_scale.psfscale)
+##	psf_fraction = aperture_photometry(psf_internal, aperture)
+##
+##	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission)*psf_fraction['aperture_sum'].data[0] # electrons/s
+##	factor_calibration = flux_cal_star/np.median(flux_cal_star_electrons) # erg/s/cm2/um / (electrons/s)
+##	
+##	outFile_flux_cal_noiseless = base_filename + "_noiseless_obj_flux_cal.fits"
+##	outFile_flux_cal_reduced = base_filename + "_reduced_flux_cal.fits"
+##	
+##	
+##	head['FUNITS'] = "erg/s/cm2/um/arcsec2"
+##	save_fits_cube(outFile_flux_cal_noiseless, output_cube_spec_wo_back/DIT*factor_calibration/spaxel_area, "Flux cal Noiseless O", head)
+##	save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
 	
 	if det_switch == "True":
 		save_fits_cube(outFile_dets, sim_only_dets, "Simulated detectors", head)
