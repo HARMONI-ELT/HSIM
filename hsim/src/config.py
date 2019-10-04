@@ -11,11 +11,25 @@ SpaxelScaleInfo = collections.namedtuple('SpaxelScaleInfo', 'xscale, yscale, psf
 	
 config_data = {
 	'read_noise': {"vis":2.0, "nir":2.845, "nir_lowexp":12.0}, # e/pix
+        'side_length':4096,
 	'dark_current': {"vis":0.00042, "nir":0.0053}, # e/pix/s
 	'saturation': {"vis":55000., "nir":55000.}, # e
 	'crosstalk': 0.02, # fraction of photons going to each of the 4 contiguous pixels
-	'side_length': 4096, # length of side of H4RG
 
+        #Detector systematics parameters
+        'systematics': {"rd":2.845,
+                        "rd_lowexp":12.0,
+                        "pedestal":4,
+                        "c_pink":3,
+                        "u_pink":1,
+                        "acn":0.5,
+                        "pca0_amp":0.2,
+                        "ref_ratio":0.8,
+                        "ktc_noise":29.,
+                        "bias_offset":5000.,
+                        "bias_amp":500.
+                        },
+                        
 	'spectral_sampling':{"output":2.2, "internal":4.}, # spectral sampling of the output cube and internal. Nyquist = 2
 	'LSF_kernel_size':12., # LSF kernel size in sigma units
 	

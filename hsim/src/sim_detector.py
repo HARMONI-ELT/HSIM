@@ -13,6 +13,7 @@ from astropy.convolution import Gaussian1DKernel
 
 from src.modules.misc_utils import path_setup
 from src.config import *
+from src import nghxrg as ng
 from src.modules.em_model import *
 
 detpath = path_setup('../../' + config_data["data_dir"] + 'detectors/')
@@ -175,85 +176,20 @@ def sim_detector(cube, back_emission, transmission, lambs, grating, DIT, debug_p
 
 # Detector systematics code
 
-#interpolation function
-def interp(data):
-	X = np.sort(data)
-	x_range = np.linspace(0,1,len(X))
-	func = UnivariateSpline(x_range, X, k=4, s=0)
-	return func
-
-
-def make_det_vals(data, N):
-	np.random.seed(1)
-	rands = np.random.random(N)
-	rands_sort = np.sort(rands)
-	det_vals = interp(data)(rands_sort)
-	np.random.seed(1)
-	np.random.shuffle(det_vals)
-	return det_vals
-
-
-def make_detectors(NDIT):
-	''' Generates an instance of the detectors
-	Inputs:
-		NDIT: Number of detector integrations
-
-	Outputs:
-		sim_dets: list of simulated detectors
-	'''
-	# load KMOS maps
-	means = np.load(os.path.join(detpath, 'kmos_means.npy'))
-	var = np.load(os.path.join(detpath, 'kmos_var.npy'))
-	side_len = config_data["side_length"]
-
-	sds = np.sqrt(var)
-
-	mc = means[4:-4,4:-4].flatten()
-	mt = means[:,-4:].flatten()
-	ml = means[4:-4,:4].flatten() 
-	mr = means[4:-4,-4:].flatten() 
-	
-	sc = sds[4:-4,4:-4].flatten()
-	sc[sc > 1000] = 1000
-	st = sds[:,-4:].flatten()
-	sl = sds[4:-4,:4].flatten()
-	sr = sds[4:-4,-4:].flatten()
-	
-	mean_map = np.zeros((8,side_len,side_len))
-	sds_map = np.zeros((8,side_len,side_len))
-
-	mean_map[:,4:-4,4:-4] = make_det_vals(mc, ((side_len-8)**2)*8).reshape((8,side_len-8, side_len-8))
-	mean_map[:,-4:,:] = make_det_vals(mt, (side_len*4)*8).reshape((8,4,side_len))
-	mean_map[:,:4,:] = make_det_vals(mt, (side_len*4)*8).reshape((8,4,side_len))
-	mean_map[:,4:-4,:4] = make_det_vals(ml, ((side_len-8)*4)*8).reshape((8,side_len-8,4))
-	mean_map[:,4:-4,-4:] = make_det_vals(mr, ((side_len-8)*4)*8).reshape((8,side_len-8,4))
-
-	sds_map[:,4:-4,4:-4] = make_det_vals(sc, ((side_len-8)**2)*8).reshape((8,side_len-8, side_len-8))
-	sds_map[:,-4:,:] = make_det_vals(st, (side_len*4)*8).reshape((8,4,side_len))
-	sds_map[:,:4,:] = make_det_vals(st, (side_len*4)*8).reshape((8,4,side_len))
-	sds_map[:,4:-4,:4] = make_det_vals(sl, ((side_len-8)*4)*8).reshape((8,side_len-8,4))
-	sds_map[:,4:-4,-4:] = make_det_vals(sr, ((side_len-8)*4)*8).reshape((8,side_len-8,4))
-	return mean_map, sds_map
-
-
-def make_det_instance(NDIT):
-	mean_map, sd_map = make_detectors(NDIT)
-	side_len = config_data["side_length"]
-	sim_dets = sd_map * np.random.randn(8,side_len,side_len) + mean_map
-	col_meds = np.load(os.path.join(detpath, 'col_meds.npy'))
-
-	for i in range(mean_map.shape[0]):
-		for j in range(mean_map.shape[1]-8):
-			row=j+4
-			row_med = np.median(np.concatenate([sim_dets[i,row-1:row+2,:4], sim_dets[i,row-1:row+2,-4:]]))
-			sim_dets[i,row] -= row_med
-
-		for k in range(mean_map.shape[2]/64):
-			sim_dets[i,:,k*64:(k+1)*64] -= np.random.choice(col_meds)
-			
-	sim_dets = sim_dets * np.sqrt(NDIT)
-	return sim_dets
-
+def get_dets(DIT):
+        dets = []
+        for i in range(8):
+                ng_h4rg = ng.HXRGNoise()
+                detname = 'det'+str(i+1)+'.fits'
+                det_hdu = ng_h4rg.mknoise(o_file=None,dit=DIT)
+                det_data = det_hdu.data
+                #Add dark current
+                det_data = det_data + np.random.poisson(config_data['dark_current']['nir'] * DIT, \
+                                                        np.shape(det_data))
+                dets.append(det_data)
+        dets = np.array(dets)
+        dets_head = det_hdu.header
+        return dets, dets_head
 
 def add_detectors(cube, dets):
 	''' Adds detectors to a datacube

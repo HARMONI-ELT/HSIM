@@ -29,7 +29,7 @@ from src.modules.adr import apply_adr
 from src.modules.rebin import *
 
 # Detector systematics
-from src.sim_detector import make_det_instance, add_detectors
+from src.sim_detector import get_dets, add_detectors
 from src.modules.misc_utils import trim_cube
 
 
@@ -235,13 +235,15 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 		logging.info("Trimming datacubes to correct size")
 		output_cube_spec = trim_cube(output_cube_spec)
 		logging.info("Generating simulated detectors")
-		sim_dets1 = make_det_instance(NDIT)
-		sim_dets2 = make_det_instance(NDIT)
+		sim_dets1 = get_dets(DIT)[0]
+		sim_dets2 = get_dets(DIT)[0]
 	elif det_switch == "True" and grating == "V+R":
                 logging.warning("IR detector systematics selected for visibile grating. Ignoring detector systematics.")
                 det_switch = "False"
 	
-	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current, thermal_background = sim_detector(output_cube_spec, output_back_emission, output_transmission, output_lambs, grating, DIT, debug_plots=debug_plots, output_file=base_filename)
+	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current, thermal_background = \
+                          sim_detector(output_cube_spec, output_back_emission, output_transmission, output_lambs, \
+                                       grating, DIT, debug_plots=debug_plots, output_file=base_filename)
 	head['FUNITS'] = "electrons"
 	
 	
@@ -528,7 +530,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
 	
 	if det_switch == "True":
-		save_fits_cube(outFile_dets, sim_only_dets, "Simulated detectors", head)
+		save_fits_cube(outFile_dets, dets1, "Simulated detectors", head)
 
 	if debug:
 		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)
