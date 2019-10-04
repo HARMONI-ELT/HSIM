@@ -111,9 +111,10 @@ if __name__ == "__main__":
 			air_mass = float(args[6])
 			moon = float(args[7])
 			jitter = str(args[8])
+			
 			site_temp = float(args[9])
 			adr = str(args[10])
-			noise_seed = int(args[11])
+			noise_seed = int(float(args[11]))
 			ao_mode = str(args[12])
 			systematics = str(args[13])
 

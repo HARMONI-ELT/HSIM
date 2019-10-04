@@ -530,7 +530,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version, 
 	save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
 	
 	if det_switch == "True":
-		save_fits_cube(outFile_dets, dets1, "Simulated detectors", head)
+		save_fits_cube(outFile_dets, sim_dets1, "Simulated detectors", head)
 
 	if debug:
 		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)
