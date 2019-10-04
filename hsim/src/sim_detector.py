@@ -176,16 +176,20 @@ def sim_detector(cube, back_emission, transmission, lambs, grating, DIT, debug_p
 
 # Detector systematics code
 
-def get_dets():
+def get_dets(DIT):
         dets = []
         for i in range(8):
                 ng_h4rg = ng.HXRGNoise()
                 detname = 'det'+str(i+1)+'.fits'
-                det_hdu = ng_h4rg.mknoise(detname)
+                det_hdu = ng_h4rg.mknoise(o_file=None,dit=DIT)
                 det_data = det_hdu.data
+                #Add dark current
+                det_data = det_data + np.random.poisson(config_data['dark_current']['nir'] * DIT, \
+                                                        np.shape(det_data))
                 dets.append(det_data)
         dets = np.array(dets)
-        return dets
+        dets_head = det_hdu.header
+        return dets, dets_head
 
 def add_detectors(cube, dets):
 	''' Adds detectors to a datacube

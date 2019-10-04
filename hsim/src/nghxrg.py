@@ -428,7 +428,7 @@ class HXRGNoise:
 
 
 
-	def mknoise(self, o_file, rd_noise=None, pedestal=None, c_pink=None,
+	def mknoise(self, o_file, dit=None,rd_noise=None, pedestal=None, c_pink=None,
 				u_pink=None, acn=None, pca0_amp=None,
 				reference_pixel_noise_ratio=None, ktc_noise=None,
 				bias_offset=None, bias_amp=None):
@@ -437,6 +437,7 @@ class HXRGNoise:
 
 		Parameters:
 			o_file   - Output filename
+			dit      - tiem of single exposure
 			pedestal - Magnitude of pedestal drift in electrons
 			rd_noise - Standard deviation of read noise in electrons
 			c_pink   - Standard deviation of correlated pink noise in electrons
@@ -477,31 +478,44 @@ class HXRGNoise:
 
 		# ======================================================================
 		#
-		# DEFAULT NOISE PARAMETERS
+		# NOISE PARAMETERS
 		#
-		# These defaults create noise similar to that seen in the JWST NIRSpec.
+		# Read in noise from hsim config file.
 		#
 		# ======================================================================
 
-		self.rd_noise  = 5.2      if rd_noise     is None else rd_noise
-		self.pedestal  = 4        if pedestal     is None else pedestal
-		self.c_pink    = 3        if c_pink       is None else c_pink
-		self.u_pink    = 1        if u_pink       is None else u_pink
-		self.acn       = 0.5      if acn          is None else acn
-		self.pca0_amp  = 0.2      if pca0_amp     is None else pca0_amp
+                if dit > 120:
+                        self.rd_noise  = config_data['systematics']['rd']       if \
+                                rd_noise     is None else rd_noise
+                else:
+                        self.rd_noise = config_data['systematics']['rd_lowexp'] if \
+                                rd_noise     is None else rd_noise
+		self.pedestal  = config_data['systematics']['pedestal'] if \
+                                pedestal     is None else pedestal
+		self.c_pink    = config_data['systematics']['c_pink']   if \
+                                c_pink       is None else c_pink
+		self.u_pink    = config_data['systematics']['u_pink']   if \
+                                u_pink       is None else u_pink
+		self.acn       = config_data['systematics']['acn']      if \
+                                acn          is None else acn
+		self.pca0_amp  = config_data['systematics']['pca0_amp'] if \
+                                pca0_amp     is None else pca0_amp
 
 		# Change this only if you know that your detector is different from a
 		# typical H2RG.
-		self.reference_pixel_noise_ratio = 0.8 if \
+		self.reference_pixel_noise_ratio = config_data['systematics']['ref_ratio'] if \
 			reference_pixel_noise_ratio is None else reference_pixel_noise_ratio
 
 		# These are used only when generating cubes. They are
 		# completely removed when the data are calibrated to
 		# correlated double sampling or slope images. We include
 		# them in here to make more realistic looking raw cubes.
-		self.ktc_noise = 29.     if ktc_noise   is None else ktc_noise 
-		self.bias_offset = 5000. if bias_offset is None else bias_offset
-		self.bias_amp    = 500.  if bias_amp    is None else bias_amp
+		self.ktc_noise = config_data['systematics']['ktc_noise']        if \
+                                ktc_noise   is None else ktc_noise 
+		self.bias_offset = config_data['systematics']['bias_offset'].   if \
+                                bias_offset is None else bias_offset
+		self.bias_amp    = config_data['systematics']['bias_amp']       if \
+                                bias_amp    is None else bias_amp
 
 		# ======================================================================
 
@@ -541,45 +555,12 @@ class HXRGNoise:
 				result[z,:,:] += bias_pattern
 
 
-##		# Make white read noise. This is the same for all pixels.
-##		if self.rd_noise > 0:
-##			self.message('Generating rd_noise')
-##			w = self.ref_all
-##			r = self.reference_pixel_noise_ratio  # Easier to work with
-##			for z in np.arange(self.naxis3):
-##				here = np.zeros((self.naxis2, self.naxis1))
-##				
-##				# Noisy reference pixels for each side of detector
-##				if w[0] > 0: # lower
-##					here[:w[0],:] = r * self.rd_noise * \
-##									np.random.standard_normal((w[0],self.naxis1))
-##				if w[1] > 0: # upper
-##					here[-w[1]:,:] = r * self.rd_noise * \
-##									np.random.standard_normal((w[1],self.naxis1))
-##				if w[2] > 0: # left
-##					here[:,:w[2]] = r * self.rd_noise * \
-##									np.random.standard_normal((self.naxis2,w[2]))
-##				if w[3] > 0: # right
-##					here[:,-w[3]:] = r * self.rd_noise * \
-##									np.random.standard_normal((self.naxis2,w[3]))
-##									
-##				# Noisy regular pixels
-##				if np.sum(w) > 0: # Ref. pixels exist in frame
-##					here[w[0]:self.naxis2-w[1],w[2]:self.naxis1-w[3]] = self.rd_noise * \
-##									  np.random.standard_normal(\
-##									  (self.naxis2-w[0]-w[1],self.naxis1-w[2]-w[3]))
-##				else: # No Ref. pixels, so add only regular pixels
-##					here = self.rd_noise * np.random.standard_normal((self.naxis2,self.naxis1))
-##				
-##				# Add the noise in to the result
-##				result[z,:,:] += here
-
-
                 # Make read noise from distribution. This is different for each pixel.
                 if self.rd_noise > 0:
                         self.message('Generating rd_noise')
                         w = self.ref_all
-
+                        r = self.reference_pixel_noise_ratio  # Easier to work with
+                        
                         hdu = fits.open(self.rn_file)
                         rn_data = hdu[0].data * self.rd_noise
 
@@ -593,19 +574,19 @@ class HXRGNoise:
 
                                 # Noisy reference pixels for each side of detector
                                 if w[0] > 0: # lower
-                                        here[:w[0],:] = self.make_det_vals(st, w[0]*self.naxis1).reshape(\
+                                        here[:w[0],:] = r * self.make_det_vals(sc, w[0]*self.naxis1).reshape(\
                                                                 (w[0],self.naxis1)) * np.random.standard_normal(\
                                                                 (w[0],self.naxis1))
                                 if w[1] > 0: # upper
-                                        here[-w[1]:,:] = self.make_det_vals(st, w[1]*self.naxis1).reshape(\
+                                        here[-w[1]:,:] = r * self.make_det_vals(sc, w[1]*self.naxis1).reshape(\
                                                                 (w[1],self.naxis1)) * np.random.standard_normal(\
                                                                 (w[1],self.naxis1))
                                 if w[2] > 0: # left
-                                        here[:,:w[2]] = self.make_det_vals(sl, w[2]*self.naxis2).reshape(\
+                                        here[:,:w[2]] = r * self.make_det_vals(sc, w[2]*self.naxis2).reshape(\
                                                                 (self.naxis2, w[2])) * np.random.standard_normal(\
                                                                 (self.naxis2, w[2]))
                                 if w[3] > 0: # right
-                                        here[:,-w[3]:] = self.make_det_vals(sr, w[3]*self.naxis2).reshape(\
+                                        here[:,-w[3]:] = r * self.make_det_vals(sc, w[3]*self.naxis2).reshape(\
                                                                 (self.naxis2, w[3])) * np.random.standard_normal(\
                                                                 (self.naxis2, w[3]))
 
