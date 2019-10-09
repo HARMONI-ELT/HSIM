@@ -1,2 +1,3 @@
 *.pyc
 *~
+hsim/sim_data/detectors/HARMONI_dets.fits

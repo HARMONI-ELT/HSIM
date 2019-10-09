@@ -199,20 +199,6 @@ class HXRGNoise:
             print('file. The default is nirspec_pca0.fits.')
             os.sys.exit()
 
-        # Initialize read noise file and make sure that it exists and is a file
-        #self.rn_file = os.getenv('NGHXRG_HOME')+'/kmos_rn.fits' if \
-                #        rn_file is None else rn_file
-        self.rn_file = NGHXRG_HOME+'/kmos_rn.fits' if \
-                        rn_file is None else rn_file
-        if os.path.isfile(self.rn_file) is False:
-            print('There was an error finding rn_file! Check to be')
-            print('sure that the NGHXRG_HOME shell environment')
-            print('variable is set correctly and that the')
-            print('$NGHXRG_HOME/ directory contains the desired read')
-            print('noise file. The default is kmos_rn.fits.')
-            os.sys.exit()
-
-
         # ======================================================================
 
         # Configure Subarray (JML)
@@ -343,36 +329,6 @@ class HXRGNoise:
             print('NG: ' + message_text + ' at DATETIME = ', \
                   datetime.datetime.now().time())
 
-    def interp(self, data):
-        """
-        Interpolation function to convert distribution into a callable
-        function to extract read noise values from.
-
-        Parameters:
-                data - Data to draw from
-        """
-        X = np.sort(data)
-        x_range = np.linspace(0,1,len(X))
-        func = UnivariateSpline(x_range, X, k=4, s=0)
-        return func
-
-    def make_det_vals(self, data, N):
-        """
-        Draw random samples from distribution to create read
-        noise values.
-
-        Parameters:
-                data - Data to draw from
-                N - number of times to sample
-        """
-        np.random.seed(1)
-        rands = np.random.random(N)
-        rands_sort = np.sort(rands)
-        det_vals = self.interp(data)(rands_sort)
-        np.random.seed(1)
-        np.random.shuffle(det_vals)
-        return det_vals      
-
     def white_noise(self, nstep=None):
         """
         Generate white noise for an HxRG including all time steps
@@ -428,8 +384,8 @@ class HXRGNoise:
 
 
 
-    def mknoise(self, o_file, dit=None,rd_noise=None, pedestal=None, c_pink=None,
-                u_pink=None, acn=None, pca0_amp=None,
+    def mknoise(self, o_file, rn_array=None, dit=None, rd_noise=None, pedestal=None,
+                c_pink=None, u_pink=None, acn=None, pca0_amp=None,
                 reference_pixel_noise_ratio=None, ktc_noise=None,
                 bias_offset=None, bias_amp=None):
         """
@@ -437,6 +393,7 @@ class HXRGNoise:
 
         Parameters:
             o_file   - Output filename
+            rn_array - Array containing read noise distribution for detector
             dit      - tiem of single exposure
             pedestal - Magnitude of pedestal drift in electrons
             rd_noise - Standard deviation of read noise in electrons
@@ -561,8 +518,7 @@ class HXRGNoise:
                     w = self.ref_all
                     r = self.reference_pixel_noise_ratio  # Easier to work with
                     
-                    hdu = fits.open(self.rn_file)
-                    rn_data = hdu[0].data * self.rd_noise
+                    rn_vals = rn_array * self.rd_noise
 
                     st = rn_data[-4:,:].flatten()
                     sl = rn_data[:,:4].flatten()
@@ -574,30 +530,26 @@ class HXRGNoise:
 
                         # Noisy reference pixels for each side of detector
                         if w[0] > 0: # lower
-                            here[:w[0],:] = r * self.make_det_vals(sc, w[0]*self.naxis1).reshape(\
-                                                    (w[0],self.naxis1)) * np.random.standard_normal(\
+                            here[:w[0],:] = r * rn_vals[:w[0],:] * np.random.standard_normal(\
                                                     (w[0],self.naxis1))
                         if w[1] > 0: # upper
-                            here[-w[1]:,:] = r * self.make_det_vals(sc, w[1]*self.naxis1).reshape(\
-                                                    (w[1],self.naxis1)) * np.random.standard_normal(\
+                            here[-w[1]:,:] = r * rn_vals[-w[1]:,:] * np.random.standard_normal(\
                                                     (w[1],self.naxis1))
                         if w[2] > 0: # left
-                            here[:,:w[2]] = r * self.make_det_vals(sc, w[2]*self.naxis2).reshape(\
-                                                    (self.naxis2, w[2])) * np.random.standard_normal(\
+                            here[:,:w[2]] = r * rn_vals[:,:w[2]] * np.random.standard_normal(\
                                                     (self.naxis2, w[2]))
                         if w[3] > 0: # right
-                            here[:,-w[3]:] = r * self.make_det_vals(sc, w[3]*self.naxis2).reshape(\
-                                                    (self.naxis2, w[3])) * np.random.standard_normal(\
+                            here[:,-w[3]:] = r * rn_vals[:,-w[3]:] * np.random.standard_normal(\
                                                     (self.naxis2, w[3]))
 
                         # Noisy regular pixels
                         if np.sum(w) > 0: # Ref. pixels exist in frame
-                            here[w[0]:self.naxis2-w[1],w[2]:self.naxis1-w[3]] = self.make_det_vals(sc, \
-                                                    ((self.naxis2-w[0]-w[1])*(self.naxis1-w[2]-w[3]))).reshape(\
-                                                    (self.naxis2-w[0]-w[1],self.naxis1-w[2]-w[3]))
+                            here[w[0]:self.naxis2-w[1],w[2]:self.naxis1-w[3]] = \
+                                                    rn_vals[w[0]:self.naxis2-w[1],w[2]:self.naxis1-w[3]] * \
+                                                    np.random.standard_normal((self.naxis2-w[0]-w[1],\
+                                                                              self.naxis1-w[2]-w[3]))
                         else: # No Ref. pixels, so add only regular pixels
-                            here = self.make_det_vals(sc, self.naxis2*self.naxis1).reshape(\
-                                                    (self.naxis2,self.naxis1))
+                            here = rn_vals * np.random.standard_normal((self.naxis1,self.naxis2))
 
                         # Add the noise in to the result
                         result[z,:,:] += here
