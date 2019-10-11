@@ -74,6 +74,7 @@ Version & Date & Comments \\
 1.1 & --- & HSIM v210 release \\
 1.2 & 2019-03-28 & HSIM v211 release \\
 1.2b & 2019-04-30 & HSIM v212 release \\
+1.3 & 2019-10-11 & Detector systematics \\
 \hline
 \end{tabular}
 \end{table*}
@@ -210,7 +211,6 @@ K & 1.951 & 2.469 & 7104\\
 z-high & 0.828 & 0.902 & 17385 \\
 J-short & 1.012 & 1.102 & 17385 \\
 J-long & 1.098 & 1.189 & 17385 \\
-J-high & 1.191 & 1.299 & 17385 \\
 H-high & 1.538 & 1.678 & 17385 \\
 K-short & 2.017 & 2.201 & 17385 \\
 K-long & 2.199 & 2.400 & 17385 \\
@@ -220,7 +220,7 @@ K-long & 2.199 & 2.400 & 17385 \\
 
 \subsection{Detector Systematics}
 
-If chosen, HSIM can be run with more detailed detector systematics to simulate some of the features seen on infra-red detectors. When this option is selected, HSIM creates 8 simulated HAWAII 4RGs where each pixel has a unique read noise value derived from analysing the KMOS H2RG detectors. The read noise values have a distribution, with the peak at the expected read noise value for the H4RGs. An example HSIM H4RG is seen in Figure~\ref{fig:hsimdet}.
+If chosen, HSIM can be run with more detailed detector systematics to simulate some of the features seen on infra-red detectors. When this option is selected, HSIM creates 8 simulated HAWAII 4RGs where each pixel has a unique read noise value derived from analysing the KMOS H2RG detectors. The read noise values have a distribution, with the peak at the expected read noise value for the H4RGs. An example HSIM H4RG is seen in Figure~\ref{fig:hsimdet}. This also utilises the HXRG noise generation tool provided by Teledyne~\citep{Rauscher2015} to add additional features, such as ACN and amplifier bias differences. The parameters of these have been tuned to an expected performance level, however can be adjusted in the config file.  Additionally, in the config file there is an option to use a different read noise file, by changing the \texttt{rn\_file} to point to a different \textsc{fits} file. This file determines the distribution the read noise will follow, so adding a file with a uniform value across the image will produce a flat distribution. The last detector systematics option, \texttt{force\_new}, determines whether or not to generate a new set of detectors with each simulation. By default, the first time you run detailed detector systematics, it will save the read noise maps generated, and use these in subsequent runs of the code to speed up the simulation. New shot noise will still be generated each time. If desired however, new detectors can be made each time, either by setting this parameter to False, or by manually deleting the created \texttt{HARMONI\_dets.fits} file in \texttt{sim\_data/detectors}.
 
 \begin{figure*}[!h]
 \centering
@@ -228,9 +228,7 @@ If chosen, HSIM can be run with more detailed detector systematics to simulate s
 \caption{\small HSIM simulated detector.}\label{fig:hsimdet}
 \end{figure*}
 
-The simulated data cube is then sliced up and added to these detectors, in a manner similar to the effect of the image slicer. This ensures that features that appear linear on the detectors no longer appear linear in the output data cube. The simulation is then folded back into a standard data cube to maintain the `cube in, cube out' nature of HSIM.
-
-When creating the reduced cube, a separate instance of the detectors is generated and used in the reduction, so the residual features will remain in the reduced cube. A separate cube is returned containing the detectors used in the simulation.
+The simulated data cube is then sliced up and added to these detectors, in a manner similar to the effect of the image slicer. This ensures that features that appear linear on the detectors no longer appear linear in the output data cube. The simulation is then folded back into a standard data cube to maintain the `cube in, cube out' nature of HSIM. When creating the reduced cube, a separate instance of the detectors is generated and used in the reduction, so the residual features will remain in the reduced cube. A separate cube is returned containing the detectors used in the simulation.
 
 \subsection{Running HSIM}
 

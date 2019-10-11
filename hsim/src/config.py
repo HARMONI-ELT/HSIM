@@ -30,7 +30,7 @@ config_data = {
                         "ktc_noise":29.,
                         "bias_offset":5000.,
                         "bias_amp":500.,
-                        "force_new":True
+                        "force_new":False
                         },
                         
 	'spectral_sampling':{"output":2.2, "internal":4.}, # spectral sampling of the output cube and internal. Nyquist = 2
