@@ -36,7 +36,7 @@ from src.modules.misc_utils import trim_cube
 def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
          res_jitter=3., moon=0., site_temp=280.5, adr_switch='True', \
          det_switch='False', seednum=100, nprocs=mp.cpu_count()-1, \
-         debug=False, aoMode="LTAO"):
+         debug=True, aoMode="LTAO"):
     '''
     Inputs:
         datacube: Input high resolution datacube (RA, DEC, lambda)
@@ -546,7 +546,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
     save_fits_cube(outFile_flux_cal_noiseless, output_cube_spec_wo_back/DIT*factor_calibration/spaxel_area, "Flux cal Noiseless O", head)
     save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
     
-    if det_switch:
+    if det_switch == "True":
         save_fits_cube(outFile_dets, sim_det_systematics1, "Simulated detectors", head)
 
     if debug:
