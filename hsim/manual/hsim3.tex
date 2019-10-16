@@ -47,7 +47,7 @@
 \textbf{
 HSIM Manual\\[0.5ex]
 \Large
-v212}
+v300}
 \vspace{2cm}
 
 \large
@@ -75,13 +75,14 @@ Version & Date & Comments \\
 1.2 & 2019-03-28 & HSIM v211 release \\
 1.2b & 2019-04-30 & HSIM v212 release \\
 1.3 & 2019-10-11 & Detector systematics \\
+1.3b & 2019-10-16 & HSIM v300 \\
 \hline
 \end{tabular}
 \end{table*}
 
 
 \subsection*{Authors of this document}
-Miguel Pereira Santaella (University of Oxford) \\
+Miguel Pereira Santaella (CAB) \\
 Laurence Routledge (University of Oxford)
 
 \clearpage
@@ -92,16 +93,21 @@ Laurence Routledge (University of Oxford)
 
 HSIM is a dedicated pipeline for simulating observations with HARMONI on the Extremely Large Telescope. HSIM takes high spectral and spatial resolution input data cubes, encoding physical descriptions of astrophysical sources, and generates mock observed data cubes. The simulations incorporate detailed models of the sky, telescope, instrument, and detectors to produce realistic mock data \citep{Zieleniewski2015}.
 
-HSIM is programmed in Python3 and the source code can be found at  \url{https://github.com/HARMONI-ELT/HSIM}. It does not require any installation, just download it from \url{....} and unzip. HSIM depends on the following Python packages to work:
+HSIM is programmed in Python3 and the source code can be found at \url{https://github.com/HARMONI-ELT/HSIM}. It does not require any installation, just clone the GitHub repository 
+
+\begin{commandshell}
+$ git clone https://github.com/HARMONI-ELT/HSIM.git$
+\end{commandshell}
+
+and download the \texttt{sim\_data} directory from \url{http://harmoni-web.physics.ox.ac.uk/large_files/hsim300_files.zip}. HSIM depends on the following Python packages to work:
 
 \begin{itemize}
 \setlength\itemsep{-0.5ex}
-\item astropy 2.0.4
-\item numpy 1.14.1
-\item scipy 1.0.0
-\item matplotlib 2.1.2
-\item photutils 0.3.2
-% \item wxPython $>$ 3.0 
+\item astropy 3.2.1
+\item numpy 1.17.0
+\item scipy 1.3.1
+\item matplotlib 3.1.1
+\item photutils 0.7
 \end{itemize}
 
 The code has been tested with the indicated package version, although more recent releases of these packages are likely to work as well.
@@ -239,7 +245,7 @@ Once the input data cube has been prepared, the next step is to run HSIM. HSIM c
 The GUI provides a relatively easy way to list the available options. To launch HSIM in the GUI mode, type the following command\\
 
 \begin{commandshell}
-$ python hsim2.py
+$ python3 hsim3.py
 \end{commandshell}
 
 Then, a window similar to that shown in Figure~\ref{fig:hsimgui} should appear. In that window, it is possible to select the input cube and the output directory and define all the parameters needed by HSIM to run the simulation (these parameters are explained in Section~\ref{s:list_options}). Clicking on the \texttt{Commence simulation} button will start the simulation. You can see how the simulation advances in the terminal window from where HSIM was called.
@@ -255,7 +261,7 @@ Then, a window similar to that shown in Figure~\ref{fig:hsimgui} should appear. 
 All the GUI options can be directly accessed from the command line mode using the following command
 
 \begin{commandshell}
-$ python hsim2.py -c arg1 arg2 ...
+$ python3 hsim3.py -c arg1 arg2 ...
 \end{commandshell}
 
 where \texttt{arg*} are the parameters of the simulation (see Section~\ref{s:list_options}). All the parameters are needed to run simulation. After the \texttt{-c}, you can add \texttt{-p number}, where \texttt{number} is the number of processors that will be used by HSIM. You can also add \texttt{-o directory} where \texttt{directory} is the output directory. If no output directory is specified, the default \texttt{output\_cubes} will be used and results from previous simulations might be overwritten. Finally, using \texttt{-h}, will show a short help message.

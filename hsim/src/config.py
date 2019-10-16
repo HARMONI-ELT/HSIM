@@ -11,14 +11,14 @@ SpaxelScaleInfo = collections.namedtuple('SpaxelScaleInfo', 'xscale, yscale, psf
 	
 config_data = {
 	'read_noise': {"vis":2.0, "nir":2.845, "nir_lowexp":12.0}, # e/pix
-        'side_length':4096,
-        'N_IR_det':8,
+	'side_length':4096,
+	'N_IR_det':8,
 	'dark_current': {"vis":0.00042, "nir":0.0053}, # e/pix/s
 	'saturation': {"vis":55000., "nir":55000.}, # e
 	'crosstalk': 0.02, # fraction of photons going to each of the 4 contiguous pixels
 
-        #Detector systematics parameters
-        'systematics': {"rd":2.845,
+	#Detector systematics parameters
+	'systematics': {"rd":2.845,
                         "rd_lowexp":12.0,
                         "rn_file":"kmos_rn.fits",
                         "pedestal":4,
