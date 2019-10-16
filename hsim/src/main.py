@@ -414,9 +414,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		
 		plt.plot(w, total_instrument_em, label="HARMONI total", color="red")
 		
-		np.savetxt(base_filename + "_total_HARMONI_em.txt", np.c_[w, total_instrument_em], comments="#", header="\n".join([
-			'TYPE: Total emission.',
-			'Wavelength [um], emission']))
+		#np.savetxt(base_filename + "_total_HARMONI_em.txt", np.c_[w, total_instrument_em], comments="#", header="\n".join([
+			#'TYPE: Total emission.',
+			#'Wavelength [um], emission']))
 
 		plt.legend(prop={'size': 6})
 		plt.xlabel(r"wavelength [$\mu$m]")
@@ -450,9 +450,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		
 		plt.plot(w, total_instrument_tr, label="HARMONI total", color="red")
 		
-		np.savetxt(base_filename + "_total_HARMONI_tr.txt", np.c_[w, total_instrument_tr], comments="#", header="\n".join([
-			'TYPE: Total transmission.',
-			'Wavelength [um], transmission']))
+		#np.savetxt(base_filename + "_total_HARMONI_tr.txt", np.c_[w, total_instrument_tr], comments="#", header="\n".join([
+			#'TYPE: Total transmission.',
+			#'Wavelength [um], transmission']))
 		
 		# the detector curve has a different wavelength range and spacing
 		w, e = np.loadtxt(base_filename + "_det_qe_tr.txt", unpack=True)
