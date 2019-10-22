@@ -74,6 +74,26 @@ if __name__ == "__main__":
 			debug = True
 			break
 
+	# Build grating list from the config file
+	gr_low = []
+	gr_mid = []
+	gr_high = []
+	for gr_name, gr_data in config_data["gratings"].items():
+		if gr_data.R < 5000:
+			gr_low.append((gr_name, gr_data.lmin))
+		elif gr_data.R < 10000:
+			gr_mid.append((gr_name, gr_data.lmin))
+		else:
+			gr_high.append((gr_name, gr_data.lmin))
+	
+	# sort by wavelenght
+	gr_low = sorted(gr_low, key=lambda x: x[1])
+	gr_mid = sorted(gr_mid, key=lambda x: x[1])
+	gr_high = sorted(gr_high, key=lambda x: x[1])
+
+	# join low, mid and high resolution gratings
+	grating_list = [_[0] for _ in gr_low] + [_[0] for _ in gr_mid] + [_[0] for _ in gr_high]
+
 	for o, a in optlist:
 		if o in ("-c", "--cline") and len(args) != 14:
 			print("")
@@ -83,7 +103,7 @@ if __name__ == "__main__":
 			print('1. datacube: Input datacube filepath')
 			print('2. DIT: Detector Integration Time [s]')
 			print('3. NDIT: No. of exposures')
-			print('4. grating - V+R, Iz+J, H+K, Iz, J, H, K, z-high, J-high, H-high, K-short, K-long, J-short, J-long')
+			print('4. grating - ' + ", ".join(grating_list))
 			print('5. spax: spatial pixel (spaxel) scale [mas] - 4x4, 10x10, 20x20, 30x60 ')
 			print('6. seeing: Atmospheric seeing FWHM [arcsec] - 0.43, 0.57, 0.64, 0.72, 1.04')
 			print('7. air mass - 1.1, 1.3, 1.5, 2.0')
@@ -224,7 +244,7 @@ if __name__ == "__main__":
 				self.exp_time = panel_instrument.add_field("Exposure time [s]", Entry, default=600)
 				self.n_exp = panel_instrument.add_field("Number of exposures", Entry, default=3)
 				self.spax_scale = panel_instrument.add_field("Spaxel scale [mas]", OptionMenu, extra=["4x4", "10x10", "20x20", "30x60"])
-				grating_list = ["V+R", "Iz+J", "H+K", "Iz", "J", "H", "K", "z-high", "J-high", "J-short", "J-long", "H-high", "K-short", "K-long"]
+				#grating_list = ["V+R", "Iz+J", "H+K", "Iz", "J", "H", "K", "z-high", "J-short", "J-long", "H-high", "K-short", "K-long"]
 				grating_choices = ["{name} [{info.lmin:.2f}-{info.lmax:.2f} um] (R={info.R:.0f})".format(name=_, info=config_data["gratings"][_]) for _ in grating_list]
 				self.grating = panel_instrument.add_field("Grating", OptionMenu, extra=grating_choices, default=grating_choices[6])
 
