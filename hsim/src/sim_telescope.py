@@ -142,25 +142,26 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 		result_cube = np.zeros_like(cube)
 		llambs = len(lambs)
 		
-		result = []
-		for i in range(len(lambs)):
-			result.append(pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i, :, :], padding_x, padding_y, padding_back[i]), callback=save_result))
-		
-		
-		try:
-			while True:
-				time.sleep(0.5)
-				if all([r.ready() for r in result]):
-					break
-
-		except KeyboardInterrupt:
-			pool.terminate()
-			pool.join()
-
-		else:
-			pool.close()
-			pool.join()
+		for j in range(0, len(lambs), ncpus):
+			result = []
+			for i in range(j, min([len(lambs), j+ncpus])):
+				result.append(pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i, :, :], padding_x, padding_y, padding_back[i]), callback=save_result))
 			
+			
+			try:
+				while True:
+					time.sleep(0.5)
+					if all([r.ready() for r in result]):
+						break
+
+			except KeyboardInterrupt:
+				pool.terminate()
+				pool.join()
+
+		
+		pool.close()
+		pool.join()
+
 		
 		cube = result_cube
 
