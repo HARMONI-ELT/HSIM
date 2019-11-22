@@ -10,6 +10,7 @@ import datetime
 import multiprocessing as mp
 import os.path
 import logging
+import warnings
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -61,6 +62,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	Outputs:
 
 	'''
+	warnings.filterwarnings("ignore", module="astropy")
+	warnings.filterwarnings("ignore", module="matplotlib")
 	debug_plots = True
 
 	Conf = collections.namedtuple('Conf', 'name, header, value')
@@ -225,7 +228,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	
 	output_cube_spec = output_cube_spec*spaxel_area*channel_width*config_data["telescope"]["area"]
 	output_back_emission = output_back_emission*spaxel_area*channel_width*config_data["telescope"]["area"]
-	head['FUNITS'] = "photons"
+	head['BUNIT'] = "photon"
 	
 	# 6 - Detector
 	#	- QE
@@ -249,7 +252,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 					output_cube_spec, output_back_emission, \
 					output_transmission, output_lambs, grating, DIT, \
 					debug_plots=debug_plots, output_file=base_filename)
-	head['FUNITS'] = "electrons"
+	head['BUNIT'] = "electron"
 	
 	
 	# Generate noiseless outputs
@@ -548,7 +551,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	outFile_flux_cal_reduced = base_filename + "_reduced_flux_cal.fits"
 	
 	
-	head['FUNITS'] = "erg/s/cm2/um/arcsec2"
+	head['BUNIT'] = "erg/s/cm2/um/arcsec2"
 	save_fits_cube(outFile_flux_cal_noiseless, output_cube_spec_wo_back/DIT*factor_calibration/spaxel_area, "Flux cal Noiseless O", head)
 	save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
 	
@@ -596,7 +599,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		del head_PSF['CRPIX3']
 		del head_PSF['CTYPE3']
 		del head_PSF['CUNIT3']
-		del head_PSF['FUNITS']
+		del head_PSF['BUNIT']
 		del head_PSF['SPECRES']
 	except:
 		pass

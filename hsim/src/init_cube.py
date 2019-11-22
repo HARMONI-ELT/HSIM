@@ -6,11 +6,11 @@ import os
 import logging
 
 import astropy.io.fits as fits
+import astropy.units as u
 import numpy as np
 import scipy.constants as sp
 from scipy.interpolate import interp2d
 
-from src.modules.fits_utils import *
 from src.config import *
 from src.modules.rebin import *
 
@@ -222,19 +222,78 @@ def init_cube(datacube, grating, spax):
 	if np.isnan(np.sum(cube)):
 		raise HSIMError('NaN values are not allowed in the input cube')
 	
+	
 	#Check that datacube has required headers to be processed in simulator
-	#Required headers = ['CDELT1/2/3'], ['CRVAL3'], ['NAXIS1/2/3'], ['FUNITS'], ['CRPIX3'],
-	#['CTYPE1/2/3'] = 'RA, DEC, WAVELENGTH, ['CUNIT1/2/3'] = MAS, MAS, microns/angstroms/etc,
-	#['SPECRES'].
-	fits_header_check(head)
+	required_headers = ['NAXIS1', 'NAXIS2', 'NAXIS3', 'CDELT1',
+			'CDELT2', 'CDELT3', 'CRVAL3', 'BUNIT',
+			'CRPIX3', 'CUNIT1', 'CUNIT2', 'CUNIT3',
+			'CTYPE1', 'CTYPE2', 'CTYPE3', 'SPECRES']
 	
-	#CREATE WAVELENGTH ARRAY IN MICRONS
-	lambs, head = wavelength_array(head)
+	missing_headers = []
 	
-	#RESCALE DATACUBE TO CHOSEN SPECTRAL RESOLUTION.
+	for i in required_headers:
+		if i not in head:
+			logging.error('Missing header: ' + i)
+			missing_headers.append(i)
+			
+	if len(missing_headers) != 0:
+		raise HSIMError('Missing headers. Please correct datacube header.')
+	
+	# define CRVAL{1,2} and CRPIX{1,2} if not included in the header
+	if "CRVAL1" not in head:
+		head["CRVAL1"] = 0
+	if "CRPIX1" not in head:
+		head["CRPIX1"] = 1
+		
+	if "CRVAL2" not in head:
+		head["CRVAL2"] = 0
+	if "CRPIX2" not in head:
+		head["CRPIX2"] = 1
+	
+	# Check axes types
+	ctype1 = map(str.lower, ['ra', 'x', 'RA---SIN', 'RA---TAN'])
+	ctype2 = map(str.lower, ['dec', 'y', 'DEC--SIN', 'DEC--TAN'])
+	ctype3 = map(str.lower, ['wavelength'])
+	
+	if head['CTYPE1'].lower() not in ctype1:
+		raise HSIMError("CTYPE1 must be set to any of the following: " + ", ".join(ctype1))
+	
+	if head['CTYPE2'].lower() not in ctype2:
+		raise HSIMError("CTYPE2 must be set to any of the following: " + ", ".join(ctype2))
+	
+	if head['CTYPE3'].lower() not in ctype3:
+		raise HSIMError("CTYPE3 must be set to any of the following: " + ", ".join(ctype3))
+	
+	# Check axes units
+	try:
+		head['CDELT1'] *= u.Unit(head["CUNIT1"]).to("mas")
+		head['CUNIT1'] = 'mas'
+	except ValueError as e:
+		raise HSIMError("CUNIT1 error: " + str(e))
+	
+	try:
+		head['CDELT2'] *= u.Unit(head["CUNIT2"]).to("mas")
+		head['CUNIT2'] = 'mas'
+	except ValueError as e:
+		raise HSIMError("CUNIT2 error: " + str(e))
+	
+	try:
+		factor = u.Unit(head["CUNIT3"]).to("micron")
+		head['CDELT3'] *= factor
+		head['SPECRES'] *= factor
+		head['CRVAL3'] *= factor
+		head['CUNIT3'] = 'micron'
+	except ValueError as e:
+		raise HSIMError("CUNIT3 error: " + str(e))
+	
+	# Create wavelength arrray 
+	lambs = head['CRVAL3'] + head['CDELT3']*(np.linspace(1, head['NAXIS3'], head['NAXIS3']) - head['CRPIX3'])
+	
+	
+	# Rescale datacube to chosen spectral resolution
 	cube, head, lambs, input_spec_res = spectral_res(cube, head, grating, lambs)
 	
-	#RESCALE DATACUBE TO CHOSEN SPATIAL RESOLUTION.
+	# Rescale datacube to chosen spatial resolution
 	cube, head = spatial_res(cube, head, spax)
 
 
@@ -242,24 +301,29 @@ def init_cube(datacube, grating, spax):
 	logging.info('Internal input cube size x={x} y={y} z={z}'.format(x=x, y=y, z=z))
 
 	#Energy-to-Photons Conversion factor will depend on head['FUNITS'] value
-	logging.info('Flux units = ' + head['FUNITS'])
-	if head['FUNITS'] == 'J/s/m2/um/arcsec2':
-		en2ph_conv_fac = (sp.h * sp.c)/(lambs*1.E-6) #J
-	elif head['FUNITS'] == 'erg/s/cm2/A/arcsec2':
-		en2ph_conv_fac = (sp.h * sp.c * 1.E7)/(lambs*1.E-6 * 1.E4 * 1.E4) #erg/1.E4(cm2->m2)/1.E4(A->um)
-	elif head['FUNITS'] == 'J/s/m2/A/arcsec2':
-		en2ph_conv_fac = (sp.h * sp.c)/(lambs*1.E-6 * 1.E4) #J/1.E4(A->um)
-	elif head['FUNITS'] == 'erg/s/cm2/um/arcsec2':
-		en2ph_conv_fac = (sp.h * sp.c * 1.E7)/(lambs*1.E-6 * 1.E4) #erg/1.E4(cm2->m2)
-	else:
-		raise HSIMError('Unknown flux units: Please change FUNITS header key to erg/s/cm2/A/arcsec2')
+	logging.info('Flux units = ' + head['BUNIT'])
 	
-	en2ph_conv_fac.shape = (len(lambs),1,1)
-	cube = np.divide(cube, en2ph_conv_fac)
-	head['FUNITS'] = 'ph/s/m2/um/arcsec2'
-
+	if head['BUNIT'] == "erg/s/cm2/A/arcsec2":
+		head['BUNIT'] = "erg/s/cm2/AA/arcsec2"
+		logging.warning("The input flux units should be erg/s/cm2/AA/arcsec2 instead of erg/s/cm2/A/arcsec2.")
+	if head['BUNIT'] == "J/s/m2/A/arcsec2":
+		head['BUNIT'] = "J/s/m2/AA/arcsec2"
+		logging.warning("The input flux units should be J/s/m2/AA/arcsec2 instead of J/s/m2/A/arcsec2.")
+		
+	try:
+		original_cube_units = u.Unit(head['BUNIT'])
+		internal_cube_units = u.Unit("ph/s/m2/um/arcsec2")
+		
+		flux_factor = ((np.ones(len(lambs))*original_cube_units*u.arcsec**2).to(internal_cube_units*u.arcsec**2, equivalencies=u.spectral_density(lambs*u.micron))).base
+		flux_factor.shape = (len(lambs),1,1)
+		cube *= flux_factor
+		
+		head['BUNIT'] = str(internal_cube_units)
+		
+	except u.UnitConversionError as e:
+		raise HSIMError("BUNIT error: " + str(e))
+	
 	logging.info('The flux range of the input cube is {:.2e} - {:.2e} ph/s/m2/um/arcsec2'.format(np.min(cube), np.max(cube)))
 
 	return cube, head, lambs, input_spec_res
-
 
