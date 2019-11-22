@@ -205,9 +205,9 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	
 	# AO dichroic if present
 	if aoMode == "LTAO":
-		harmoni.addPart(InstrumentPart("LTAO dichroic", TTel, AreaIns, n_lenses=1, dust_lens=2.*dustfrac))
+		harmoni.addPart(InstrumentPart("LTAO dichroic", TTel, AreaIns, n_lenses=1, emis_lens="LTAO_0.6_dichroic.txt", dust_lens=2.*dustfrac))
 	elif aoMode == "SCAO":
-		harmoni.addPart(InstrumentPart("SCAO dichroic", TTel, AreaIns, n_lenses=1, emis_scaling=0.3, dust_lens=2.*InstrumentPart.mindustfrac))
+		harmoni.addPart(InstrumentPart("SCAO dichroic", TTel, AreaIns, n_lenses=1, emis_lens="SCAO_0.8_dichroic.txt", dust_lens=2.*dustfrac))
 
 
 	if aoMode in ["LTAO", "SCAO"]:
