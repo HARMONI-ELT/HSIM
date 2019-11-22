@@ -47,7 +47,7 @@
 \textbf{
 HSIM Manual\\[0.5ex]
 \Large
-v300}
+v302}
 \vspace{2cm}
 
 \large
@@ -139,7 +139,7 @@ Spaxel scale & input scale\\
 
 Similarly, it is recommended to oversample the spectral dimension of the input cube by a factor of 4 with respect to the nominal resolving power ($R$) of the selected grating (e.g., the spectral sampling for the K-grating $R$=7100 at 2.2$\mu$m should be 0.078\,nm). If your input cube has a different spectral sampling, HSIM will interpolate\slash rebin it. If possible, it is recommend to use input cubes with a spectral resolution a factor of 2 better than the $R$ of the selected grating.
 
-The information on the spatial and spectral sampling of the input cube are passed through the \textsc{fits} file header to HSIM (Table~\ref{tab:fits_header} shows a summary of all the header keywords used by HSIM). In particular, the \texttt{CDELT1} and \texttt{CDELT2} header values are used to get the spatial scale, and \texttt{CDELT3} to obtain the spectral sampling. The spectral resolution of the input cube is indicated by \texttt{SPECRES} in wavelength units similar to \texttt{CDELT3}. The units of these values are those indicated by the \texttt{CUNIT1}, \texttt{CUNIT2}, and \texttt{CUNIT3} header values. Currently, for the spatial units (\texttt{CUNIT1} and \texttt{CUNIT2}), the accepted values are \texttt{mas} and \texttt{arcsec}. For the spectral units, \texttt{CUNIT3} and \texttt{SPECRES}, HSIM recognizes the following values: \texttt{angstrom}, \texttt{nanometers}, \texttt{nm}, \texttt{micron}, and \texttt{meter}. The size of the input cube is obtained from \texttt{NAXIS1}, \texttt{NAXIS2}, and \texttt{NAXIS3}.
+The information on the spatial and spectral sampling of the input cube are passed through the \textsc{fits} file header to HSIM (Table~\ref{tab:fits_header} shows a summary of all the header keywords used by HSIM). In particular, the \texttt{CDELT1} and \texttt{CDELT2} header values are used to get the spatial scale, and \texttt{CDELT3} to obtain the spectral sampling. The spectral resolution of the input cube is indicated by \texttt{SPECRES} in wavelength units similar to \texttt{CDELT3}. The units of these values are those indicated by the \texttt{CUNIT1}, \texttt{CUNIT2}, and \texttt{CUNIT3} header values. For the spatial units (\texttt{CUNIT1} and \texttt{CUNIT2}), the accepted values are any angular units supported by astropy (e.g., \texttt{mas}, \texttt{arcsec}). For the spectral units, \texttt{CUNIT3} and \texttt{SPECRES}, HSIM recognizes any length unit supported by astropy (e.g., \texttt{angstrom}, \texttt{nm}, \texttt{micron}). The size of the input cube is obtained from \texttt{NAXIS1}, \texttt{NAXIS2}, and \texttt{NAXIS3}.
 
 
 The wavelength of each slice of the data cube are also calculated from the \textsc{fits} header using the following relation:
@@ -149,7 +149,7 @@ The wavelength of each slice of the data cube are also calculated from the \text
 
 where $i$ is the slice number from 1 to $\texttt{NAXIS3}$. The wavelength range of the input cube and the selected grating should, at least, partially overlap.
 
-Finally, the input data cube should be in surface brightness units indicated by \texttt{BUNIT}. The accepted units are the following: \texttt{erg/s/cm2/um/arcsec2}, \texttt{erg/s/cm2/A/arcsec2}, \texttt{J/s/m2/um/arcsec2}, and \texttt{J/s/m2/A/arcsec2}.
+Finally, the input data cube should be in surface brightness units indicated by \texttt{BUNIT}. The accepted values are any surface spectral flux density units supported by astropy (e.g., \texttt{erg/s/cm2/um/arcsec2}, \texttt{erg/s/cm2/AA/arcsec2}, \texttt{MJy/sr}).
 
 
 \begin{table*}[h]
@@ -164,10 +164,10 @@ Keyword & Description & Accepted values \\
 \multicolumn{3}{c}{Spatial information}\\
 \hline
 NAXIS\{1,2\} & Number of pixels along x-axis and y-axis\\
-CTYPE1 & Type of the spatial x-axis & x, ra \\
-CTYPE2 & Type of the spatial y-axis & y, dec \\
+CTYPE1 & Type of the spatial x-axis & x, ra, RA-{}-{}-SIN, RA-{}-{}-TAN \\
+CTYPE2 & Type of the spatial y-axis & y, dec, DEC-{}-SIN, DEC-{}-TAN \\
 CDELT\{1,2\} & X and Y pixel size \\
-CUNIT\{1,2\} & Units of CDELT\{1,2\} & mas, arcsec\\
+CUNIT\{1,2\} & Units of CDELT\{1,2\} & any angular unit supported by astropy (e.g., mas, arcsec)\\
 \hline
 \multicolumn{3}{c}{Spectral information}\\
 \hline
@@ -177,12 +177,11 @@ CDELT3 & Size of the spectral pixel \\
 SPECRES & Spectral resolution in wavelength units &  \\
 CRPIX3 & Reference pixel for the spectral axis (see Equation~\ref{eq:lambda}) \\
 CRVAL3 & Wavelength of the reference pixel\\
-CUNIT3 & Units of CDELT3, CRVAL3, and SPECRES & angstrom, nanometers, nm, \hbox{micron}, meter \\
+CUNIT3 & Units of CDELT3, CRVAL3, and SPECRES & any length unit supported by astropy (e.g., angstrom, AA, nm, micron) \\
 \hline
 \multicolumn{3}{c}{Flux units}\\
 \hline
-BUNIT & Flux units of the cube & erg/s/cm2/um/arcsec2, erg/s/cm2/A/arcsec2,
-J/s/m2/um/arcsec2, J/s/m2/A/arcsec2 \\
+BUNIT & Flux units of the cube & any surface spectral flux density unit supported by astropy (e.g., erg/s/cm2/um/arcsec2, erg/s/cm2/AA/arcsec2, MJy/sr) \\
 \hline
 \end{tabular}
 \end{table*}
