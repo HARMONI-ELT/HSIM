@@ -417,13 +417,13 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		
 		plt.plot(w, total_instrument_em, label="HARMONI total", color="red")
 		
-		#np.savetxt(base_filename + "_total_HARMONI_em.txt", np.c_[w, total_instrument_em], comments="#", header="\n".join([
-			#'TYPE: Total emission.',
-			#'Wavelength [um], emission']))
+		np.savetxt(base_filename + "_total_HARMONI_em.txt", np.c_[w, total_instrument_em], comments="#", header="\n".join([
+			'TYPE: Total emission.',
+			'Wavelength [um], emission']))
 
 		plt.legend(prop={'size': 6})
 		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"back emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
+		plt.ylabel(r"back emission [photon/m$^2$/$\mu$m/arcsec$^2$]")
 		plt.yscale("log")
 		#plt.text(0.1, 0.2, "HARMONI/(Telescope+Sky) = {:.2f}".format(np.nanmedian(total_instrument_em/total_telescope_sky_em)), transform=ax.transAxes)
 		plt.savefig(base_filename + "_total_em.pdf")
@@ -453,9 +453,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		
 		plt.plot(w, total_instrument_tr, label="HARMONI total", color="red")
 		
-		#np.savetxt(base_filename + "_total_HARMONI_tr.txt", np.c_[w, total_instrument_tr], comments="#", header="\n".join([
-			#'TYPE: Total transmission.',
-			#'Wavelength [um], transmission']))
+		np.savetxt(base_filename + "_total_HARMONI_tr.txt", np.c_[w, total_instrument_tr], comments="#", header="\n".join([
+			'TYPE: Total transmission.',
+			'Wavelength [um], transmission']))
 		
 		# the detector curve has a different wavelength range and spacing
 		w, e = np.loadtxt(base_filename + "_det_qe_tr.txt", unpack=True)
@@ -538,14 +538,14 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	# - Calibration star
 	flux_cal_star = 1e-13 # erg/s/cm2/um
 	en2ph_conv_fac = (1.98644582e-25 * 1.e7)/(output_lambs*1.e-6*1.e4)
-	flux_cal_star_photons = flux_cal_star/en2ph_conv_fac #photons/s/cm2/um
+	flux_cal_star_photons = flux_cal_star/en2ph_conv_fac #photon/s/cm2/um
 
 	# r=0.5" aperture for the PSF
 	aperture = CircularAperture((spax_scale.psfsize//2, spax_scale.psfsize//2), r=500./spax_scale.psfscale)
 	psf_fraction = aperture_photometry(psf_internal, aperture)
 
-	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission)*psf_fraction['aperture_sum'].data[0] # electrons/s
-	factor_calibration = flux_cal_star/np.median(flux_cal_star_electrons) # erg/s/cm2/um / (electrons/s)
+	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission)*psf_fraction['aperture_sum'].data[0] # electron/s
+	factor_calibration = flux_cal_star/np.median(flux_cal_star_electrons) # erg/s/cm2/um / (electron/s)
 	
 	outFile_flux_cal_noiseless = base_filename + "_noiseless_obj_flux_cal.fits"
 	outFile_flux_cal_reduced = base_filename + "_reduced_flux_cal.fits"

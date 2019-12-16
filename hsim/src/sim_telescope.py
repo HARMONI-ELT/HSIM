@@ -74,6 +74,7 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 	# Get telescope reflectivity
 	logging.info("Calculating telescope reflectivity")
 	telescope_reflectivity = load_transmission_curve(ext_lambs, "ELT_mirror_reflectivity.txt", debug_plots, [output_file, "tel"], "telescope transmission")
+		#telescope_reflectivity = load_transmission_curve(ext_lambs, "ELT_mirror_reflectivity_age0.txt", debug_plots, [output_file, "tel"], "telescope transmission")
 	back_emission *= telescope_reflectivity
 	transmission *= telescope_reflectivity
 	
