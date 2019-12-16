@@ -14,7 +14,7 @@ config_data = {
 	'side_length':4096,
 	'N_IR_det':8,
 	'dark_current': {"vis":0.00042, "nir":0.0053}, # e/pix/s
-	'saturation': {"vis":55000., "nir":55000.}, # e
+	'saturation': {"vis":72000., "nir":30000.}, # e
 	'crosstalk': 0.02, # fraction of photons going to each of the 4 contiguous pixels
 
 	#Detector systematics parameters
