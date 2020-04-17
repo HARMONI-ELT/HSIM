@@ -213,7 +213,7 @@ def make_rn_dist(det_save_path):
 
     logging.info('- no exisiting HARMONI detectors found')
     logging.info('- creating new detectors')
-    np.random.seed(1)
+
     rn_file = detpath+config_data['systematics']['rn_file'] 
     if os.path.isfile(rn_file) is False:
         logging.error('There was an error finding rn_file. \
@@ -228,7 +228,6 @@ def make_rn_dist(det_save_path):
     rands = np.random.random(N) 
     rands_sort = np.sort(rands)
     rn_vals = interp(rn_data.flatten())(rands_sort)
-    np.random.seed(1)
     np.random.shuffle(rn_vals)
     rn_vals = np.reshape(rn_vals,(N_det,side_len,side_len))
 
