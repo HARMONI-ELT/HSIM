@@ -128,7 +128,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 
     try:
         if "x" in res_jitter:
-            jitter = np.array(map(float, res_jitter.split("x")))
+            jitter = np.array([*map(float, res_jitter.split("x"))])
             if len(jitter) != 2:
                 logging.error(str(res_jitter) + " is not a valid jitter value.")
                 return
