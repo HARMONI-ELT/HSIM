@@ -24,7 +24,7 @@ config_data = {
                         "pedestal":4,
                         "c_pink":3,
                         "u_pink":1,
-                        "acn":5.,
+                        "acn":0.5,
                         "pca0_amp":0.2,
                         "ref_ratio":0.8,
                         "ktc_noise":29.,
