@@ -367,14 +367,28 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
     noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*read_noise # read noise sigma
     noise_cube_dark = dark_cube # dark noise variance
     noise_cube_thermal = thermal_cube # thermal noise variance
+    if det_switch == "True":
+        if DIT > 120:
+            noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*config_data['systematics']['rd']
+        else:
+            noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*config_data['systematics']['rd_lowexp']
+        noise_cube_pedestal = zero_cube + np.sqrt(NDIT)*config_data['systematics']['pedestal']
+        noise_cube_c_pink = zero_cube + np.sqrt(NDIT)*config_data['systematics']['c_pink']
+        noise_cube_u_pink = zero_cube + np.sqrt(NDIT)*config_data['systematics']['u_pink']
+        noise_cube_acn = zero_cube + np.sqrt(NDIT)*config_data['systematics']['acn']
+        noise_cube_pca0 = zero_cube + np.sqrt(NDIT)*config_data['systematics']['pca0_amp']
     
     if grating != "V+R":
         n_observations = 2
     else:
         n_observations = 1 # no dedicated sky observation
         
-    noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
-    
+    if det_switch == "False":    
+        noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
+    else:
+        noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2 + \
+                                   n_observations*noise_cube_pedestal**2 + n_observations*noise_cube_c_pink**2 + n_observations*noise_cube_u_pink**2 + n_observations*noise_cube_acn**2 + \
+                                   n_observations*noise_cube_pca0**2)
     #
     logging.info("Saving output")
     if debug_plots:
