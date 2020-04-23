@@ -257,9 +257,9 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	bandws = config_data['gratings'][grating]
 	new_res = (bandws.lmin + bandws.lmax)/(2.*bandws.R) # micron
 	new_res_pix = (new_res**2 - input_spec_res**2)**0.5/(ext_lambs[1] - ext_lambs[0])
-	logging.info("Output resolution: {:.3f} A".format(new_res*10000.))
-	logging.info("Input resolution: {:.3f} A".format(input_spec_res*10000.))
-	logging.info("LSF FWHM = {:.3f} A".format((new_res**2 - input_spec_res**2)**0.5*10000.))
+	logging.info("Output resolution: {:.3f} AA".format(new_res*10000.))
+	logging.info("Input resolution: {:.3f} AA".format(input_spec_res*10000.))
+	logging.info("LSF FWHM = {:.3f} AA".format((new_res**2 - input_spec_res**2)**0.5*10000.))
 	
 	
 	npix_LSF = 0
@@ -281,7 +281,7 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 		back_emission = np.convolve(back_emission, kernel_LSF, mode="same")
 		transmission = np.convolve(transmission, kernel_LSF, mode="same")
 
-	LSF_size = npix_LSF*(ext_lambs[1] - ext_lambs[0])*10000. # A
-	logging.info("Total LSF width for the convolution: {:.3f} A".format(LSF_size))
+	LSF_size = npix_LSF*(ext_lambs[1] - ext_lambs[0])*10000. # AA
+	logging.info("Total LSF width for the convolution: {:.3f} AA".format(LSF_size))
 	
 	return cube, back_emission, transmission, LSF_size

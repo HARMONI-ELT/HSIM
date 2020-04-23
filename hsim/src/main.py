@@ -204,7 +204,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	
 	output_lambs = new_lamb_per_pix*np.arange(int(len(lambs)*scale_z)) + lambs[0]
 	
-	logging.info("- Output spectral sampling: {:.2f} A".format(new_lamb_per_pix*10000.))
+	logging.info("- Output spectral sampling: {:.2f} AA".format(new_lamb_per_pix*10000.))
 	
 	output_cube_spec = rebin_cube_1d(output_lambs, lambs, output_cube)
 	output_back_emission = rebin1d(output_lambs, lambs_extended, back_emission)

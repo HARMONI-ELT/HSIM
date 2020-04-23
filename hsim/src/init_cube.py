@@ -54,10 +54,10 @@ def spectral_res(datacube, head, grating, wavels):
 	elif input_spec_res == 0.:
 		logging.warning("The input cube spectral resolution is not defined")
 	
-	logging.info('Input resolution = %.1f A' % (input_spec_res*10000.))
-	logging.info('Input sampling = %.1f A' % (head['CDELT3']*10000.))
-	logging.info('Output resolution = %.1f A' % (new_res*10000.))
-	logging.info('Internal sampling = %.1f A' % (lamb_per_pix*10000.))
+	logging.info('Input resolution = %.1f AA' % (input_spec_res*10000.))
+	logging.info('Input sampling = %.1f AA' % (head['CDELT3']*10000.))
+	logging.info('Output resolution = %.1f AA' % (new_res*10000.))
+	logging.info('Internal sampling = %.1f AA' % (lamb_per_pix*10000.))
 
 	#Interpolate datacube onto regular pixel grid
 	if wavels[0] <= bandws.lmin and wavels[-1] >= bandws.lmax: # cube wavelength range larger than grating choice
