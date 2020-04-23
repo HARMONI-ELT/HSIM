@@ -37,7 +37,7 @@ from src.modules.misc_utils import trim_cube
 
 def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		 res_jitter=3., moon=0., site_temp=280.5, adr_switch='True', \
-		 det_switch='False', seednum=100, nprocs=mp.cpu_count()-1, \
+		 det_switch='False', det_save_path="None", seednum=100, nprocs=mp.cpu_count()-1, \
 		 debug=True, aoMode="LTAO"):
 	'''
 	Inputs:
@@ -54,6 +54,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		moon: Fractional Moon illumination
 		adr_switch: Boolean - turn ADR on or off.
 		det_switch: Boolean - use detector systematics (off by default)
+		det_save_path: Directory to save interim detector files
 		seednum: ramdom seed number
 		nprocs: Number of processes
 		debug: keep debug plots and all noise outputs
@@ -127,7 +128,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 
 	try:
 		if "x" in res_jitter:
-			jitter = np.array(map(float, res_jitter.split("x")))
+			jitter = np.array([*map(float, res_jitter.split("x"))])
 			if len(jitter) != 2:
 				logging.error(str(res_jitter) + " is not a valid jitter value.")
 				return
@@ -240,9 +241,6 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	if det_switch == "True" and grating != "V+R":
 		logging.info("Trimming datacubes to correct size")
 		output_cube_spec = trim_cube(output_cube_spec, verbose=True)
-	#   logging.info("Generating simulated detectors")
-	#	sim_dets1 = get_dets(DIT)[0]
-	#	sim_dets2 = get_dets(DIT)[0]
 	elif det_switch == "True" and grating == "V+R":
 				logging.warning("IR detector systematics selected for visibile grating. Ignoring detector systematics.")
 				det_switch = "False"
@@ -297,7 +295,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		sim_read_noise1 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
 	else:
 		logging.info("Starting advanced detector systematics")
-		rn_dist = make_rn_dist()
+		rn_dist = make_rn_dist(det_save_path)
 		logging.info("- adding systematic effects into observation")
 		sim_det_systematics1 = make_dets(np.sqrt(NDIT)*rn_dist, DIT)[0]
 	sim_dark_current1 = np.random.poisson(dark_cube).astype(np.float32)
@@ -369,13 +367,31 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*read_noise # read noise sigma
 	noise_cube_dark = dark_cube # dark noise variance
 	noise_cube_thermal = thermal_cube # thermal noise variance
+	if det_switch == "True":
+		if DIT > 120:
+			noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*config_data['systematics']['rd']
+		else:
+			noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*config_data['systematics']['rd_lowexp']
+		noise_cube_pedestal = zero_cube + np.sqrt(NDIT)*config_data['systematics']['pedestal']
+		noise_cube_c_pink = zero_cube + np.sqrt(NDIT)*config_data['systematics']['c_pink']
+		noise_cube_u_pink = zero_cube + np.sqrt(NDIT)*config_data['systematics']['u_pink']
+		noise_cube_acn = zero_cube + np.sqrt(NDIT)*config_data['systematics']['acn']
+		noise_cube_pca0 = zero_cube + np.sqrt(NDIT)*config_data['systematics']['pca0_amp']
+	
 	
 	if grating != "V+R":
 		n_observations = 2
 	else:
 		n_observations = 1 # no dedicated sky observation
-		
-	noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
+	
+	
+	if det_switch == "False":    
+		noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
+	else:
+		noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2 + \
+                                   n_observations*noise_cube_pedestal**2 + n_observations*noise_cube_c_pink**2 + n_observations*noise_cube_u_pink**2 + n_observations*noise_cube_acn**2 + \
+                                   n_observations*noise_cube_pca0**2)
+	
 	
 	#
 	logging.info("Saving output")
@@ -502,7 +518,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	outFile_std = base_filename + "_std.fits"
 
 	# detectors
-	outFile_dets = base_filename + "_dets.fits"
+	outFile_alldets = base_filename + "_all_dets.fits"
+	outFile_useddets = base_filename + "_used_dets.fits"
 	
 	#
 	outFile_read_noise = base_filename + "_read_noise.fits"
@@ -556,7 +573,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
 	
 	if det_switch == "True":
-		save_fits_cube(outFile_dets, sim_det_systematics1, "Simulated detectors", head)
+		save_fits_cube(outFile_alldets, sim_det_systematics1, "All simulated detectors", head)
+		save_fits_cube(outFile_useddets, sim_only_dets, "Used detector noise", head)
 
 	if debug:
 		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)

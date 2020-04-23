@@ -95,7 +95,7 @@ if __name__ == "__main__":
 	grating_list = [_[0] for _ in gr_low] + [_[0] for _ in gr_mid] + [_[0] for _ in gr_high]
 
 	for o, a in optlist:
-		if o in ("-c", "--cline") and len(args) != 14:
+		if o in ("-c", "--cline") and len(args) != 15:
 			print("")
 			print('COMMAND LINE USAGE')
 			print("")
@@ -114,10 +114,11 @@ if __name__ == "__main__":
 			print('12. noise seed')
 			print('13. AO mode [LTAO/SCAO//noAO/Airy/User defined PSF fits file]')
 			print('14. Use IR detector systematics (True/False)')
+			print('15. Directory to save interim detector files (None for default/not using detectors')
 			print("")
 
 			sys.exit()
-		elif o in ("-c", "--cline") and len(args) == 14:
+		elif o in ("-c", "--cline") and len(args) == 15:
 			if not os.path.exists(odir) or not os.path.isdir(odir):
 				print("Output directory '" + odir + "'  does not exist or is not a directory. Exiting.")
 				sys.exit()
@@ -136,11 +137,12 @@ if __name__ == "__main__":
 			noise_seed = int(float(args[11]))
 			ao_mode = str(args[12])
 			systematics = str(args[13])
+			det_save_path = str(args[14])
 
 			#Start main function
 			main(os.path.join(".", datacube), os.path.join(".", odir), DIT, NDIT, grat, spax, seeing, air_mass, ver,
 				res_jitter=jitter, moon=moon, site_temp=site_temp, adr_switch=adr, det_switch=systematics,
-				seednum=noise_seed, nprocs=nprocs, debug=debug, aoMode=ao_mode)
+				det_save_path=os.path.join(".",det_save_path), seednum=noise_seed, nprocs=nprocs, debug=debug, aoMode=ao_mode)
 
 			sys.exit()
 
@@ -265,6 +267,7 @@ if __name__ == "__main__":
 				self.jitter = panel_misc.add_field("Additional jitter [mas]", Entry, default=3)
 				self.adr_var = panel_misc.add_field("ADR on/off", Checkbutton, default=1, height=1000)
 				self.det_var = panel_misc.add_field("Detector systematics", Checkbutton)
+				self.det_save_path = panel_misc.add_field("Det dir", Button, command=lambda : browse_dir(self), default="(None)")
 				self.ncpu = panel_misc.add_field("No. of processors (1-" + str(mp.cpu_count())+")", Entry, default=mp.cpu_count()-1)
 				self.noise = panel_misc.add_field("Noise seed", Entry, default=100)
 
@@ -286,11 +289,12 @@ if __name__ == "__main__":
 					odir = str(self.outputdir.get())
 					return_adrval = "True" if int(self.adr_var.get()) == 1 else "False"
 					return_detval = "True" if int(self.det_var.get()) == 1 else "False"
+					det_save_path = str(self.det_save_path.get())
 					
 					#start main program
 					main(os.path.join(".", cubefile), os.path.join(".", odir), ditval, nditval, photoband, spaxval, seeingval, airmassaval, ver,
 						res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval, det_switch=return_detval,
-						seednum=noiseseedval, nprocs=nprocs, aoMode=aomode, moon=moon)
+						det_save_path=os.path.join(".",det_save_path), seednum=noiseseedval, nprocs=nprocs, aoMode=aomode, moon=moon)
 
 				Button(parent, text="Commence simulation", command=OnClick, style="tm.TButton").grid(row=2, column=2, pady=10)
 

@@ -189,21 +189,23 @@ def interp(data):
 	func = UnivariateSpline(x_range, X, k=4, s=0)
 	return func
 
-def make_rn_dist():
+def make_rn_dist(det_save_path):
 	"""
 	Draw random samples from distribution to create read
 	noise values.
 
-	Parameters:
-			data - Data to draw from
-			N - number of times to sample
+	Inputs:
+		det_save_path - Directory to save rn distribution to
 	"""
+	if det_save_path == "None":
+		det_save_path = detpath
+	
 	# First look to see if detectors already made
-	if os.path.exists(detpath+'HARMONI_dets.fits'):
+	if os.path.exists(det_save_path+'HARMONI_dets.fits'):
 		logging.info('- found existing HARMONI detectors')
 		if config_data['systematics']['force_new'] == False:
 			logging.info('- using existing detectors')
-			hdulist = fits.open(detpath+'HARMONI_dets.fits')
+			hdulist = fits.open(det_save_path+'HARMONI_dets.fits')
 			rn_vals = hdulist[0].data
 			return rn_vals
 		else:
@@ -211,8 +213,8 @@ def make_rn_dist():
 
 	logging.info('- no exisiting HARMONI detectors found')
 	logging.info('- creating new detectors')
-	np.random.seed(1)
-	rn_file = detpath+config_data['systematics']['rn_file'] 
+	
+	rn_file = det_save_path+config_data['systematics']['rn_file'] 
 	if os.path.isfile(rn_file) is False:
 		logging.error('There was an error finding rn_file. \
 					  Check config.py to ensure filename is correct')
@@ -226,14 +228,14 @@ def make_rn_dist():
 	rands = np.random.random(N) 
 	rands_sort = np.sort(rands)
 	rn_vals = interp(rn_data.flatten())(rands_sort)
-	np.random.seed(1)
+	
 	np.random.shuffle(rn_vals)
 	rn_vals = np.reshape(rn_vals,(N_det,side_len,side_len))
 
 	#Saving detectors for future use
-	fits.writeto(detpath+'HARMONI_dets.fits',rn_vals,overwrite=True)
+	fits.writeto(det_save_path+'HARMONI_dets.fits',rn_vals,overwrite=True)
 	
-	return rn_vals	  
+	return rn_vals
 
 
 def make_dets(rn_vals, DIT):
