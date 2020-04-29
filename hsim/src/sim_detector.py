@@ -214,7 +214,8 @@ def make_rn_dist(det_save_path):
 	logging.info('- no exisiting HARMONI detectors found')
 	logging.info('- creating new detectors')
 	
-	rn_file = det_save_path+config_data['systematics']['rn_file'] 
+	rn_path = path_setup('../../' + config_data["data_dir"] + 'detectors/')
+	rn_file = rn_path+config_data['systematics']['rn_file'] 
 	if os.path.isfile(rn_file) is False:
 		logging.error('There was an error finding rn_file. \
 					  Check config.py to ensure filename is correct')
