@@ -26,7 +26,7 @@ def trim_cube(datacube, verbose=False):
 	'''
 	z, x, y = datacube.shape
 	if z > 3700:
-		lam_low = int((shape[0] - 3700) / 2)
+		lam_low = int((z - 3700) / 2)
 		if z % 2 == 0:
 			lam_high = int(z - lam_low)
 		else:
@@ -53,7 +53,7 @@ def trim_cube(datacube, verbose=False):
 			y_high = int(y - y_low)
 		else:
 			y_high = int(y - y_low - 1)
-		if verbsoe:
+		if verbose:
 			logging.info('Restricting y axis to 204 spaxels')
 	else:
 		y_low, y_high = 0, y

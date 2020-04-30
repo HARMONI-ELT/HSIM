@@ -702,7 +702,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 
 def save_fits_cube(filename, data, typ, header):
 	header['HSM_TYPE'] = typ
-	fits.writeto(filename, data, header=header, overwrite=True)
+	fits.writeto(filename, data, header=header, overwrite=True, output_verify="silentfix")
 	
 	
 
