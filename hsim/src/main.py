@@ -242,8 +242,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		logging.info("Trimming datacubes to correct size")
 		output_cube_spec = trim_cube(output_cube_spec, verbose=True)
 	elif det_switch == "True" and grating == "V+R":
-				logging.warning("IR detector systematics selected for visibile grating. Ignoring detector systematics.")
-				det_switch = "False"
+		logging.warning("IR detector systematics selected for visibile grating. Ignoring detector systematics.")
+		det_switch = "False"
 	
 	output_cube_spec, output_back_emission, output_transmission, read_noise, \
 					dark_current, thermal_background = sim_detector(\
