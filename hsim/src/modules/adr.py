@@ -53,7 +53,7 @@ def apply_adr(cube, header, wave, T, am, correct=False, debug_plots=False, outpu
 		else:
 			ygrid_in = ygrid_out - adr[k]
 		
-		image = interp2d(xgrid_in, ygrid_in, cube[k,:,:], kind='linear')
+		image = interp2d(xgrid_in, ygrid_in, cube[k,:,:], kind='cubic')
 		cube[k,:,:] = image(xgrid_out, ygrid_out)
 
 	return cube

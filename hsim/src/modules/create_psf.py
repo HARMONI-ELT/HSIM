@@ -252,7 +252,7 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode, rotatio
 		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
 			# Check that we have the actual files and not the git LFS links
 			if os.path.getsize(os.path.join(psf_path,"ELT_pup.fits")) < 1024:
-				raise HSIMError("The *.fits files in the sim_data directory are git LFS links. Please, download the complete sim_data directory from http://harmoni-web.physics.ox.ac.uk/large_files/hsim300_files.zip")
+				raise HSIMError("The *.fits files in the sim_data directory are git LFS links. Please, download the complete sim_data directory from http://harmoni-web.physics.ox.ac.uk/large_files/hsim303_files.zip")
 			
 			
 			# PSD cubes
