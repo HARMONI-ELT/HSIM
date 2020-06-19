@@ -557,11 +557,11 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	en2ph_conv_fac = (1.98644582e-25 * 1.e7)/(output_lambs*1.e-6*1.e4)
 	flux_cal_star_photons = flux_cal_star/en2ph_conv_fac #photon/s/cm2/um
 
-	# r=0.5" aperture for the PSF
-	aperture = CircularAperture((spax_scale.psfsize//2, spax_scale.psfsize//2), r=500./spax_scale.psfscale)
-	psf_fraction = aperture_photometry(psf_internal, aperture)
+	## r=0.5" aperture for the PSF
+	#aperture = CircularAperture((spax_scale.psfsize//2, spax_scale.psfsize//2), r=500./spax_scale.psfscale)
+	#psf_fraction = aperture_photometry(psf_internal, aperture)
 
-	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission)*psf_fraction['aperture_sum'].data[0] # electron/s
+	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission) # electron/s  #*psf_fraction['aperture_sum'].data[0] # electron/s
 	factor_calibration = flux_cal_star/np.median(flux_cal_star_electrons) # erg/s/cm2/um / (electron/s)
 	
 	outFile_flux_cal_noiseless = base_filename + "_noiseless_obj_flux_cal.fits"
