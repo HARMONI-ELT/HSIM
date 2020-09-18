@@ -297,7 +297,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		logging.info("Starting advanced detector systematics")
 		rn_dist = make_rn_dist(det_save_path)
 		logging.info("- adding systematic effects into observation")
-		sim_det_systematics1 = make_dets(np.sqrt(NDIT)*rn_dist, DIT)[0]
+		sim_det_systematics1 = make_dets(rn_dist, DIT)[0]*np.sqrt(NDIT)
 	sim_dark_current1 = np.random.poisson(dark_cube).astype(np.float32)
 	sim_thermal1 = np.random.poisson(thermal_cube).astype(np.float32)
 	
@@ -325,7 +325,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		sim_read_noise2 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
 	else:
 		logging.info("- creating background exposure")
-		sim_det_systematics2 = make_dets(np.sqrt(NDIT)*rn_dist, DIT)[0]
+		sim_det_systematics2 = make_dets(rn_dist, DIT)[0]*np.sqrt(NDIT)
 	sim_dark_current2 = np.random.poisson(dark_cube).astype(np.float32)
 	sim_thermal2 = np.random.poisson(thermal_cube).astype(np.float32)
 
@@ -376,23 +376,19 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		noise_cube_c_pink = zero_cube + np.sqrt(NDIT)*config_data['systematics']['c_pink']
 		noise_cube_u_pink = zero_cube + np.sqrt(NDIT)*config_data['systematics']['u_pink']
 		noise_cube_acn = zero_cube + np.sqrt(NDIT)*config_data['systematics']['acn']
-		noise_cube_pca0 = zero_cube + np.sqrt(NDIT)*config_data['systematics']['pca0_amp']
-	
+		noise_cube_pca0 = zero_cube + np.sqrt(NDIT)*config_data['systematics']['pca0_amp']	
 	
 	if grating != "V+R":
 		n_observations = 2
 	else:
 		n_observations = 1 # no dedicated sky observation
 	
-	
 	if det_switch == "False":    
 		noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
 	else:
 		noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2 + \
                                    n_observations*noise_cube_pedestal**2 + n_observations*noise_cube_c_pink**2 + n_observations*noise_cube_u_pink**2 + n_observations*noise_cube_acn**2 + \
-                                   n_observations*noise_cube_pca0**2)
-	
-	
+                                   n_observations*noise_cube_pca0**2)	
 	#
 	logging.info("Saving output")
 	if debug_plots:
