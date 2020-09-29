@@ -512,47 +512,47 @@ class HXRGNoise:
                 result[z,:,:] += bias_pattern
 
 
-                # Make read noise from distribution. This is different for each pixel.
-                if self.rd_noise > 0:
-                    self.message('Generating rd_noise')
-                    w = self.ref_all
-                    r = self.reference_pixel_noise_ratio  # Easier to work with
-                    
-                    rn_vals = rn_array * self.rd_noise
+        # Make read noise from distribution. This is different for each pixel.
+        if self.rd_noise > 0:
+            self.message('Generating rd_noise')
+            w = self.ref_all
+            r = self.reference_pixel_noise_ratio  # Easier to work with
+            
+            rn_vals = rn_array * self.rd_noise
 
-                    st = rn_data[-4:,:].flatten()
-                    sl = rn_data[:,:4].flatten()
-                    sr = rn_data[:,-4:].flatten()
-                    sc = rn_data[4:-4,4:-4].flatten()
-                    
-                    for z in np.arange(self.naxis3):
-                        here = np.zeros((self.naxis2, self.naxis1))
+            st = rn_vals[-4:,:].flatten()
+            sl = rn_vals[:,:4].flatten()
+            sr = rn_vals[:,-4:].flatten()
+            sc = rn_vals[4:-4,4:-4].flatten()
+            
+            for z in np.arange(self.naxis3):
+                here = np.zeros((self.naxis2, self.naxis1))
 
-                        # Noisy reference pixels for each side of detector
-                        if w[0] > 0: # lower
-                            here[:w[0],:] = r * rn_vals[:w[0],:] * np.random.standard_normal(\
-                                                    (w[0],self.naxis1))
-                        if w[1] > 0: # upper
-                            here[-w[1]:,:] = r * rn_vals[-w[1]:,:] * np.random.standard_normal(\
-                                                    (w[1],self.naxis1))
-                        if w[2] > 0: # left
-                            here[:,:w[2]] = r * rn_vals[:,:w[2]] * np.random.standard_normal(\
-                                                    (self.naxis2, w[2]))
-                        if w[3] > 0: # right
-                            here[:,-w[3]:] = r * rn_vals[:,-w[3]:] * np.random.standard_normal(\
-                                                    (self.naxis2, w[3]))
+                # Noisy reference pixels for each side of detector
+                if w[0] > 0: # lower
+                    here[:w[0],:] = r * rn_vals[:w[0],:] * np.random.standard_normal(\
+                                            (w[0],self.naxis1))
+                if w[1] > 0: # upper
+                    here[-w[1]:,:] = r * rn_vals[-w[1]:,:] * np.random.standard_normal(\
+                                            (w[1],self.naxis1))
+                if w[2] > 0: # left
+                    here[:,:w[2]] = r * rn_vals[:,:w[2]] * np.random.standard_normal(\
+                                            (self.naxis2, w[2]))
+                if w[3] > 0: # right
+                    here[:,-w[3]:] = r * rn_vals[:,-w[3]:] * np.random.standard_normal(\
+                                            (self.naxis2, w[3]))
 
-                        # Noisy regular pixels
-                        if np.sum(w) > 0: # Ref. pixels exist in frame
-                            here[w[0]:self.naxis2-w[1],w[2]:self.naxis1-w[3]] = \
-                                                    rn_vals[w[0]:self.naxis2-w[1],w[2]:self.naxis1-w[3]] * \
-                                                    np.random.standard_normal((self.naxis2-w[0]-w[1],\
-                                                                              self.naxis1-w[2]-w[3]))
-                        else: # No Ref. pixels, so add only regular pixels
-                            here = rn_vals * np.random.standard_normal((self.naxis1,self.naxis2))
+                # Noisy regular pixels
+                if np.sum(w) > 0: # Ref. pixels exist in frame
+                    here[w[0]:self.naxis2-w[1],w[2]:self.naxis1-w[3]] = \
+                                            rn_vals[w[0]:self.naxis2-w[1],w[2]:self.naxis1-w[3]] * \
+                                            np.random.standard_normal((self.naxis2-w[0]-w[1],\
+                                                                      self.naxis1-w[2]-w[3]))
+                else: # No Ref. pixels, so add only regular pixels
+                    here = rn_vals * np.random.standard_normal((self.naxis1,self.naxis2))
 
-                        # Add the noise in to the result
-                        result[z,:,:] += here
+                # Add the noise in to the result
+                result[z,:,:] += here
 
 
         # Add correlated pink noise.

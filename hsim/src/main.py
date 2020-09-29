@@ -339,6 +339,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		# - create cube of detector noise
 		sim_only_dets = np.zeros_like(sim_total)
 		sim_only_dets = add_detectors(sim_only_dets, sim_det_systematics1)
+		sim_back_dets = np.zeros_like(sim_total)
+		sim_back_dets = add_detectors(sim_back_dets, sim_det_systematics2)
 		logging.info("- advanced detector systematics complete")
 	
 	
@@ -376,7 +378,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		noise_cube_c_pink = zero_cube + np.sqrt(NDIT)*config_data['systematics']['c_pink']
 		noise_cube_u_pink = zero_cube + np.sqrt(NDIT)*config_data['systematics']['u_pink']
 		noise_cube_acn = zero_cube + np.sqrt(NDIT)*config_data['systematics']['acn']
-		noise_cube_pca0 = zero_cube + np.sqrt(NDIT)*config_data['systematics']['pca0_amp']	
+		noise_cube_pca0 = zero_cube + np.sqrt(NDIT)*config_data['systematics']['pca0_amp']
+		noise_cube_dets = zero_cube + np.sqrt(NDIT)*sim_only_dets + np.sqrt(NDIT)*sim_back_dets
 	
 	if grating != "V+R":
 		n_observations = 2
@@ -388,7 +391,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	else:
 		noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2 + \
                                    n_observations*noise_cube_pedestal**2 + n_observations*noise_cube_c_pink**2 + n_observations*noise_cube_u_pink**2 + n_observations*noise_cube_acn**2 + \
-                                   n_observations*noise_cube_pca0**2)	
+                                   n_observations*noise_cube_pca0**2)
+		noise_cube_total_with_dets = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + noise_cube_dets**2)
 	#
 	logging.info("Saving output")
 	if debug_plots:
@@ -510,9 +514,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	# SNR
 	# - Obj/Noise
 	outFile_SNR = base_filename + "_reduced_SNR.fits"
+	outFile_detSNR = base_filename + "_detector_SNR.fits"
 	# standard deviation cube
 	outFile_std = base_filename + "_std.fits"
-
+	outFile_detstd = base_filename + "_det_std.fits"
 	# detectors
 	outFile_alldets = base_filename + "_all_dets.fits"
 	outFile_useddets = base_filename + "_used_dets.fits"
@@ -571,6 +576,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	if det_switch == "True":
 		save_fits_cube(outFile_alldets, sim_det_systematics1, "All simulated detectors", head)
 		save_fits_cube(outFile_useddets, sim_only_dets, "Used detector noise", head)
+		save_fits_cube(outFile_detSNR, output_cube_spec_wo_back*NDIT/noise_cube_total_with_dets, "SNR (O-B)/Exact Noise", head)
+		save_fits_cube(outFile_detstd, noise_cube_total_with_dets, "Noise std with exact dets", head)
 
 	if debug:
 		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)
