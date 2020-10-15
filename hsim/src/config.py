@@ -79,10 +79,10 @@ config_data = {
 		  '30x60':30.
 		},
 
-	#Each PSD file containts 5 seeings [0.43, 0.57, 0.64, 0.72, 1.04] and 4 zenith angles [25, 40, 48, 60]
-	'PSD_file':{"LTAO":"psd_ltao_hsim_6LGS_cn2_all.fits", 
-		"SCAO":"psd_SCAO_hsim_6_cn2_all.fits"},
-	'PSD_cube':{'air_masses':[1.1, 1.3, 1.5, 2.0],
+	#Each PSD file containts 1 seeing  [0.43] and 1 zenith angle [25]
+	'PSD_file':{"LTAO":"psd_ltao_hsim_6LGS_cn2_310.fits", 
+		"SCAO":"psd_SCAO_hsim_6_cn2_310.fits"},
+	'PSD_params':{'air_masses':[1.1, 1.3, 1.5, 2.0],
 		'seeings':[0.43, 0.57, 0.64, 0.72, 1.04]}
 
 }
@@ -90,6 +90,6 @@ config_data = {
 class HSIMError(Exception):
 	pass
 	def __init__(self, message):
-		sys.tracebacklimit = 0
 		logging.error(message)
+		sys.exit()
 

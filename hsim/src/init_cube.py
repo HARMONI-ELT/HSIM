@@ -284,7 +284,8 @@ def init_cube(datacube, grating, spax):
 		head['CRVAL3'] *= factor
 		head['CUNIT3'] = 'micron'
 	except ValueError as e:
-		raise HSIMError("CUNIT3 error: " + str(e))
+		HSIMError("CUNIT3 error: " + str(e))
+		
 	
 	# Create wavelength arrray 
 	lambs = head['CRVAL3'] + head['CDELT3']*(np.linspace(1, head['NAXIS3'], head['NAXIS3']) - head['CRPIX3'])
@@ -324,6 +325,14 @@ def init_cube(datacube, grating, spax):
 		raise HSIMError("BUNIT error: " + str(e))
 	
 	logging.info('The flux range of the input cube is {:.2e} - {:.2e} ph/s/m2/um/arcsec2'.format(np.min(cube), np.max(cube)))
+
+	spax_scale = config_data['spaxel_scale'][spax]	
+	
+	area_spaxel = spax_scale.xscale*spax_scale.yscale/1000.**2 # arcsec2
+	um_per_pixel = head['SPECRES'] # micron/pixel
+	factor = config_data["telescope"]["area"]*area_spaxel*um_per_pixel
+	
+	logging.info('The flux range of the input cube is {:.2e} - {:.2e} ph/s/output pixel'.format(np.min(cube)*factor, np.max(cube)*factor))
 
 	return cube, head, lambs, input_spec_res
 

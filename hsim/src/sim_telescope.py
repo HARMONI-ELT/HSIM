@@ -46,22 +46,29 @@ def save_result(results):
 	result_cube[i, :, :] = conv_image[y0:y1, x0:x1]
 
 
-def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, aoMode, ncpus, debug_plots=False, output_file=""):
+def sim_telescope(input_parameteres, cube, back_emission, transmission, ext_lambs, cube_lamb_mask, debug_plots=False, output_file=""):
 	''' Simulates telescope effects
 	Inputs:
+		input_parameters: input dictionary
+			exposure_time: Exposure time [s]
+			jitter: Residual telescope jitter [mas]
+			air_mass: Air mass of the observation
+			zenith_seeing: Atmospheric seeing FWHM [arcsec]
+			spaxel_scale: spatial pixel (spaxel) scale [mas]
+			telescope_temp: Telescope temperature [K]
+			ao_mode: LTAO/SCAO/NOAO/AIRY/User defined PSF fits file
+			ao_star_hmag: AO star H mag
+			ao_star_distance: AO star distance [arcsec]
+			user_defined_psf: user defined fits PSF
+			n_cpus: no. of CPUs to use
+			
+	
 		cube: Input datacube (RA, DEC, lambda)
 		back_emission: Input background emission
 		transmission: Input transmission
 		ext_lambs: extended lambda array [um]
 		cube_lamb_mask: mask array to get the lambs of the cube
-		DIT: Exposure time [s]
-		jitter: Residual telescope jitter [mas]
-		air_mass: Air mass of the observation
-		seeing: Atmospheric seeing FWHM [arcsec]
-		spax: spatial pixel (spaxel) scale [mas]
-		site_temp: Telescope temperature [K]
-		aoMode: AO mode: LTAO/SCAO/NOAO/AIRY/User defined PSF fits file
-		ncpus: no. of CPUs to use
+		
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
 		
@@ -80,7 +87,7 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 	
 	# Get telescope background
 	logging.info("Calculating telescope background")
-	telescope_background = get_background_emission(ext_lambs, site_temp, 1. - telescope_reflectivity, DIT, debug_plots, [output_file, "tel"], "telescope emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
+	telescope_background = get_background_emission(ext_lambs, input_parameteres["telescope_temp"], 1. - telescope_reflectivity, input_parameteres["exposure_time"], debug_plots, [output_file, "tel"], "telescope emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
 	back_emission += telescope_background
 	
 	# Add telescope emission/transmission to the input cube
@@ -95,6 +102,8 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 	
 	# PSF + Jitter + Instrument PSF
 	logging.info("Define PSF")
+	jitter = input_parameteres["jitter"]
+	spax= input_parameteres["spaxel_scale"]
 	
 	FWHM_instrument = (config_data["dynamic_instrument_psf"]**2 + config_data["static_instrument_psf"][spax]**2)**0.5
 	sigma_instrument = FWHM_instrument/2.35482
@@ -106,7 +115,7 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 	
 	psf_size = config_data["spaxel_scale"][spax].psfsize
 	
-	define_psf(air_mass, seeing, sigma_combined, config_data["telescope"]["diameter"], psf_size, config_data["spaxel_scale"][spax].psfscale, aoMode)
+	define_psf(input_parameteres, sigma_combined, psf_size, config_data["spaxel_scale"][spax].psfscale)
 	lambs = ext_lambs[cube_lamb_mask]
 	
 	# padding with back_emission
@@ -130,6 +139,8 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 	global counter, result_cube, bar_str, llambs
 	
 	bar_str = "[ {:2d}% {:" + str(len(str(len(lambs)))) + "d}/{:" + str(len(str(len(lambs)))) + "d} ]"
+	
+	ncpus = input_parameteres["n_cpus"]
 	
 	logging.info(("Using {:d} CPU" + ("s" if ncpus > 1 else "")).format(ncpus))
 	if ncpus > 1:
@@ -176,6 +187,6 @@ def sim_telescope(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, 
 			cube[i, :, :] = conv_image[y0:y1, x0:x1]
 	
 	central_lambda = (lambs[0] + lambs[-1])*0.5
-	return cube, back_emission, transmission, create_psf(central_lambda), central_lambda
+	return (cube, back_emission, transmission), create_psf(central_lambda), central_lambda
 
 

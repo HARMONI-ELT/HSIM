@@ -19,8 +19,6 @@ from astropy.io import fits
 import astropy.constants as const
 from photutils import aperture_photometry, CircularAperture
 
-import matplotlib.pylab as plt
-
 from src.config import *
 from src.init_cube import init_cube
 from src.sim_sky import sim_sky
@@ -35,31 +33,37 @@ from src.sim_detector import make_rn_dist, make_dets, add_detectors
 from src.modules.misc_utils import trim_cube
 
 
-def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
-		 res_jitter=3., moon=0., site_temp=280.5, adr_switch='True', \
-		 det_switch='False', det_save_path="None", seednum=100, nprocs=mp.cpu_count()-1, \
-		 debug=True, aoMode="LTAO"):
+def main(input_parameters):
 	'''
 	Inputs:
-		datacube: Input high resolution datacube (RA, DEC, lambda)
-		outdir: Output file directory
-		DIT: Exposure time [s]
-		NDIT: No. of exposures
-		grating: Spectral grating
-		spax: spatial pixel (spaxel) scale [mas]
-		seeing: Atmospheric seeing FWHM [arcsec]
-		air_mass: Air mass of the observation
-		res_jitter: Residual telescope jitter. 1 or 2 x separated numbers [mas]
-		site_temp: Telescope temperature [K]
-		moon: Fractional Moon illumination
-		adr_switch: Boolean - turn ADR on or off.
-		det_switch: Boolean - use detector systematics (off by default)
-		det_save_path: Directory to save interim detector files
-		seednum: ramdom seed number
-		nprocs: Number of processes
-		debug: keep debug plots and all noise outputs
-		aoMode: Adaptive optics mode: "LTAO", "SCAO", "Airy" or "noAO" for seeing limited
-
+		Dictionary containing:
+		
+		'input_cube': Input high resolution datacube (RA, DEC, lambda)
+		'output_dir': Output file directory
+		'spaxel_scale': spatial pixel (spaxel) scale [mas]
+		'grating': Spectral grating
+		'n_exposures': NDIT: No. of exposures
+		'exposure_time': Exposure time [s]
+		
+		'zenith_seeing': Atmospheric seeing FWHM [arcsec]
+		'air_mass':  Air mass of the observation
+		'ao_mode': AO mode
+		'user_defined_psf': User defined PSF
+		'ao_star_distance': AO star distance [arcsec]
+		'ao_star_hmag': AO star H magnitude
+		'moon_illumination': Fractional Moon illumination
+		
+		'extra_jitter': Residual telescope jitter. 1 or 2 x separated numbers [mas]
+		'detector_systematics': Boolean - use detector systematics
+		'detector_tmp_path':  Directory to save interim detector files		
+		'telescope_temp': Telescope temperature [K]
+		'adr': Boolean - turn ADR on or off
+		
+		'noise_seed': 100,
+		'config_file': configuration file
+		'debug': keep debug plots and all noise outputs
+		'n_cpus': Number of processes
+		'version': HSIM version
 	Outputs:
 
 	'''
@@ -69,27 +73,49 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 
 	Conf = collections.namedtuple('Conf', 'name, header, value')
 	simulation_conf = [
-			Conf('HSIM Version', 'HSM_VER', version),
-			Conf('Filename', 'HSM_FILE', datacube),
-			Conf('Output dir', 'HSM_OUTD', outdir),
-			Conf('DIT', 'HSM_DIT', DIT),
-			Conf('NINT', 'HSM_NINT', NDIT),
-			Conf('Spaxel', 'HSM_SPAX', spax),
-			Conf('Grating', 'HSM_GRAT', grating),
-			Conf('Seeing', 'HSM_SEEI', seeing),
-			Conf('Air Mass', 'HSM_AIRM', air_mass),
-			Conf('Residual telescope jitter', 'HSM_JITT', res_jitter),
-			Conf('Temperature', 'HSM_TEMP', site_temp),
-			Conf('Moon', 'HSM_MOON', moon),
-			Conf('ADR', 'HSM_ADR', adr_switch),
-			Conf('Detectors', 'HSM_DET', det_switch),
-			Conf('Seed', 'HSM_SEED', seednum),
-			Conf('AO', 'HSM_AO', aoMode.upper()),
-			Conf('No. of processes', 'HSM_NPRC', nprocs),
+			Conf('HSIM Version', 'HSM_VER', 'version'),
+			Conf('Filename', 'HSM_FILE', 'input_cube'),
+			Conf('Output dir', 'HSM_OUTD', 'output_dir'),
+			Conf('Exposure time', 'HSM_EXP', 'exposure_time'),
+			Conf('Number of exposures', 'HSM_NEXP', 'n_exposures'),
+			Conf('Spaxel', 'HSM_SPAX', 'spaxel_scale'),
+			Conf('Grating', 'HSM_GRAT', 'grating'),
+			Conf('Zenith seeing', 'HSM_SEEI', 'zenith_seeing'),
+			Conf('Air Mass', 'HSM_AIRM', 'air_mass'),
+			Conf('Extra jitter', 'HSM_JITT', 'extra_jitter'),
+			Conf('Telescope temperature', 'HSM_TEMP', 'telescope_temp'),
+			Conf('Moon', 'HSM_MOON', 'moon_illumination'),
+			Conf('ADR', 'HSM_ADR', 'adr'),
+			Conf('Detectors', 'HSM_DET', 'detector_systematics'),
+			Conf('Seed', 'HSM_SEED', 'noise_seed'),
+			Conf('AO', 'HSM_AO', 'ao_mode'),
+			Conf('Config file', 'HSM_CFG', 'config_file'),
+			Conf('No. of processes', 'HSM_NPRC', 'n_cpus'),
 			]
-
-	base_name = os.path.splitext(os.path.basename(datacube))[0]
-	base_filename = os.path.join(outdir, base_name)
+	
+	def str2bool(var):
+		if type(input_parameters[var]) is str:
+			input_parameters[var] = input_parameters[var].upper() == "TRUE"
+	
+	# change type to bool
+	str2bool("debug")
+	str2bool("adr")
+	str2bool("detector_systematics")
+	
+	
+	if input_parameters["detector_systematics"] == True:
+		simulation_conf.append(Conf('Detectors tmp path', 'HSM_DDIR', 'detector_tmp_path'))
+	
+	if input_parameters["ao_mode"] in ["LTAO", "SCAO"]:
+		simulation_conf.append(Conf('AO star H mag', 'HSM_AOMA', 'ao_star_hmag'))
+		simulation_conf.append(Conf('AO star H mag', 'HSM_AODI', 'ao_star_distance'))
+	elif input_parameters["ao_mode"] == "User":
+		simulation_conf.append(Conf('User defined PSF file', 'HSM_UPSF', 'user_defined_psf'))
+	
+	
+	# Init logger
+	base_name = os.path.splitext(os.path.basename(input_parameters['input_cube']))[0]
+	base_filename = os.path.join(input_parameters['output_dir'], base_name)
 
 	logfile = base_filename + ".log"
 	open(logfile, 'w').close()
@@ -109,24 +135,10 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 
 	logging.info("Simulation input parameters:")
 	for _ in simulation_conf:
-		logging.info(_.name + " = " + str(_.value))
-
-	if aoMode.upper() in ["LTAO", "SCAO", "NOAO", "AIRY"]:
-		aoMode = aoMode.upper()
-	elif not os.path.isfile(aoMode):
-		logging.error(aoMode + ' is not a valid AO mode. Valid options are: LTAO, SCAO, noAO, Airy')
-		return
-
-	if air_mass not in config_data["PSD_cube"]["air_masses"]:
-		logging.error(str(air_mass) + ' is not a valid air mass. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["air_masses"]))))
-		return
-
-	if seeing not in  config_data["PSD_cube"]["seeings"]:
-		logging.error(str(seeing) + ' is not a valid seeing. Valid options are: ' + ", ".join(map(str, sorted(config_data["PSD_cube"]["seeings"]))))
-		return
-
+		logging.info(_.name + " = " + str(input_parameters[_.value]))
 
 	try:
+		res_jitter = input_parameters["extra_jitter"]
 		if "x" in res_jitter:
 			jitter = np.array([*map(float, res_jitter.split("x"))])
 			if len(jitter) != 2:
@@ -134,17 +146,20 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 				return
 		else:
 			jitter = np.repeat(float(res_jitter), 2)
+			
+		input_parameters["jitter"] = jitter
 		
 	except:
 		logging.error(str(res_jitter) + " is not a valid jitter value.")
 		return
 
-	np.random.seed(seednum)
+	#
+	np.random.seed(input_parameters["noise_seed"])
 
 	# Read input FITS cube and resample depending on grating and spaxel scale
 	# output is in ph/s/m2/um/arcsec2 units
-	cube, head, lambs, input_spec_res = init_cube(datacube, grating, spax)
-
+	cube, head, lambs, input_spec_res = init_cube(input_parameters["input_cube"], input_parameters["grating"], input_parameters["spaxel_scale"])
+	
 	# Calculate extended lambda range to convolve with the LSF
 	LSF_width = int(config_data["spectral_sampling"]["internal"]/2.35482*config_data['LSF_kernel_size'])
 	lambs_extended_index = (np.arange(LSF_width)+1)*(lambs[1] - lambs[0])
@@ -154,36 +169,42 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 
 	# calculate the cube in photons for a single exposure
 	# in ph/m2/um/arcsec2
-	cube_exp = cube*DIT
+	cube_exp = cube*input_parameters["exposure_time"]
 	back_emission = np.zeros(len(lambs_extended)) # Background exposure
 	transmission = np.ones(len(lambs_extended)) # Telluric correction
+
+	lambda_data = (lambs_extended, cube_lamb_mask)
+
+	simulated_data = (cube_exp, back_emission, transmission)
 
 	# 1 - Atmosphere: 
 	#	- Sky emission (lines + continuum)
 	#	- Sky transmission
 	#	- Moon
 	#	- Atmospheric differential refration
-	cube_exp, back_emission, transmission = sim_sky(cube_exp, back_emission, transmission, head, lambs_extended, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, input_spec_res, debug_plots=debug_plots, output_file=base_filename)
+	simulated_data = sim_sky(input_parameters, *simulated_data, head, *lambda_data, input_spec_res, debug_plots=debug_plots, output_file=base_filename)
 	
 	# 2 - Telescope:
 	#	- PSF + Jitter
 	#	- Telescope background
 	#	- Telescope transmission
-	cube_exp, back_emission, transmission, psf_internal, psf_lambda = sim_telescope(cube_exp, back_emission, transmission, lambs_extended, cube_lamb_mask, DIT, jitter, air_mass, seeing, spax, site_temp, aoMode, nprocs, debug_plots=debug_plots, output_file=base_filename)
-
+	simulated_data, psf_internal, psf_lambda = sim_telescope(input_parameters, *simulated_data, *lambda_data, debug_plots=debug_plots, output_file=base_filename)
+	
 	# 3 - Instrument:
 	#	- LSF
 	#	- Instrument background
 	#	- Instrument transmission
-	cube_exp, back_emission, transmission, LSF_width_A = sim_instrument(cube_exp, back_emission, transmission, lambs_extended, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=debug_plots, output_file=base_filename)
+	simulated_data, LSF_width_A = sim_instrument(input_parameters, *simulated_data, *lambda_data, input_spec_res, debug_plots=debug_plots, output_file=base_filename)
+	
+	cube_exp, back_emission, transmission = simulated_data
 	
 	# 4 - Rebin cube to output spatial and spectral pixel size
 	logging.info("Rebin data")
-	logging.info("- Output spaxel scale: " + str(spax))
+	logging.info("- Output spaxel scale: " + str(input_parameters["spaxel_scale"]))
 	z, y, x = cube_exp.shape
 	
 	# rebin spatial axes
-	spax_scale = config_data['spaxel_scale'][spax]
+	spax_scale = config_data['spaxel_scale'][input_parameters["spaxel_scale"]]
 	scale_x = spax_scale.xscale/spax_scale.psfscale
 	scale_y = spax_scale.yscale/spax_scale.psfscale
 	out_size_x = int(x/scale_x)
@@ -218,9 +239,9 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	
 	
 	# correct for ADR
-	if adr_switch == "True":
+	if input_parameters["adr"] == True:
 		logging.info("- Correcting ADR")
-		output_cube_spec = apply_adr(output_cube_spec, head, output_lambs, site_temp, air_mass, correct=True)
+		output_cube_spec = apply_adr(output_cube_spec, head, output_lambs, input_parameters["telescope_temp"], input_parameters["air_mass"], correct=True)
 
 	
 	# 5 - Convert to photons per pixel
@@ -236,19 +257,18 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	#	- Dark
 	#	- Read noise
 	#	- Thermal background
-
+	grating = input_parameters["grating"]
+	det_switch = input_parameters["detector_systematics"]
 	# Cut cubes to correct size if using detector systematics and generate detectors 
-	if det_switch == "True" and grating != "V+R":
+	if det_switch == True and grating != "V+R":
 		logging.info("Trimming datacubes to correct size")
 		output_cube_spec = trim_cube(output_cube_spec, verbose=True)
-	elif det_switch == "True" and grating == "V+R":
+	elif det_switch == True and grating == "V+R":
 		logging.warning("IR detector systematics selected for visibile grating. Ignoring detector systematics.")
-		det_switch = "False"
+		det_switch = False
 	
-	output_cube_spec, output_back_emission, output_transmission, read_noise, \
-					dark_current, thermal_background = sim_detector(\
-					output_cube_spec, output_back_emission, \
-					output_transmission, output_lambs, grating, DIT, \
+	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current, thermal_background = \
+				sim_detector(input_parameters, output_cube_spec, output_back_emission, output_transmission, output_lambs, \
 					debug_plots=debug_plots, output_file=base_filename)
 	head['BUNIT'] = "electron"
 	
@@ -263,7 +283,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	output_back_emission = output_back_emission.astype(np.float32)
 	output_back_emission.shape = (len(output_back_emission), 1, 1)
 	output_back_emission_cube = np.zeros_like(output_cube_spec) + output_back_emission
-	if det_switch == "True":
+	if det_switch == True:
 		output_back_emission_cube = trim_cube(output_back_emission_cube)
 	
 	# - mask saturated pixels
@@ -276,6 +296,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	zero_cube = np.zeros_like(output_cube_spec)
 	
 	# A. Object exposure
+	DIT = input_parameters["exposure_time"]
+	NDIT = input_parameters["n_exposures"]
 	# - object exposure with crosstalk
 	sim_object_plus_back = np.random.poisson(abs(output_cube_spec*NDIT)).astype(np.float32)
 	# Apply crosstalk only to NIR detectors
@@ -291,18 +313,18 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	thermal_cube = np.zeros_like(output_cube_spec) + thermal_background*NDIT
 	
 	# - read noise and dark current for object exposure
-	if det_switch == "False":
+	if det_switch == False:
 		sim_read_noise1 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
 	else:
 		logging.info("Starting advanced detector systematics")
-		rn_dist = make_rn_dist(det_save_path)
+		rn_dist = make_rn_dist(input_parameters["detector_tmp_path"])
 		logging.info("- adding systematic effects into observation")
 		sim_det_systematics1 = make_dets(np.sqrt(NDIT)*rn_dist, DIT)[0]
 	sim_dark_current1 = np.random.poisson(dark_cube).astype(np.float32)
 	sim_thermal1 = np.random.poisson(thermal_cube).astype(np.float32)
 	
 	# - combine object, read noise and dark current
-	if det_switch == "False":
+	if det_switch == False:
 		sim_total = sim_object_plus_back + sim_read_noise1 + sim_dark_current1 + sim_thermal1
 	else:
 		logging.info("- adding detectors into datacube")
@@ -321,7 +343,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		sim_back[saturated_back] = np.nan
 
 	# - read noise and dark current for background exposure
-	if det_switch == "False":
+	if det_switch == False:
 		sim_read_noise2 = np.random.normal(zero_cube, np.sqrt(NDIT)*read_noise).astype(np.float32)
 	else:
 		logging.info("- creating background exposure")
@@ -330,7 +352,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	sim_thermal2 = np.random.poisson(thermal_cube).astype(np.float32)
 
 	# - combine object, read noise and dark current
-	if det_switch == "False":
+	if det_switch == False:
 		sim_total_only_back = sim_back + sim_read_noise2 + sim_dark_current2 + sim_thermal2
 	else:
 		sim_total_only_back = add_detectors(sim_back, sim_det_systematics2) + \
@@ -362,12 +384,12 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		sim_reduced[pz, :, :] = convolve2d(sim_reduced[pz, :, :], kernel, mode="same", boundary="fill", fillvalue=0.)
 
 	# Calculate noise cube
-	noise_cube_object = abs(output_cube_spec*NDIT) # object+back noise variance
+	noise_cube_object = abs(output_cube_spec_wo_back*NDIT) # object noise variance
 	noise_cube_back = abs(output_back_emission_cube*NDIT) # back noise variance
 	noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*read_noise # read noise sigma
 	noise_cube_dark = dark_cube # dark noise variance
 	noise_cube_thermal = thermal_cube # thermal noise variance
-	if det_switch == "True":
+	if det_switch == True:
 		if DIT > 120:
 			noise_cube_read_noise = zero_cube + np.sqrt(NDIT)*config_data['systematics']['rd']
 		else:
@@ -385,7 +407,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		n_observations = 1 # no dedicated sky observation
 	
 	
-	if det_switch == "False":    
+	if det_switch == False:    
 		noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
 	else:
 		noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2 + \
@@ -396,6 +418,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	#
 	logging.info("Saving output")
 	if debug_plots:
+		import matplotlib.pylab as plt
+		
 		plt.clf()
 
 		colors = [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf', u'#2dd42d', u'#eaff00', u'#202020', u'#66f2ff']*2
@@ -412,7 +436,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		plt.plot(w, e, label="telescope", color=colors[-2])
 		total_telescope_sky_em += e
 
-		if moon > 0.:
+		if input_parameters["moon_illumination"] > 0.:
 			w, e = np.loadtxt(base_filename + "_moon_em.txt", unpack=True)
 			plt.plot(w, e, label="Moon", color=colors[6])
 			total_telescope_sky_em += e
@@ -487,8 +511,8 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 		plt.xlabel(r"wavelength [$\mu$m]")
 		plt.ylabel(r"transmission")
 		plt.savefig(base_filename + "_total_tr.pdf")
-
-		if not debug:
+		
+		if input_parameters["debug"] == False:
 			list_files = ["sky_tr", "sky_em", "moon_em", "tel_tr", "tel_em", "det_qe_tr"]
 			for _ in list_files:
 				os.remove(base_filename + "_" + _ + ".txt")
@@ -528,7 +552,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	
 	# Update header
 	for _ in simulation_conf:
-		head[_.header] = str(_.value)
+		head[_.header] = str(input_parameters[_.value])
 	
 	head['HSM_TIME'] = str(datetime.datetime.utcnow())
 	
@@ -557,11 +581,11 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	en2ph_conv_fac = (1.98644582e-25 * 1.e7)/(output_lambs*1.e-6*1.e4)
 	flux_cal_star_photons = flux_cal_star/en2ph_conv_fac #photon/s/cm2/um
 
-	## r=0.5" aperture for the PSF
-	#aperture = CircularAperture((spax_scale.psfsize//2, spax_scale.psfsize//2), r=500./spax_scale.psfscale)
-	#psf_fraction = aperture_photometry(psf_internal, aperture)
+	# Calculate the flux in the PSF core 
+	peak_psf = np.max(psf_internal)
+	flux_fraction_psf_core = np.sum(psf_internal[psf_internal > 0.5*peak_psf])
 
-	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission) # electron/s  #*psf_fraction['aperture_sum'].data[0] # electron/s
+	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission)*flux_fraction_psf_core # electron/s 
 	factor_calibration = flux_cal_star/np.median(flux_cal_star_electrons) # erg/s/cm2/um / (electron/s)
 	
 	outFile_flux_cal_noiseless = base_filename + "_noiseless_obj_flux_cal.fits"
@@ -572,11 +596,11 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	save_fits_cube(outFile_flux_cal_noiseless, output_cube_spec_wo_back/DIT*factor_calibration/spaxel_area, "Flux cal Noiseless O", head)
 	save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
 	
-	if det_switch == "True":
+	if det_switch == True:
 		save_fits_cube(outFile_alldets, sim_det_systematics1, "All simulated detectors", head)
 		save_fits_cube(outFile_useddets, sim_only_dets, "Used detector noise", head)
 
-	if debug:
+	if input_parameters["debug"] == True:
 		save_fits_cube(outFile_dark, noise_cube_dark, "dark noise variance", head)
 		save_fits_cube(outFile_read_noise, noise_cube_read_noise**2, "read noise variance", head)
 		save_fits_cube(outFile_ddetector_thermal, noise_cube_thermal, "detector thermal noise variance", head)
@@ -589,13 +613,13 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	
 	logging.info("Sensitivity point-source 5sigma = {:.2f} mag = {:.2e} erg/s/cm2/um at {:.3f} um".format(sens_ABmag, sens_5sigma, lcentral))
 
-	noise_total = np.median(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
+	noise_total = np.max(noise_cube_object) + np.median(n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
+	
 	fraction_noise_back = n_observations*np.median(noise_cube_back)/noise_total*100.
 	fraction_noise_dark = n_observations*np.median(noise_cube_dark)/noise_total*100.
 	fraction_noise_read = n_observations*np.median(noise_cube_read_noise)**2/noise_total*100.
-	
-	logging.info("Noise contributions: Background (sky+tel+instrument) = {:.2f} %. Dark current = {:.2f} %. Read noise = {:.2f} %".format(fraction_noise_back, fraction_noise_dark, fraction_noise_read))
 
+	logging.info("Noise contributions: Background (sky+tel+instrument) = {:.2f} %. Dark current = {:.2f} %. Read noise = {:.2f} %".format(fraction_noise_back, fraction_noise_dark, fraction_noise_read))
 
 	# Save transmission with crosstalk
 	if grating != "V+R":
@@ -630,7 +654,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 			new_shape[1], arr.shape[1] // new_shape[1])
 		return arr.reshape(shape).sum(-1).sum(1)
 	
-	psf_info = config_data["spaxel_scale"][spax]
+	psf_info = config_data["spaxel_scale"][input_parameters["spaxel_scale"]]
 	
 	# Calcualte the offset needed to keep the PSF center
 	# at the output image center after rebining
@@ -646,7 +670,7 @@ def main(datacube, outdir, DIT, NDIT, grating, spax, seeing, air_mass, version,\
 	
 	psf_spaxel = rebin_psf(tmp, (psf_spaxel_shape, psf_spaxel_shape))
 	
-	if spax == "30x60":
+	if input_parameters["spaxel_scale"] == "30x60":
 		# an extre rebin is needed for the y axis
 		if psf_spaxel_shape % 2 == 1:
 			tmp = np.zeros((psf_spaxel_shape + 1, psf_spaxel_shape + 1))
@@ -726,8 +750,10 @@ class HSIMFormatter(logging.Formatter):
 
 	def format(self, record):
 		if record.levelno > logging.INFO:
-			self._fmt = "** %(levelname)s ** %(message)s"
+			self._style = logging._STYLES["%"][0]("** %(levelname)s ** %(message)s")
 		else:
-			self._fmt = "%(message)s"
-
+			self._style = logging._STYLES["%"][0]("%(message)s")
+		
 		return logging.Formatter.format(self, record)
+
+

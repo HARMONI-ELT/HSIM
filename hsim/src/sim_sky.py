@@ -214,20 +214,23 @@ def sky_transmission(lambs, air_mass, input_spec_res, debug_plots, output_file):
 
 
 
-def sim_sky(cube, back_emission, transmission, header, ext_lambs, cube_lamb_mask, DIT, air_mass, moon, site_temp, adr_switch, input_spec_res, debug_plots=False, output_file=""):
+def sim_sky(input_parameters, cube, back_emission, transmission, header, ext_lambs, cube_lamb_mask, input_spec_res, debug_plots=False, output_file=""):
 	''' Simulates sky effects
 	Inputs:
+		input_parameters: input dictionary
+			exposure_time: Exposure time [s]
+			air_mass: Air mass of the observation
+			moon_illumination: Fractional moon illumination
+			telescope_temp: Telescope temperature [K]
+			adr: Boolean - turn ADR on or off
+		
+		
 		cube: Input datacube (RA, DEC, lambda)
 		back_emission: Input background emission
 		transmission: Input transmission
 		header: FITS header
 		ext_lambs: extended lambda array [um]
 		cube_lamb_mask: mask array to get the lambs of the cube
-		DIT: Exposure time [s]
-		air_mass: Air mass of the observation
-		moon: Fractional moon illumination
-		site_temp: Telescope temperature [K]
-		adr_switch: Boolean - turn ADR on or off
 		input_spec_res: Spectral resolution of the input cube [micron]
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
@@ -235,6 +238,11 @@ def sim_sky(cube, back_emission, transmission, header, ext_lambs, cube_lamb_mask
 		cube: Cube including sky emission, transmission and ADR
 		back_emission: back_emission including sky
 	'''
+	air_mass = input_parameters["air_mass"]
+	exposure_time = input_parameters["exposure_time"]
+	moon = input_parameters["moon_illumination"]
+	telescope_temp = input_parameters["telescope_temp"]
+	adr_switch = input_parameters["adr"]
 	
 	# Get sky transmission
 	logging.info("Calculating sky transmission")
@@ -243,11 +251,11 @@ def sim_sky(cube, back_emission, transmission, header, ext_lambs, cube_lamb_mask
 	
 	# Get sky emission (lines + continuum)
 	logging.info("Calculating sky emission")
-	sky_emission = sky_background(ext_lambs, air_mass, DIT, input_spec_res, debug_plots, output_file)
+	sky_emission = sky_background(ext_lambs, air_mass, exposure_time, input_spec_res, debug_plots, output_file)
 	
 	# Get moon emission
 	logging.info("Calculating Moon emission")
-	moon_emission = moon_background(ext_lambs, moon, DIT, input_spec_res, debug_plots, output_file)
+	moon_emission = moon_background(ext_lambs, moon, exposure_time, input_spec_res, debug_plots, output_file)
 	back_emission = back_emission + sky_emission + moon_emission
 	
 
@@ -261,11 +269,11 @@ def sim_sky(cube, back_emission, transmission, header, ext_lambs, cube_lamb_mask
 	cube += sky_emission_cube
 	
 	# Add atmospheric differential refration
-	if adr_switch == "True":
+	if adr_switch == True:
 		logging.info("Calculating ADR")
 		lambs = ext_lambs[cube_lamb_mask]
-		cube = apply_adr(cube, header, lambs, site_temp, air_mass, debug_plots=False, output_file=output_file)
+		cube = apply_adr(cube, header, lambs, telescope_temp, air_mass, debug_plots=False, output_file=output_file)
 		
 		
-	return cube, back_emission, transmission
+	return (cube, back_emission, transmission)
 

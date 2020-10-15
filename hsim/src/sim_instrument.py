@@ -147,19 +147,21 @@ class Instrument:
 
 
 
-def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask, DIT, grating, site_temp, input_spec_res, aoMode, debug_plots=False, output_file=""):
+def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lambs, cube_lamb_mask, input_spec_res, debug_plots=False, output_file=""):
 	''' Simulates instrument effects
 	Inputs:
+		input_parameters: input dictionary
+			exposure_time: Exposure time [s]
+			grating: Spectral grating
+			ao_mode: LTAO/SCAO/NOAO/AIRY/User defined PSF fits file
+			telescope_temp: Telescope temperature [K]
+	
 		cube: Input datacube (RA, DEC, lambda)
 		back_emission: Input background emission
 		transmission: Input transmission
 		ext_lambs: extended lambda array [um]
 		cube_lamb_mask: mask array to get the lambs of the cube
-		DIT: Exposure time [s]
-		grating: Spectral grating
-		site_temp: Telescope temperature [K]
 		input_spec_res: Spectral resolution of the input cube [micron]
-		aoMode: LTAO/SCAO/NOAO
 		debug_plots: Produce debug plots
 		output_file: File name for debug plots
 
@@ -178,7 +180,7 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	# Instrument model variables
 	# -------------------------
 	# Instrument temperatures
-	TTel = site_temp
+	TTel = input_parameters["telescope_temp"]
 	#TCool = TTel - config_data['HARMONI_FPRS_diff_temp']
 	TCool = 273.15 - 10
 	TCryo = config_data['HARMONI_cryo_temp']
@@ -204,6 +206,7 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	
 	
 	# AO dichroic if present
+	aoMode = input_parameters["ao_mode"]
 	if aoMode == "LTAO":
 		harmoni.addPart(InstrumentPart("LTAO dichroic", TTel, AreaIns, n_lenses=1, emis_lens="LTAO_0.6_dichroic.txt", dust_lens=2.*dustfrac))
 	elif aoMode == "SCAO":
@@ -230,10 +233,11 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 	harmoni.addPart(InstrumentPart("Pre-optics+IFU+Spectrograph", TCryoMech, AreaIns, n_lenses=8, n_mirrors=19))
 
 	# Grating
+	grating = input_parameters["grating"]
 	harmoni.addPart(InstrumentPart("Grating " + grating, TCryoMech, AreaIns, n_mirrors=1, emis_mirror=grating + "_grating.txt", dust_mirror=0))
 	
 	lamb_grid = np.linspace(2, 2.5, 50)
-	HARMONI_transmission, HARMONI_background = harmoni.calcThroughputAndEmission(ext_lambs, DIT, output_file=output_file)
+	HARMONI_transmission, HARMONI_background = harmoni.calcThroughputAndEmission(ext_lambs, input_parameters["exposure_time"], output_file=output_file)
 
 
 	back_emission = back_emission*HARMONI_transmission
@@ -282,6 +286,6 @@ def sim_instrument(cube, back_emission, transmission, ext_lambs, cube_lamb_mask,
 		transmission = np.convolve(transmission, kernel_LSF, mode="same")
 
 	LSF_size = npix_LSF*(ext_lambs[1] - ext_lambs[0])*10000. # AA
-	logging.info("Total LSF width for the convolution: {:.3f} AA".format(LSF_size))
+	logging.info("Range for the LSF convolution: {:.3f} AA".format(LSF_size))
 	
-	return cube, back_emission, transmission, LSF_size
+	return (cube, back_emission, transmission), LSF_size

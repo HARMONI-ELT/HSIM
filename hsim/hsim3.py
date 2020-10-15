@@ -1,79 +1,34 @@
 '''Front-end code for HARMONI simulator
 This handles the GUI and command line interfaces.
 '''
-import getopt
-import sys
-import os
-import multiprocessing as mp
-import os.path
-import matplotlib
-matplotlib.use('Agg')
 
-from src.main import main
+import os
+import sys
+import argparse
+import configparser
+import multiprocessing as mp
+import collections
+
 from src.config import config_data
 
 
-if __name__ == "__main__":
-
-	#Get version number
+def get_version_number():
 	try:
 		dir_path = os.path.dirname(os.path.realpath(__file__))
 		with open(dir_path + '/PKG-INFO') as f:
-			ver = f.readlines()[2][:-1].split('Version: ')[1]
+			return f.readlines()[2][:-1].split('Version: ')[1]
 
 	except:
-		ver = "???"
+		return "???"
 
-	optlist, args = getopt.getopt(sys.argv[1:], 'dhcp:o:', ['debug', 'help', 'cline', 'proc', 'odir'])
-
-	for o, a in optlist:
-		if o in ("-h", "--help"):
-			print("")
-			print('-'*19)
-			print(' HARMONI Simulator')
-			print('-'*19)
-			print('Version: ', ver)
-			print("---")
-			print('TO RUN GUI')
-			print('>>> python3 hsim3.py')
-			print("")
-			print('Command line')
-			print('>>> python3 hsim3.py -c arg arg2 ...')
-			print("")
-			print("---")
-			print('OPTIONS')
-			print('-h or --help = display this message and exit')
-			print('-c or --cline = use command line. Use: >>> python hsim3.py -c to display arguments list')
-			print('-p or --proc = set the number of processors when using command line (1-'+str(mp.cpu_count())+')')
-			print('-o or --odir = set the output file directory when using the command line (default: ./output_cubes)')
-			print("")
-			sys.exit()
-
+def get_cpu_count():
 	nprocs = mp.cpu_count() - 1
-	for o, a in optlist:
-		if o in ("-p", "--proc"):
-			nprocs = int(a)
+	if nprocs <= 0:
+		nprocs = 1
+	return nprocs
 
-		if nprocs <= 0:
-			nprocs = 1
-			print("Using 1 CPU")
-
-		if nprocs > mp.cpu_count():
-			print('Only ' + str(mp.cpu_count()) + ' CPUs. Using ' + str(mp.cpu_count()))
-			nprocs = mp.cpu_count()
-
-	odir = 'output_cubes'
-	for o, a in optlist:
-		if o in ("-o", "--odit"):
-			odir = a
-			break
-
-	debug = False
-	for o, a in optlist:
-		if o in ("-d"):
-			debug = True
-			break
-
+def get_grating_list():
+	
 	# Build grating list from the config file
 	gr_low = []
 	gr_mid = []
@@ -92,62 +47,128 @@ if __name__ == "__main__":
 	gr_high = sorted(gr_high, key=lambda x: x[1])
 
 	# join low, mid and high resolution gratings
-	grating_list = [_[0] for _ in gr_low] + [_[0] for _ in gr_mid] + [_[0] for _ in gr_high]
+	return [_[0] for _ in gr_low] + [_[0] for _ in gr_mid] + [_[0] for _ in gr_high]
 
-	for o, a in optlist:
-		if o in ("-c", "--cline") and len(args) != 15:
-			print("")
-			print('COMMAND LINE USAGE')
-			print("")
-			print('Enter command line arguments in following order:')
-			print('1. datacube: Input datacube filepath')
-			print('2. DIT: Detector Integration Time [s]')
-			print('3. NDIT: No. of exposures')
-			print('4. grating - ' + ", ".join(grating_list))
-			print('5. spax: spatial pixel (spaxel) scale [mas] - 4x4, 10x10, 20x20, 30x60 ')
-			print('6. seeing: Atmospheric seeing FWHM [arcsec] - 0.43, 0.57, 0.64, 0.72, 1.04')
-			print('7. air mass - 1.1, 1.3, 1.5, 2.0')
-			print('8. Moon fractional illumination - 0 0.5 1.0')
-			print('9. jitter: Additional telescope PSF blur [mas]')
-			print('10. site temp: Site/telescope temperature [K]')
-			print('11. ADR on: (True/False) - atmospheric differential refraction')
-			print('12. noise seed')
-			print('13. AO mode [LTAO/SCAO//noAO/Airy/User defined PSF fits file]')
-			print('14. Use IR detector systematics (True/False)')
-			print('15. Directory to save interim detector files (None for default/not using detectors')
-			print("")
 
+if __name__ == "__main__":
+
+	hsim_version = get_version_number()
+	
+	Parameter = collections.namedtuple("Parameter", "name,help,type,default,choices")
+	Parameter.__new__.__defaults__ = (None, None, str, None, None)
+	
+	simulation_parameters = [Parameter("input_cube", "FITS input cube"),
+				Parameter("output_dir", "Output directory"),
+				Parameter("grating", "HARMONI grating", choices = get_grating_list()),
+				Parameter("spaxel_scale", "Spaxel Scale", choices = ["4x4", "10x10", "20x20", "30x60"]),
+				Parameter("exposure_time", "Exposure time [s]", type=int),
+				Parameter("n_exposures", "Number of exposures", type=int),
+				Parameter("ao_mode", "AO Mode", choices = ["LTAO", "SCAO", "noAO", "Airy", "User"]),
+				Parameter("user_defined_psf", "User defined PSF FITS file when ao-mode is set to User", default="''"),
+				Parameter("ao_star_hmag", "H magnitude of the LTAO AO star", type=float, default=17.5, choices = [15., 17.5, 19.]),
+				Parameter("ao_star_distance", "Distance from the HARMONI FoV center to the LTAO AO star [arcsec]", type=int, default=45, choices = [30, 45, 60]),
+				Parameter("zenith_seeing", "Atmospheric seeing FWHM at zenith [arcsec]", type=float, choices = config_data["PSD_params"]["seeings"]),
+				Parameter("air_mass", "Air mass of the observation", type=float, choices = config_data["PSD_params"]["air_masses"]),
+				Parameter("moon_illumination", "Moon fractional illumination", type=float, default = 0., choices = [0.0, 0.5, 1.0]),
+				Parameter("detector_systematics", "FITS input cube", default="False", choices = ["True", "False"]),
+				Parameter("detector_tmp_path", "Directory to save interim detector files", default="''"),
+				Parameter("adr", "Simulate atmospheric differential refraction", default="True", choices = ["True", "False"]),
+				Parameter("telescope_temp", "Telescope temperature [K]", type=float, default = 280),
+				Parameter("extra_jitter", "Additional telescope PSF blur [mas]", type=str, default = 0),
+				Parameter("noise_seed", "Noise random number generator seed", type=int, default = 100),
+				Parameter("n_cpus", "Number of processors", type=int, default = get_cpu_count()),
+			  ]
+	
+	# Define argument parser
+	parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	
+	parser.add_argument("-v", "--version", action="version", version="HARMONI Simulator version " + hsim_version)
+	parser.add_argument("-b", dest="batch_mode", action="store_true", help="Batch mode. Do not show HSIM GUI")
+	parser.add_argument("-c", dest="config_file", type=str, help="Simulation configuration file")
+	
+	parameter_actions = {}
+	for param in simulation_parameters:
+		parameter_actions[param.name] = parser.add_argument("--" + param.name.replace("_", "-") , dest=param.name, type=param.type, help=param.help if param.default is None else param.help + " (default: " + str(param.default) + ")", choices=param.choices)
+	
+	parameter_actions["debug"] = parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Produce debug outputs (default: False)")
+		
+	#
+	args = parser.parse_args()
+	
+	# Get input parameters from command line and configuration file
+	input_parameters = {}
+	
+	# Define default parameters
+	for param in simulation_parameters:
+		input_parameters[param.name.lower()] = param.default
+	input_parameters["debug"] = False
+	
+	# Read ini configuration file if provided
+	if hasattr(args, "config_file"):
+		
+		if not os.path.isfile(args.config_file):
+			print("ERROR: Cannot open configuration file " + args.config_file)
 			sys.exit()
-		elif o in ("-c", "--cline") and len(args) == 15:
-			if not os.path.exists(odir) or not os.path.isdir(odir):
-				print("Output directory '" + odir + "'  does not exist or is not a directory. Exiting.")
+		
+		config = configparser.ConfigParser()
+		config.read(args.config_file)
+		
+		if "HSIM" not in config:
+			print("ERROR: [HSIM] section not found in configuration file " + args.config_file)
+			sys.exit()
+		
+		for key in config["HSIM"]:
+			value = config["HSIM"][key]
+			key = key.lower()
+			if key not in input_parameters:
+				print("ERROR: Unknown option '" +  key + "' in configuration file " + args.config_file)
+				sys.exit()
+			
+			action = parameter_actions[key]
+			
+			if action.type is not None:
+				try:
+					value = action.type(value)
+				except:
+					print("ERROR: '" +  str(value) + "' is not a valid " + str(action.type.__name__) + " value for '" +  key + "' in configuration file " + args.config_file)
+					sys.exit()
+			
+			if action.choices is not None:
+				if value not in action.choices:
+					print("ERROR: Not valid value '" + str(value) + "' for '" +  key + "' in configuration file " + args.config_file)
+					print("Valid values are: {" + ", ".join(map(str, action.choices)) + "}")
+					sys.exit()
+					
+			input_parameters[key] = value
+			
+		input_parameters["config_file"] = args.config_file
+			
+	# Override with command line options
+	for key, value in args.__dict__.items():
+		key = key.lower()
+		if key in input_parameters:
+			input_parameters[key] = value
+	
+	
+	input_parameters["version"] = get_version_number()
+	
+	if hasattr(args, "batch_mode") and args.batch_mode == True:
+		# Batch mode
+		
+		# Check that all parameters are properly defined
+		for key, value in input_parameters.items():
+			if value is None:
+				print("ERROR: '" + key + "' input parameter is not defined")
 				sys.exit()
 				
-			datacube = str(args[0])
-			DIT = int(args[1])
-			NDIT = int(args[2])
-			grat = str(args[3])
-			spax = str(args[4])
-			seeing = float(args[5])
-			air_mass = float(args[6])
-			moon = float(args[7])
-			jitter = str(args[8])
-			site_temp = float(args[9])
-			adr = str(args[10])
-			noise_seed = int(float(args[11]))
-			ao_mode = str(args[12])
-			systematics = str(args[13])
-			det_save_path = str(args[14])
-
-			#Start main function
-			main(os.path.join(".", datacube), os.path.join(".", odir), DIT, NDIT, grat, spax, seeing, air_mass, ver,
-				res_jitter=jitter, moon=moon, site_temp=site_temp, adr_switch=adr, det_switch=systematics,
-				det_save_path=os.path.join(".",det_save_path), seednum=noise_seed, nprocs=nprocs, debug=debug, aoMode=ao_mode)
-
-			sys.exit()
-
-	#Use GUI interface if no command line option
-	if len(optlist) == 0 and len(args) == 0:
+	
+		
+		from src.main import main
+		
+		main(input_parameters)
+		
+	else:
+		# GUI mode
 		from tkinter import *
 		from tkinter import filedialog, messagebox
 		from tkinter.ttk import *
@@ -212,8 +233,7 @@ if __name__ == "__main__":
 				
 				file_menu = Menu(menubar)
 				def OnAbout():
-					ver = "212"
-					messagebox.showinfo("HSIM", r"HSIM " + ver + "\nHARMONI simulation pipeline\nhttps://github.com/HARMONI-ELT/HSIM")
+					messagebox.showinfo("HSIM", r"HSIM " + get_version_number() + "\nHARMONI simulation pipeline\nhttps://github.com/HARMONI-ELT/HSIM")
 
 				
 				file_menu.add_command(label="About", command=OnAbout)
@@ -222,85 +242,117 @@ if __name__ == "__main__":
 				menubar.add_cascade(label="File", menu=file_menu)
 
 
+				def create_field(name, panel_field):
+					var = panel_field
+					try:
+						default_value = str(input_parameters[name])
+						if default_value != "None":
+							if default_value == "True":
+								default_value = "1"
+							elif default_value == "False":
+								default_value = "0"
+							elif default_value == "''":
+								default_value = "(None)"
+							var.set(default_value)
+					except:
+						pass
+					
+					setattr(self, name, var)
+				
+
 				# Instrument frame
 				panel_instrument = panel_gui(parent, "Instrument", 1)
 
-				def browse_file(self):
+				def browse_input_file(self):
 					try:
 						filename = filedialog.askopenfilename(filetypes = (("FITS files","*.fits"),("all files","*.*")))
 						self.input_cube.set(os.path.relpath(filename))
 					except:
 						pass
-
-				
 				def browse_dir(self):
 					try:
-						filename = filedialog.askdirectory(initialdir = self.outputdir.get())
-						self.outputdir.set(os.path.relpath(filename))
+						filename = filedialog.askdirectory(initialdir = self.output_dir.get())
+						self.output_dir.set(os.path.relpath(filename))
 					except:
 						pass
 					
 					
-				self.input_cube = panel_instrument.add_field("Input cube", Button, command=lambda : browse_file(self), default="(None)")
-				self.outputdir = panel_instrument.add_field("Output dir", Button, command=lambda : browse_dir(self), default="./output_cubes")
-				self.exp_time = panel_instrument.add_field("Exposure time [s]", Entry, default=600)
-				self.n_exp = panel_instrument.add_field("Number of exposures", Entry, default=3)
-				self.spax_scale = panel_instrument.add_field("Spaxel scale [mas]", OptionMenu, extra=["4x4", "10x10", "20x20", "30x60"])
-				#grating_list = ["V+R", "Iz+J", "H+K", "Iz", "J", "H", "K", "z-high", "J-short", "J-long", "H-high", "K-short", "K-long"]
-				grating_choices = ["{name} [{info.lmin:.2f}-{info.lmax:.2f} um] (R={info.R:.0f})".format(name=_, info=config_data["gratings"][_]) for _ in grating_list]
-				self.grating = panel_instrument.add_field("Grating", OptionMenu, extra=grating_choices, default=grating_choices[6])
+				create_field("input_cube", panel_instrument.add_field("Input cube", Button, command=lambda : browse_input_file(self), default="(None)"))
+				create_field("output_dir", panel_instrument.add_field("Output dir", Button, command=lambda : browse_dir(self), default="./output_cubes"))
+				create_field("exposure_time", panel_instrument.add_field("Exposure time [s]", Entry, default=600))
+				create_field("n_exposures", panel_instrument.add_field("Number of exposures", Entry, default=3))
+				spaxel_choices = list(parameter_actions["spaxel_scale"].choices)
+				create_field("spaxel_scale", panel_instrument.add_field("Spaxel scale [mas]", OptionMenu, extra=spaxel_choices))
+	
+				grating_choices = ["{name} [{info.lmin:.2f}-{info.lmax:.2f} um] (R={info.R:.0f})".format(name=_, info=config_data["gratings"][_]) for _ in get_grating_list()]
+				create_field("grating", panel_instrument.add_field("Grating", OptionMenu, extra=grating_choices, default=grating_choices[6]))
 
 
 				# Telescope frame
-				panel_telescope = panel_gui(parent, "Telescope", 2)
-				seeing_choices = list(map(str, sorted(config_data["PSD_cube"]["seeings"])))
-				self.seeing = panel_telescope.add_field("Zenith seeing [arcsec]", OptionMenu, default=seeing_choices[2], extra=seeing_choices)
-				self.ao_mode = panel_telescope.add_field("AO mode", OptionMenu, extra=["LTAO", "SCAO", "noAO", "Airy"])
-				air_mass_choices = list(map(str, sorted(config_data["PSD_cube"]["air_masses"])))
-				self.air_mass = panel_telescope.add_field("Air mass", OptionMenu, default=air_mass_choices[1], extra=air_mass_choices)
-				self.moon = panel_telescope.add_field("Moon illumination", OptionMenu, extra=list(map(str, [0, 0.5, 1])))
-				self.tel_temp = panel_telescope.add_field("Telescope temperature [K]", Entry, default=280)
+				def browse_psf_file(self):
+					try:
+						filename = filedialog.askopenfilename(filetypes = (("FITS files","*.fits"),("all files","*.*")))
+						self.user_defined_psf.set(os.path.relpath(filename))
+					except:
+						pass
 
+				panel_telescope = panel_gui(parent, "Telescope", 2)
+				seeing_choices = list(map(str, parameter_actions["zenith_seeing"].choices))
+				create_field("zenith_seeing", panel_telescope.add_field("Zenith seeing [arcsec]", OptionMenu, default=seeing_choices[2], extra=seeing_choices))
+				ao_choices = list(parameter_actions["ao_mode"].choices)
+				create_field("ao_mode", panel_telescope.add_field("AO mode", OptionMenu, extra=ao_choices))
+				ao_star_hmag_choices = list(parameter_actions["ao_star_hmag"].choices)
+				create_field("ao_star_hmag", panel_telescope.add_field("AO star H mag", OptionMenu, extra=ao_star_hmag_choices))
+				ao_star_distance_choices = list(parameter_actions["ao_star_distance"].choices)
+				create_field("ao_star_distance", panel_telescope.add_field("AO star distance [arcsec]", OptionMenu, extra=ao_star_distance_choices))
+				create_field("user_defined_psf", panel_telescope.add_field("Used defined PSF", Button, command=lambda : browse_psf_file(self)))
+				
+				air_mass_choices = list(parameter_actions["air_mass"].choices)
+				create_field("air_mass", panel_telescope.add_field("Air mass", OptionMenu, default=air_mass_choices[1], extra=air_mass_choices))
+				create_field("moon_illumination", panel_telescope.add_field("Moon illumination", OptionMenu, extra=list(map(str, [0, 0.5, 1]))))
+				
 
 				# Misc frame
 				panel_misc = panel_gui(parent, "Miscellaneous", 3)
-				self.jitter = panel_misc.add_field("Additional jitter [mas]", Entry, default=3)
-				self.adr_var = panel_misc.add_field("ADR on/off", Checkbutton, default=1, height=1000)
-				self.det_var = panel_misc.add_field("Detector systematics", Checkbutton)
-				self.det_save_path = panel_misc.add_field("Det dir", Button, command=lambda : browse_dir(self), default="(None)")
-				self.ncpu = panel_misc.add_field("No. of processors (1-" + str(mp.cpu_count())+")", Entry, default=mp.cpu_count()-1)
-				self.noise = panel_misc.add_field("Noise seed", Entry, default=100)
+				create_field("telescope_temp", panel_misc.add_field("Telescope temperature [K]", Entry))
+				create_field("extra_jitter", panel_misc.add_field("Additional jitter [mas]", Entry))
+				create_field("adr", panel_misc.add_field("ADR on/off", Checkbutton, default=1, height=1000))
+				create_field("detector_systematics", panel_misc.add_field("Detector systematics", Checkbutton))
+				create_field("detector_tmp_path", panel_misc.add_field("Detector tmp dir", Button, command=lambda : browse_dir(self)))
+				create_field("n_cpus", panel_misc.add_field("No. of processors (1-" + str(mp.cpu_count())+")", Entry))
+				create_field("noise_seed", panel_misc.add_field("Noise seed", Entry))
 
 
 				def OnClick():
-					cubefile = str(self.input_cube.get())
-					ditval = float(self.exp_time.get())
-					nditval = float(self.n_exp.get())
-					spaxval = str(self.spax_scale.get())
-					photoband = str(self.grating.get()).split(' ')[0]
-					seeingval = float(self.seeing.get())
-					aomode = str(self.ao_mode.get()).split(' ')[0]
-					airmassaval = float(self.air_mass.get())
-					moon = float(self.moon.get())
-					resjitval = str(self.jitter.get())
-					sitetempval = float(self.tel_temp.get())
-					noiseseedval = int(self.noise.get())
-					nprocs = int(self.ncpu.get())
-					odir = str(self.outputdir.get())
-					return_adrval = "True" if int(self.adr_var.get()) == 1 else "False"
-					return_detval = "True" if int(self.det_var.get()) == 1 else "False"
-					det_save_path = str(self.det_save_path.get())
+					#cubefile = str(self.input_cube.get())
+					#ditval = float(self.exp_time.get())
+					#nditval = float(self.n_exp.get())
+					#spaxval = str(self.spax_scale.get())
+					#photoband = str(self.grating.get()).split(' ')[0]
+					#seeingval = float(self.seeing.get())
+					#aomode = str(self.ao_mode.get()).split(' ')[0]
+					#airmassaval = float(self.air_mass.get())
+					#moon = float(self.moon.get())
+					#resjitval = str(self.jitter.get())
+					#sitetempval = float(self.tel_temp.get())
+					#noiseseedval = int(self.noise.get())
+					#nprocs = int(self.ncpu.get())
+					#odir = str(self.outputdir.get())
+					#return_adrval = "True" if int(self.adr_var.get()) == 1 else "False"
+					#return_detval = "True" if int(self.det_var.get()) == 1 else "False"
+					#det_save_path = str(self.det_save_path.get())
 					
-					#start main program
-					main(os.path.join(".", cubefile), os.path.join(".", odir), ditval, nditval, photoband, spaxval, seeingval, airmassaval, ver,
-						res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval, det_switch=return_detval,
-						det_save_path=os.path.join(".",det_save_path), seednum=noiseseedval, nprocs=nprocs, aoMode=aomode, moon=moon)
+					##start main program
+					#main(os.path.join(".", cubefile), os.path.join(".", odir), ditval, nditval, photoband, spaxval, seeingval, airmassaval, ver,
+						#res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval, det_switch=return_detval,
+						#det_save_path=os.path.join(".",det_save_path), seednum=noiseseedval, nprocs=nprocs, aoMode=aomode, moon=moon)
+					1/0
 
 				Button(parent, text="Commence simulation", command=OnClick, style="tm.TButton").grid(row=2, column=2, pady=10)
 
 
 		root = Tk()
-		root.title("HARMONI Simulator Interface")
+		root.title("HARMONI Simulator Interface v" + get_version_number())
 		font_size_title = "helvetica 20 bold"
 		default_font = "helvetica 13"
 		root.option_add("*Font", default_font)

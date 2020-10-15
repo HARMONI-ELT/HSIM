@@ -5,6 +5,7 @@ import os
 import logging
 
 import numpy as np
+from scipy.interpolate import interp1d
 import scipy.ndimage
 from astropy.io import fits
 from scipy.interpolate import interp2d
@@ -210,31 +211,37 @@ jitter = None
 diameter = None
 
 # no AO variables
-seeing = None
+zenith_seeing = None
 air_mass = None
 
 # user-defined PSF
 user_psf = None
 
-def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode, rotation=None):
+def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 	'''
 	Define parameters used for the PSF generation
 	Inputs:
-		air_mass: Air mass of the observation
-		seeing: Atmospheric seeing FWHM [arcsec]
-		jitter: Residual telescope jitter [mas]
-		D: telescope diameter [m]
+		input_parameters:
+			ao_mode: AO mode LTAO, SCAO, Airy, user
+			ao_star_hmag: H magnitude of the LTAO AO star
+			ao_star_distance: Distance from HARMONI FoV to LTAO AO star
+			air_mass: Air mass of the observation
+			zenith_seeing: Atmospheric seeing FWHM [arcsec]
+			user_defined_psf: FITS file with the user defined PSF
+		
+		_jitter: Residual usre defined jitter and instrument PSF effect [mas]
 		fov: number of pixels of the PSF
 		psfscale: pixel size for the PSF [mas]
-		aoMode: LTAO/SCAO/NOAO/AIRY/User defined PSF fits file
+		
 	Outputs:
 		None
 	'''
 	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode, rotation_angle
-	global seeing, air_mass
+	global zenith_seeing, air_mass
 	global user_psf
 	
-	AO_mode = _aoMode
+	
+	AO_mode = input_parameters["ao_mode"].upper()
 	rotation_angle = rotation
 	
 	fov = _fov
@@ -242,20 +249,16 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode, rotatio
 	xgrid_out = (np.linspace(0, fov-1, fov) - fov*0.5)*psfscale
 	ygrid_out = (np.linspace(0, fov-1, fov) - fov*0.5)*psfscale
 
-	seeing = _seeing
-	air_mass = _air_mass
+	zenith_seeing = input_parameters["zenith_seeing"]
+	air_mass = input_parameters["air_mass"]
 	
 	if AO_mode in ["LTAO", "SCAO", "AIRY"]:
 		jitter = _jitter
-		diameter = D
+		diameter = config_data["telescope"]["diameter"]
 		logging.info("define AO PSF - " + AO_mode)
 		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
-			# Check that we have the actual files and not the git LFS links
-			if os.path.getsize(os.path.join(psf_path,"ELT_pup.fits")) < 1024:
-				raise HSIMError("The *.fits files in the sim_data directory are git LFS links. Please, download the complete sim_data directory from http://harmoni-web.physics.ox.ac.uk/large_files/hsim303_files.zip")
 			
-			
-			# PSD cubes
+			# PSD
 			pup = fits.getdata(os.path.join(psf_path,"ELT_pup.fits"))
 			
 			if AO_mode == "AIRY":
@@ -264,16 +267,57 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode, rotatio
 			else:
 				stats = fits.getdata(os.path.join(psf_path, "ELT_statics.fits"))
 				
-				# Select PSD based on air_mass and seeing
-
-				index_airmass = config_data["PSD_cube"]["air_masses"].index(air_mass)
-				index_seeing = config_data["PSD_cube"]["seeings"].index(seeing)
 				
 				logging.info("Using PSD file: " + config_data["PSD_file"][AO_mode])
 				
-				psd_cube = fits.getdata(os.path.join(psf_path, config_data["PSD_file"][AO_mode]))
-				psd = psd_cube[index_airmass, index_seeing,:,:]
-				psd = eclat(psd)
+				psd = fits.getdata(os.path.join(psf_path, config_data["PSD_file"][AO_mode]))
+				
+				# estimate PSD jitter
+				if AO_mode == "SCAO":
+					jitter_PSD = 2.
+				elif AO_mode == "LTAO":
+					# jitter dependency on AO star mag and distance
+					jitter_matrix = {} # [Star H mag, distance (arcsec)] = jitter (mas)
+					jitter_matrix[15.0, 30] = 2.
+					jitter_matrix[15.0, 45] = 5.
+					jitter_matrix[15.0, 60] = 7.
+
+					jitter_matrix[17.5, 30] = 4.
+					jitter_matrix[17.5, 45] = 5.
+					jitter_matrix[17.5, 60] = 7.
+
+					jitter_matrix[19.0, 30] = 5.
+					jitter_matrix[19.0, 45] = 7.
+					jitter_matrix[19.0, 60] = 12.
+					
+					jitter_PSD = jitter_matrix[float(input_parameters["ao_star_hmag"]), int(input_parameters["ao_star_distance"])]
+					logging.info("LTAO jitter star = {:.2f} mas".format(jitter_PSD))
+					
+					# scaling jitter depending on zenit seeing and air mass
+					zenit_angle = np.arccos(1./air_mass)
+					seeing_scaling = 1./(np.cos(zenit_angle))**0.5
+					effective_seeing = seeing_scaling*zenith_seeing
+					
+					logging.info("Effective seeing at airmass = {:.2f} arcsec".format(effective_seeing))
+					
+					if effective_seeing < 0.64:
+						scaling_jitter = 1.
+					else:
+						jitter_interp = interp1d([0.64, 0.74, 1.04, 1.40], [1., 1.5, 2., 3.], kind='linear', bounds_error=False, fill_value="extrapolate")
+						scaling_jitter = jitter_interp(effective_seeing)
+					
+					logging.info("LTAO jitter scaling factor = {:.2f}".format(scaling_jitter))
+					
+					jitter_PSD = scaling_jitter*jitter_PSD
+					
+				
+				logging.info("PSD jitter = {:.2f} mas".format(jitter_PSD))
+				
+				# combine PSD jitter and instrument and extra user defined jitter
+				jitter = (jitter**2 + jitter_PSD**2)**0.5
+				logging.info("Total PSF jitter = {0:.2f}x{1:.2f} mas".format(*jitter))
+
+				
 		else:
 			#Test PSF
 			logging.warning("Using test PSD files")
@@ -299,13 +343,12 @@ def define_psf(_air_mass, _seeing, _jitter, D, _fov, _psfscale, _aoMode, rotatio
 			#fits.writeto("t2.fits", tmp_pupil, overwrite=True)
 			#pup = tmp_pupil
 	
-	
-	
 	elif AO_mode == "NOAO":
 		logging.info("define noAO Gaussian PSF")
-	else: # user defined PSF
-		logging.info("Reading user defined PSF: " + AO_mode)
-		user_psf, head = fits.getdata(AO_mode, 0, header=True, memmap=True)
+		
+	elif AO_mode == "USER":
+		logging.info("Reading user defined PSF: " + input_parameters["user_defined_psf"])
+		user_psf, head = fits.getdata(input_parameters["user_defined_psf"], 0, header=True, memmap=True)
 		
 		if user_psf.ndim != 2:
 			raise HSIMError("User PSF must have 2 dimensions.")
@@ -330,7 +373,7 @@ def create_psf(lamb, Airy=False):
 	'''
 		
 	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode, rotation
-	global seeing, air_mass
+	global zenith_seeing, air_mass
 
 	if AO_mode in ["LTAO", "SCAO", "AIRY"]:
 		# size of a pixel returned by psd_to_psf
@@ -364,7 +407,7 @@ def create_psf(lamb, Airy=False):
 	elif AO_mode == "NOAO": # noAO Gaussian PSF
 		# Beckers 1993 ARAA
 		zenit_angle = np.arccos(1./air_mass)
-		seeing_lambda = seeing/((lamb/0.5)**(1./5)*np.cos(zenit_angle)**(3./5))*1000. # mas
+		seeing_lambda = zenith_seeing/((lamb/0.5)**(1./5)*np.cos(zenit_angle)**(3./5))*1000. # mas
 		sigma = seeing_lambda/2.35482
 		
 		Gauss2D = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*sigma**2))
@@ -374,7 +417,7 @@ def create_psf(lamb, Airy=False):
 		finalpsf = finalpsf/np.sum(finalpsf)
 		#fits.writeto("psf.fits", Gauss2D(xx, yy), overwrite=True)
 		return finalpsf
-	else:
+	elif AO_mode == "USER":
 		# user defined PSF
 		return user_psf
 		

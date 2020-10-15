@@ -112,9 +112,14 @@ def apply_crosstalk_1d(spectrum, crosstalk):
 
  
 
-def sim_detector(cube, back_emission, transmission, lambs, grating, DIT, debug_plots=False, output_file=""):
+def sim_detector(input_parameters, cube, back_emission, transmission, lambs, debug_plots=False, output_file=""):
 	''' Simulates detector effects
 	Inputs:
+		input_parameters: input dictionary
+			exposure_time: Exposure time [s]
+			grating: Spectral grating
+
+	
 		cube: Input datacube (RA, DEC, lambda)
 		back_emission: Input background emission
 		transmission: Input transmission
@@ -129,6 +134,9 @@ def sim_detector(cube, back_emission, transmission, lambs, grating, DIT, debug_p
 		dark*DIT: dark current  [e/pix]
 		ftot_electron*DIT: thermal background seen by the detector  [e/pix]
 	'''
+	
+	DIT = input_parameters["exposure_time"]
+	grating = input_parameters["grating"]
 	
 	# Get QE curve
 	logging.info("Calculating detector QE")
