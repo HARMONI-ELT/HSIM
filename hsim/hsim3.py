@@ -162,9 +162,7 @@ if __name__ == "__main__":
 				sys.exit()
 				
 	
-		
 		from src.main import main
-		
 		main(input_parameters)
 		
 	else:
@@ -245,8 +243,15 @@ if __name__ == "__main__":
 				def create_field(name, panel_field):
 					var = panel_field
 					try:
-						default_value = str(input_parameters[name])
-						if default_value != "None":
+						default_value = str(input_parameters[name]).strip()
+						if name == "grating":
+							for _ in grating_choices:
+								if type(_) != str:
+									continue
+								if _.split("[")[0].strip() == default_value:
+									var.set(_)
+									break
+						elif default_value != "None":
 							if default_value == "True":
 								default_value = "1"
 							elif default_value == "False":
@@ -282,11 +287,10 @@ if __name__ == "__main__":
 				create_field("exposure_time", panel_instrument.add_field("Exposure time [s]", Entry, default=600))
 				create_field("n_exposures", panel_instrument.add_field("Number of exposures", Entry, default=3))
 				spaxel_choices = list(parameter_actions["spaxel_scale"].choices)
-				create_field("spaxel_scale", panel_instrument.add_field("Spaxel scale [mas]", OptionMenu, extra=spaxel_choices))
+				create_field("spaxel_scale", panel_instrument.add_field("Spaxel scale [mas]", OptionMenu, extra=spaxel_choices, default=spaxel_choices[1]))
 	
 				grating_choices = ["{name} [{info.lmin:.2f}-{info.lmax:.2f} um] (R={info.R:.0f})".format(name=_, info=config_data["gratings"][_]) for _ in get_grating_list()]
 				create_field("grating", panel_instrument.add_field("Grating", OptionMenu, extra=grating_choices, default=grating_choices[6]))
-
 
 				# Telescope frame
 				def browse_psf_file(self):
@@ -324,29 +328,17 @@ if __name__ == "__main__":
 
 
 				def OnClick():
-					#cubefile = str(self.input_cube.get())
-					#ditval = float(self.exp_time.get())
-					#nditval = float(self.n_exp.get())
-					#spaxval = str(self.spax_scale.get())
-					#photoband = str(self.grating.get()).split(' ')[0]
-					#seeingval = float(self.seeing.get())
-					#aomode = str(self.ao_mode.get()).split(' ')[0]
-					#airmassaval = float(self.air_mass.get())
-					#moon = float(self.moon.get())
-					#resjitval = str(self.jitter.get())
-					#sitetempval = float(self.tel_temp.get())
-					#noiseseedval = int(self.noise.get())
-					#nprocs = int(self.ncpu.get())
-					#odir = str(self.outputdir.get())
-					#return_adrval = "True" if int(self.adr_var.get()) == 1 else "False"
-					#return_detval = "True" if int(self.det_var.get()) == 1 else "False"
-					#det_save_path = str(self.det_save_path.get())
-					
-					##start main program
-					#main(os.path.join(".", cubefile), os.path.join(".", odir), ditval, nditval, photoband, spaxval, seeingval, airmassaval, ver,
-						#res_jitter=resjitval, site_temp=sitetempval, adr_switch=return_adrval, det_switch=return_detval,
-						#det_save_path=os.path.join(".",det_save_path), seednum=noiseseedval, nprocs=nprocs, aoMode=aomode, moon=moon)
-					1/0
+					input_parameters["config_file"] = "GUI"
+					for param in simulation_parameters:
+						if param.choices == ["True", "False"]:
+							input_parameters[param.name] = "True" if int(getattr(self, param.name).get()) == 1 else "False"
+						elif param.name == "grating":
+							input_parameters["grating"] = str(self.grating.get()).split("[")[0].strip()
+						else:
+							input_parameters[param.name] = param.type(getattr(self, param.name).get())
+						
+					from src.main import main
+					main(input_parameters)
 
 				Button(parent, text="Commence simulation", command=OnClick, style="tm.TButton").grid(row=2, column=2, pady=10)
 
