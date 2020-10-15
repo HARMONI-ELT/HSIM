@@ -14,9 +14,9 @@ The pipeline is written in Python v3.6. We have tested it on Linux (Ubuntu 16.04
 
 The required Python modules are:
 - astropy 3.2.1
-- numpy 1.17.0
-- scipy 1.3.0
-- matplotlib 3.1.1
+- numpy 1.18.3
+- scipy 1.4.1
+- matplotlib 3.1.3
 - photutils 0.7
 
 The code has been tested with the indicated package version, although more recent releases of these packages are likely to work as well.
@@ -28,5 +28,5 @@ We point out here several useful tips that have emerged from our extensive devel
 
 2. Datacubes can get very large very quickly and fill up the memory even on large computers. The input datacube can be tailored to suit the required needs. For example if one is only interested in the spatial information of an object (e.g. around an emission line) then the cube can be kept very small in the spectral dimension.
 
-3. The flux density units for input datacubes require the usual flux (erg/s/cm^2^/A) to be divided by the spaxel scale in arcsec. This then gives e.g. erg/s/cm^2^/A/arcsec^2^.
+3. The flux density units for input datacubes require the usual flux (e.g., erg/s/cm^2^/AA) to be divided by the spaxel scale in arcsec. This then gives e.g. erg/s/cm^2^/AA/arcsec^2^.
 
