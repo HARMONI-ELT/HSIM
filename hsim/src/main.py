@@ -74,6 +74,7 @@ def main(input_parameters):
 	Conf = collections.namedtuple('Conf', 'name, header, value')
 	simulation_conf = [
 			Conf('HSIM Version', 'HSM_VER', 'version'),
+			Conf('Config file', 'HSM_CFG', 'config_file'),
 			Conf('Filename', 'HSM_FILE', 'input_cube'),
 			Conf('Output dir', 'HSM_OUTD', 'output_dir'),
 			Conf('Exposure time', 'HSM_EXP', 'exposure_time'),
@@ -89,7 +90,6 @@ def main(input_parameters):
 			Conf('Detectors', 'HSM_DET', 'detector_systematics'),
 			Conf('Seed', 'HSM_SEED', 'noise_seed'),
 			Conf('AO', 'HSM_AO', 'ao_mode'),
-			Conf('Config file', 'HSM_CFG', 'config_file'),
 			Conf('No. of processes', 'HSM_NPRC', 'n_cpus'),
 			]
 	
@@ -135,7 +135,11 @@ def main(input_parameters):
 
 	logging.info("Simulation input parameters:")
 	for _ in simulation_conf:
-		logging.info(_.name + " = " + str(input_parameters[_.value]))
+		logging.info(_.value + " = " + str(input_parameters[_.value]))
+		if _.value == "config_file":
+			logging.info("# start configuration file")
+		
+	logging.info("# end configuration file")
 
 	try:
 		res_jitter = input_parameters["extra_jitter"]
