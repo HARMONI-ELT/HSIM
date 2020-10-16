@@ -192,7 +192,7 @@ if __name__ == "__main__":
 					var = StringVar()
 					
 					try:
-						extra = kw["extra"]
+						extra = kw["extra"].copy()
 					except:
 						extra = []
 					
@@ -246,8 +246,6 @@ if __name__ == "__main__":
 						default_value = str(input_parameters[name]).strip()
 						if name == "grating":
 							for _ in grating_choices:
-								if type(_) != str:
-									continue
 								if _.split("[")[0].strip() == default_value:
 									var.set(_)
 									break
