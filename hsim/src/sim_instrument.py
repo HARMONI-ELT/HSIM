@@ -271,6 +271,10 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 		sigma_LSF_pix = new_res_pix/2.35482
 	
 		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
+		# Ensure that the kernel has an odd number of channels
+		if npix_LSF % 2 == 0:
+			npix_LSF = npix_LSF + 1
+			
 		kernel_LSF = Gaussian1DKernel(stddev=sigma_LSF_pix, x_size=npix_LSF)
 		z, y, x = cube.shape
 		

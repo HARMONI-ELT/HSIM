@@ -54,6 +54,10 @@ def spectral_res(datacube, head, grating, wavels):
 	elif input_spec_res == 0.:
 		logging.warning("The input cube spectral resolution is not defined")
 	
+	if input_spec_res < head['CDELT3']:
+		logging.warning('Input resolution (%.1f AA) < Input sampling (%.1f AA). Assuming resultion = 2*sampling' % (input_spec_res*10000., head['CDELT3']*10000.))
+		input_spec_res = 2.*head['CDELT3']
+	
 	logging.info('Input resolution = %.1f AA' % (input_spec_res*10000.))
 	logging.info('Input sampling = %.1f AA' % (head['CDELT3']*10000.))
 	logging.info('Output resolution = %.1f AA' % (new_res*10000.))
@@ -95,6 +99,7 @@ def spectral_res(datacube, head, grating, wavels):
 	
 	
 	#Update header
+	head['CRPIX3'] = 1
 	head['CRVAL3'] = new_wavels[0]
 	head['CDELT3'] = lamb_per_pix
 	head['NAXIS3'] = len(new_wavels)
@@ -334,5 +339,5 @@ def init_cube(datacube, grating, spax):
 	
 	logging.info('The flux range of the input cube is {:.2e} - {:.2e} ph/s/output pixel'.format(np.min(cube)*factor, np.max(cube)*factor))
 
-	return cube, head, lambs, input_spec_res
 
+	return cube, head, lambs, input_spec_res
