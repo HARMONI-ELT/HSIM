@@ -71,6 +71,10 @@ def main(input_parameters):
 	warnings.filterwarnings("ignore", module="matplotlib")
 	debug_plots = True
 
+	# Check that the 60x60 and 120x60 are only used with the V+R grating
+	if input_parameters["spaxel_scale"] in ["60x60", "120x60"] and input_parameters["grating"] != "V+R":
+		raise HSIMError(input_parameters["spaxel_scale"] + ' is only available for the V+R grating. ')
+
 	Conf = collections.namedtuple('Conf', 'name, header, value')
 	simulation_conf = [
 			Conf('HSIM Version', 'HSM_VER', 'version'),
@@ -237,6 +241,7 @@ def main(input_parameters):
 	output_transmission = rebin1d(output_lambs, lambs_extended, transmission)
 	
 	# and update header
+	head['CRPIX3'] = 1
 	head['CRVAL3'] = output_lambs[0]
 	head['CDELT3'] = new_lamb_per_pix
 	head['NAXIS3'] = len(output_lambs)
@@ -656,17 +661,12 @@ def main(input_parameters):
 	
 	save_fits_cube(base_filename + "_PSF_internal.fits", psf_internal, "PSF", head_PSF)
 	
-	# - Rebin and Reshape PSF to match the output cube size and spaxel size
-	def rebin_psf(arr, new_shape):
-		shape = (new_shape[0], arr.shape[0] // new_shape[0],
-			new_shape[1], arr.shape[1] // new_shape[1])
-		return arr.reshape(shape).sum(-1).sum(1)
-	
+	# - Rebin and Reshape PSF to match the output cube size and spaxel size	
 	psf_info = config_data["spaxel_scale"][input_parameters["spaxel_scale"]]
 	
 	# Calcualte the offset needed to keep the PSF center
 	# at the output image center after rebining
-	psf_oversampling = int(round(psf_info.xscale/psf_info.psfscale))
+	psf_oversampling = int(round(min([psf_info.xscale, psf_info.yscale])/psf_info.psfscale))
 	psf_spaxel_shape = psf_info.psfsize//psf_oversampling + 1
 	
 	tmp = np.zeros((psf_spaxel_shape*psf_oversampling, psf_spaxel_shape*psf_oversampling))
@@ -676,19 +676,19 @@ def main(input_parameters):
 	x0 = psf_oversampling//2 + 1 - psfcenter_offset
 	tmp[x0:x0 + psf_info.psfsize, x0:x0 + psf_info.psfsize] = psf_internal[:, :]
 	
+	psf_spaxel_shape_x, psf_spaxel_shape_y = psf_spaxel_shape, psf_spaxel_shape
+	
 	psf_spaxel = rebin_psf(tmp, (psf_spaxel_shape, psf_spaxel_shape))
 	
 	if input_parameters["spaxel_scale"] == "30x60":
-		# an extre rebin is needed for the y axis
-		if psf_spaxel_shape % 2 == 1:
-			tmp = np.zeros((psf_spaxel_shape + 1, psf_spaxel_shape + 1))
-			final_psf_shape = ((psf_spaxel_shape + 1)//2, psf_spaxel_shape + 1)
-			tmp[1:, 1:] = psf_spaxel
-		else:
-			tmp = psf_spaxel
-			final_psf_shape = (psf_spaxel_shape//2, psf_spaxel_shape)
-		
-		psf_spaxel = rebin_psf(tmp, final_psf_shape)
+		# an extra rebin is needed for the y axis
+		psf_spaxel_shape_y = psf_spaxel_shape_y//2
+	elif input_parameters["spaxel_scale"] == "120x60":
+		# an extra rebin is needed for the x axis
+		psf_spaxel_shape_x = psf_spaxel_shape_x//2
+	
+	psf_spaxel = frebin2d(tmp, (psf_spaxel_shape_x, psf_spaxel_shape_y))
+	psf_spaxel = psf_spaxel/np.sum(psf_spaxel)*np.sum(tmp) # Normalize PSF
 	
 	# center PSF on the output array
 	center_x_output = (output_cube_spec.shape[2] - 1) // 2 - (output_cube_spec.shape[2] % 2 - 1)
@@ -720,8 +720,6 @@ def main(input_parameters):
 	head_PSF['CDELT2'] = spax_scale.yscale
 	save_fits_cube(base_filename + "_PSF.fits", psf_spaxel, "PSF", head_PSF)
 	
-	
-
 
 	if hsimlog.count_error == 0 and hsimlog.count_warning == 0:
 		logging.info('Simulation OK - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")

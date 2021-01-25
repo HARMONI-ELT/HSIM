@@ -160,6 +160,11 @@ def sim_detector(input_parameters, cube, back_emission, transmission, lambs, deb
 	# dark current
 	if grating == "V+R":
 		dark = config_data["dark_current"]["vis"]
+		# dark current increases due to pixel binning
+		if config_data["spaxel_scale"] == "60x60":
+			dark = dark*2
+		elif config_data["spaxel_scale"] == "120x60":
+			dark = dark*4
 	else:
 		dark = config_data["dark_current"]["nir"]
 

@@ -65,7 +65,9 @@ config_data = {
 	'spaxel_scale': {'4x4':SpaxelScaleInfo(4., 4., 0.8, 1250),
 		  '10x10':SpaxelScaleInfo(10., 10., 2., 800),
 		  '20x20':SpaxelScaleInfo(20., 20., 2.857, 800),
-		  '30x60':SpaxelScaleInfo(30., 60., 3.333, 600)
+		  '30x60':SpaxelScaleInfo(30., 60., 3.333, 600),
+		  '60x60':SpaxelScaleInfo(60., 60., 3.529, 560),
+		  '120x60':SpaxelScaleInfo(120., 60., 3.529, 560)
 		  },
 	
 	
@@ -76,7 +78,9 @@ config_data = {
 	'static_instrument_psf': {'4x4': 0.,
     		  '10x10':10.,
 		  '20x20':26.,
-		  '30x60':30.
+		  '30x60':30.,
+		  '60x60':30.,
+		  '120x60':30.
 		},
 
 	#Each PSD file containts 1 seeing  [0.43] and 1 zenith angle [25]

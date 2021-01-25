@@ -290,7 +290,7 @@ The available HSIM options are listed below. The complete list is also available
 $ python3 hsim3.py -h
 \end{commandshell}
 
-These options are preceded by \texttt{--} when included in the command-line. When they are used in a configuration file the ``\texttt{-}'' in their names should be replaced by ``\texttt{\_}'' (see Section~\ref{ss:conf_file}).
+These options are preceded by \texttt{--} when included in the command-line. When they are used in a configuration file the ``\texttt{-}'' in their names should be replaced by ``\texttt{\_}'' (see example below).
 
 \begin{description}
 % \setlength\itemsep{-0.5ex}
@@ -300,7 +300,7 @@ These options are preceded by \texttt{--} when included in the command-line. Whe
 
 \item \texttt{grating}: HARMONI grating. Available values are: \texttt{V+R, Iz+J, H+K, Iz, J, H, K, z-high, J-short, J-long, H-high, K-short, K-long}.
 
-\item \texttt{spaxel-scale}: HARMONI spatial scale in mas. Available values are: \texttt{4x4, 10x10, 20x20, 30x60}.
+\item \texttt{spaxel-scale}: HARMONI spatial scale in mas. Available values are: \texttt{4x4, 10x10, 20x20, 30x60, 60x60, 120x60}. The 60x60 and 120x60 scales are only available for the V+R grating.
 
 \item \texttt{exposure-time}: Integration time of each exposure in seconds (e.g., \texttt{600}).
 
