@@ -301,10 +301,17 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 					logging.info("Effective seeing at airmass = {:.2f} arcsec".format(effective_seeing))
 					
 					if effective_seeing < 0.64:
-						scaling_jitter = 1.
+						scaling_jitter_seeing = 1.
 					else:
-						jitter_interp = interp1d([0.64, 0.74, 1.04, 1.40], [1., 1.5, 2., 3.], kind='linear', bounds_error=False, fill_value="extrapolate")
-						scaling_jitter = jitter_interp(effective_seeing)
+						jitter_seeing_interp = interp1d([0.64, 0.74, 1.04, 1.40], [1., 1.5, 2., 3.], kind='linear', bounds_error=False, fill_value="extrapolate")
+						scaling_jitter_seeing = jitter_seeing_interp(effective_seeing)
+						
+					# scaling due to airmass
+					jitter_airmass_interp = interp1d([1.1, 1.3, 1.5, 2.0], [1., 1.02, 1.2, 1.4], kind='linear', bounds_error=False, fill_value="extrapolate")
+					scaling_jitter_airmass = jitter_airmass_interp(air_mass)
+					
+					
+					scaling_jitter = scaling_jitter_seeing*scaling_jitter_airmass
 					
 					logging.info("LTAO jitter scaling factor = {:.2f}".format(scaling_jitter))
 					
