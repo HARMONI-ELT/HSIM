@@ -77,6 +77,8 @@ if __name__ == "__main__":
 				Parameter("extra_jitter", "Additional telescope PSF blur [mas]", type=str, default = "0"),
 				Parameter("noise_seed", "Noise random number generator seed", type=int, default = 100),
 				Parameter("n_cpus", "Number of processors", type=int, default = get_cpu_count()),
+				Parameter("spectral_sampling", "Internal spectral oversampling factor.", type=float, default = -1),
+				Parameter("spatial_sampling", "Internal spatial oversampling factor.", type=float, default = -1),
 			  ]
 	
 	# Define argument parser

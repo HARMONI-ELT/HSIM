@@ -74,6 +74,28 @@ def main(input_parameters):
 	# Check that the 60x60 and 120x60 are only used with the V+R grating
 	if input_parameters["spaxel_scale"] in ["60x60", "120x60"] and input_parameters["grating"] != "V+R":
 		raise HSIMError(input_parameters["spaxel_scale"] + ' is only available for the V+R grating. ')
+	
+	
+	# Get oversampling factor
+	# spectral axis
+	if input_parameters["spectral_sampling"] == -1: # Use default oversampling factor
+		input_parameters["spectral_sampling"] = config_data["spectral_sampling"]["internal"]
+	else:
+		config_data["spectral_sampling"]["internal"] = input_parameters["spectral_sampling"]
+	
+	# spatial axes
+	spax_scale = config_data['spaxel_scale'][input_parameters["spaxel_scale"]]
+	if input_parameters["spatial_sampling"] == -1: # Use default oversampling factor
+		factor = spax_scale.xscale/spax_scale.psfscale
+		input_parameters["spatial_sampling"] = factor
+	else:
+		psf_fov = spax_scale.psfscale*spax_scale.psfsize
+		new_psf_scale = spax_scale.xscale/input_parameters["spatial_sampling"]
+		# Update scale info
+		spax_scale = SpaxelScaleInfo(spax_scale.xscale, spax_scale.yscale, new_psf_scale, round(psf_fov/new_psf_scale/2.)*2)
+		config_data['spaxel_scale'][input_parameters["spaxel_scale"]] = spax_scale
+
+
 
 	Conf = collections.namedtuple('Conf', 'name, header, value')
 	simulation_conf = [
@@ -83,7 +105,7 @@ def main(input_parameters):
 			Conf('Output dir', 'HSM_OUTD', 'output_dir'),
 			Conf('Exposure time', 'HSM_EXP', 'exposure_time'),
 			Conf('Number of exposures', 'HSM_NEXP', 'n_exposures'),
-			Conf('Spaxel', 'HSM_SPAX', 'spaxel_scale'),
+			Conf('Spaxel scale', 'HSM_SPAX', 'spaxel_scale'),
 			Conf('Grating', 'HSM_GRAT', 'grating'),
 			Conf('Zenith seeing', 'HSM_SEEI', 'zenith_seeing'),
 			Conf('Air Mass', 'HSM_AIRM', 'air_mass'),
@@ -95,6 +117,8 @@ def main(input_parameters):
 			Conf('Seed', 'HSM_SEED', 'noise_seed'),
 			Conf('AO', 'HSM_AO', 'ao_mode'),
 			Conf('No. of processes', 'HSM_NPRC', 'n_cpus'),
+			Conf('Internal spectral oversampling factor', 'HSM_SPES', 'spectral_sampling'),
+			Conf('Internal spatial oversampling factor', 'HSM_SPAS', 'spatial_sampling'),
 			]
 	
 	def str2bool(var):
@@ -106,7 +130,6 @@ def main(input_parameters):
 	str2bool("adr")
 	str2bool("detector_systematics")
 	
-	
 	if input_parameters["detector_systematics"] == True:
 		simulation_conf.append(Conf('Detectors tmp path', 'HSM_DDIR', 'detector_tmp_path'))
 	
@@ -115,7 +138,6 @@ def main(input_parameters):
 		simulation_conf.append(Conf('AO star H mag', 'HSM_AODI', 'ao_star_distance'))
 	elif input_parameters["ao_mode"] == "User":
 		simulation_conf.append(Conf('User defined PSF file', 'HSM_UPSF', 'user_defined_psf'))
-	
 	
 	# Init logger
 	base_name = os.path.splitext(os.path.basename(input_parameters['input_cube']))[0]
@@ -135,7 +157,6 @@ def main(input_parameters):
 
 	hsimlog = HSIMLoggingHandler()
 	logger.addHandler(hsimlog)
-
 
 	logging.info("Simulation input parameters:")
 	for _ in simulation_conf:
@@ -212,7 +233,6 @@ def main(input_parameters):
 	z, y, x = cube_exp.shape
 	
 	# rebin spatial axes
-	spax_scale = config_data['spaxel_scale'][input_parameters["spaxel_scale"]]
 	scale_x = spax_scale.xscale/spax_scale.psfscale
 	scale_y = spax_scale.yscale/spax_scale.psfscale
 	out_size_x = int(x/scale_x)
@@ -563,7 +583,7 @@ def main(input_parameters):
 	
 	# Update header
 	for _ in simulation_conf:
-		head[_.header] = str(input_parameters[_.value])
+		head[_.header] = (str(input_parameters[_.value]), _.name)
 	
 	head['HSM_TIME'] = str(datetime.datetime.utcnow())
 	
@@ -661,7 +681,11 @@ def main(input_parameters):
 	
 	save_fits_cube(base_filename + "_PSF_internal.fits", psf_internal, "PSF", head_PSF)
 	
-	# - Rebin and Reshape PSF to match the output cube size and spaxel size	
+	# - Rebin and Reshape PSF to match the output cube size and spaxel size
+	def rebin_psf(arr, new_shape):
+		shape = (new_shape[0], arr.shape[0] // new_shape[0],
+			new_shape[1], arr.shape[1] // new_shape[1])
+		return arr.reshape(shape).sum(-1).sum(1)
 	psf_info = config_data["spaxel_scale"][input_parameters["spaxel_scale"]]
 	
 	# Calcualte the offset needed to keep the PSF center
