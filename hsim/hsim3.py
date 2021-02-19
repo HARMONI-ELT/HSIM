@@ -77,8 +77,8 @@ if __name__ == "__main__":
 				Parameter("extra_jitter", "Additional telescope PSF blur [mas]", type=str, default = "0"),
 				Parameter("noise_seed", "Noise random number generator seed", type=int, default = 100),
 				Parameter("n_cpus", "Number of processors", type=int, default = get_cpu_count()),
-				Parameter("spectral_sampling", "Internal spectral oversampling factor.", type=float, default = -1),
-				Parameter("spatial_sampling", "Internal spatial oversampling factor.", type=float, default = -1),
+				Parameter("spectral_sampling", "Internal spectral oversampling factor", type=float, default = -1),
+				Parameter("spatial_sampling", "Internal spatial oversampling factor", type=float, default = -1),
 			  ]
 	
 	# Define argument parser
@@ -325,6 +325,9 @@ if __name__ == "__main__":
 				create_field("detector_tmp_path", panel_misc.add_field("Detector tmp dir", Button, command=lambda : browse_dir(self)))
 				create_field("n_cpus", panel_misc.add_field("No. of processors (1-" + str(mp.cpu_count())+")", Entry))
 				create_field("noise_seed", panel_misc.add_field("Noise seed", Entry))
+				panel_misc.add_field("Internal oversampling:", None)
+				create_field("spectral_sampling", panel_misc.add_field("   Spectral (default = -1)", Entry))
+				create_field("spatial_sampling", panel_misc.add_field("   Spatial (default = -1)", Entry))
 
 
 				def OnClick():

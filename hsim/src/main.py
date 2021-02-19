@@ -71,32 +71,6 @@ def main(input_parameters):
 	warnings.filterwarnings("ignore", module="matplotlib")
 	debug_plots = True
 
-	# Check that the 60x60 and 120x60 are only used with the V+R grating
-	if input_parameters["spaxel_scale"] in ["60x60", "120x60"] and input_parameters["grating"] != "V+R":
-		raise HSIMError(input_parameters["spaxel_scale"] + ' is only available for the V+R grating. ')
-	
-	
-	# Get oversampling factor
-	# spectral axis
-	if input_parameters["spectral_sampling"] == -1: # Use default oversampling factor
-		input_parameters["spectral_sampling"] = config_data["spectral_sampling"]["internal"]
-	else:
-		config_data["spectral_sampling"]["internal"] = input_parameters["spectral_sampling"]
-	
-	# spatial axes
-	spax_scale = config_data['spaxel_scale'][input_parameters["spaxel_scale"]]
-	if input_parameters["spatial_sampling"] == -1: # Use default oversampling factor
-		factor = spax_scale.xscale/spax_scale.psfscale
-		input_parameters["spatial_sampling"] = factor
-	else:
-		psf_fov = spax_scale.psfscale*spax_scale.psfsize
-		new_psf_scale = spax_scale.xscale/input_parameters["spatial_sampling"]
-		# Update scale info
-		spax_scale = SpaxelScaleInfo(spax_scale.xscale, spax_scale.yscale, new_psf_scale, round(psf_fov/new_psf_scale/2.)*2)
-		config_data['spaxel_scale'][input_parameters["spaxel_scale"]] = spax_scale
-
-
-
 	Conf = collections.namedtuple('Conf', 'name, header, value')
 	simulation_conf = [
 			Conf('HSIM Version', 'HSM_VER', 'version'),
@@ -158,13 +132,42 @@ def main(input_parameters):
 	hsimlog = HSIMLoggingHandler()
 	logger.addHandler(hsimlog)
 
-	logging.info("Simulation input parameters:")
-	for _ in simulation_conf:
-		logging.info(_.value + " = " + str(input_parameters[_.value]))
-		if _.value == "config_file":
-			logging.info("# start configuration file")
+	# Check that the 60x60 and 120x60 are only used with the V+R grating
+	if input_parameters["spaxel_scale"] in ["60x60", "120x60"] and input_parameters["grating"] != "V+R":
+		logging.error(input_parameters["spaxel_scale"] + ' is only available for the V+R grating. ')
+		return
 		
-	logging.info("# end configuration file")
+	# Get oversampling factor
+	# spectral axis
+	if input_parameters["spectral_sampling"] == -1: # Use default oversampling factor
+		input_parameters["spectral_sampling"] = config_data["spectral_sampling"]["internal"]
+	elif  input_parameters["spectral_sampling"] <= 0:
+		logging.error("Spectral sampling must be > 0")
+		return
+	else:
+		if input_parameters["spectral_sampling"] < config_data["spectral_sampling"]["internal"]:
+			logging.warning("The selected spectral oversampling (" + str(input_parameters["spectral_sampling"]) + ") is lower than the defaul value: " + str(config_data["spectral_sampling"]["internal"]))
+			
+		config_data["spectral_sampling"]["internal"] = input_parameters["spectral_sampling"]
+
+	# spatial axes
+	spax_scale = config_data['spaxel_scale'][input_parameters["spaxel_scale"]]
+	if input_parameters["spatial_sampling"] == -1: # Use default oversampling factor
+		factor = spax_scale.xscale/spax_scale.psfscale
+		input_parameters["spatial_sampling"] = factor
+	elif  input_parameters["spatial_sampling"] <= 0:
+		logging.error("Spatial sampling must be > 0")
+		return
+	else:
+		psf_fov = spax_scale.psfscale*spax_scale.psfsize
+		new_psf_scale = spax_scale.xscale/input_parameters["spatial_sampling"]
+		# Update scale info
+		spax_scale = SpaxelScaleInfo(spax_scale.xscale, spax_scale.yscale, new_psf_scale, round(psf_fov/new_psf_scale/2.)*2)
+		
+		if new_psf_scale > config_data['spaxel_scale'][input_parameters["spaxel_scale"]].psfscale:
+			logging.warning("The selected spatial oversampling results in internal " + str(new_psf_scale) + " mas pixels that are larger than the default size of " + str(config_data['spaxel_scale'][input_parameters["spaxel_scale"]].psfscale) + " mas")
+		
+		config_data['spaxel_scale'][input_parameters["spaxel_scale"]] = spax_scale
 
 	try:
 		res_jitter = input_parameters["extra_jitter"]
@@ -181,6 +184,15 @@ def main(input_parameters):
 	except:
 		logging.error(str(res_jitter) + " is not a valid jitter value.")
 		return
+
+
+	logging.info("Simulation input parameters:")
+	for _ in simulation_conf:
+		logging.info(_.value + " = " + str(input_parameters[_.value]))
+		if _.value == "config_file":
+			logging.info("# start configuration file")
+		
+	logging.info("# end configuration file")
 
 	#
 	np.random.seed(input_parameters["noise_seed"])
