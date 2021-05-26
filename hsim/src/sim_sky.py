@@ -37,7 +37,7 @@ def convolve_1d_spectrum(input_lambda, input_flux, output_spec_res):
 		
 		new_res_pix = (output_spec_res**2 - sky_resolution**2)**0.5/np.abs(input_lambda[1] - input_lambda[0])
 		sigma_LSF_pix = new_res_pix/2.35482
-		if sigma_LSF_pix < 1: # avoid convolution with a kernel narrower than 1 pixel
+		if sigma_LSF_pix < 1.: # avoid convolution with a kernel narrower than 1 pixel
 			return input_flux
 		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
 		kernel_LSF = Gaussian1DKernel(stddev=sigma_LSF_pix, x_size=npix_LSF)

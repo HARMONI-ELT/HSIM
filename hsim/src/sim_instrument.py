@@ -260,14 +260,19 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	# Assume Gaussian LSF
 	bandws = config_data['gratings'][grating]
 	new_res = (bandws.lmin + bandws.lmax)/(2.*bandws.R) # micron
-	new_res_pix = (new_res**2 - input_spec_res**2)**0.5/(ext_lambs[1] - ext_lambs[0])
+	pix_size = (ext_lambs[1] - ext_lambs[0])
+	if new_res > input_spec_res:
+		new_res_pix = (new_res**2 - input_spec_res**2)**0.5/pix_size
+	else:
+		logging.warning("The output spectral resolution is higher than the input cube resolution. Assuming input resolution = 0 AA")
+		new_res_pix = new_res/pix_size
+		
 	logging.info("Output resolution: {:.3f} AA".format(new_res*10000.))
 	logging.info("Input resolution: {:.3f} AA".format(input_spec_res*10000.))
-	logging.info("LSF FWHM = {:.3f} AA".format((new_res**2 - input_spec_res**2)**0.5*10000.))
+	logging.info("LSF FWHM = {:.3f} AA".format(new_res_pix*pix_size*10000.))
 	
-	
-	npix_LSF = 0
-	if new_res_pix > 0.:
+	LSF_size = 0
+	if new_res_pix > 1.: # avoid convolution with a kernel narrower than 1 pixel
 		sigma_LSF_pix = new_res_pix/2.35482
 	
 		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
@@ -288,8 +293,12 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 		
 		back_emission = np.convolve(back_emission, kernel_LSF, mode="same")
 		transmission = np.convolve(transmission, kernel_LSF, mode="same")
+		
+		LSF_size = npix_LSF*(ext_lambs[1] - ext_lambs[0])*10000. # AA
+		logging.info("Range for the LSF convolution: {:.3f} AA".format(LSF_size))
+	else:
+		logging.warning("LSF convolution not performed because the LSF FWHM is < 1 pix")
 
-	LSF_size = npix_LSF*(ext_lambs[1] - ext_lambs[0])*10000. # AA
-	logging.info("Range for the LSF convolution: {:.3f} AA".format(LSF_size))
+
 	
 	return (cube, back_emission, transmission), LSF_size
