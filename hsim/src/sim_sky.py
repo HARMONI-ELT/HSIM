@@ -37,9 +37,10 @@ def convolve_1d_spectrum(input_lambda, input_flux, output_spec_res):
 		
 		new_res_pix = (output_spec_res**2 - sky_resolution**2)**0.5/np.abs(input_lambda[1] - input_lambda[0])
 		sigma_LSF_pix = new_res_pix/2.35482
+		if sigma_LSF_pix < 1: # avoid convolution with a kernel narrower than 1 pixel
+			return input_flux
 		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
 		kernel_LSF = Gaussian1DKernel(stddev=sigma_LSF_pix, x_size=npix_LSF)
-		
 		return np.convolve(input_flux, kernel_LSF, mode="same")
 		
 	else:
@@ -76,7 +77,7 @@ def sky_background(lambs, air_mass, dit, input_spec_res, debug_plots, output_fil
 	sky_em_lambda = sky_em_all_X[:, 0]
 	sky_em_flux = sky_em_all_X[:, data_index]
 	
-	mask_range_output = (sky_em_lambda > lambs[0]*0.9)*(sky_em_lambda < lambs[-1]*1.1)
+	mask_range_output = (sky_em_lambda > lambs[0]*0.99)*(sky_em_lambda < lambs[-1]*1.01)
 	sky_em_lambda = sky_em_lambda[mask_range_output]
 	sky_em_flux = sky_em_flux[mask_range_output]
 	
@@ -85,7 +86,7 @@ def sky_background(lambs, air_mass, dit, input_spec_res, debug_plots, output_fil
 
 	# rebin sky emission
 	sky_radiance = dit*rebin1d(lambs, sky_em_lambda, sky_em_flux)
-		
+
 	if debug_plots:
 		plt.clf()
 		mask_plot = (sky_em_lambda > lambs[0])*(sky_em_lambda < lambs[-1])
@@ -132,7 +133,7 @@ def moon_background(lambs, moon, dit, input_spec_res, debug_plots, output_file):
 		moon_em_lambda = moon_em_all_X[:, 0]
 		moon_em_flux = moon_em_all_X[:, data_index]
 
-		mask_range_output = (moon_em_lambda > lambs[0]*0.9)*(moon_em_lambda < lambs[-1]*1.1)
+		mask_range_output = (moon_em_lambda > lambs[0]*0.99)*(moon_em_lambda < lambs[-1]*1.01)
 		moon_em_lambda = moon_em_lambda[mask_range_output]
 		moon_em_flux = moon_em_flux[mask_range_output]
 
@@ -189,7 +190,7 @@ def sky_transmission(lambs, air_mass, input_spec_res, debug_plots, output_file):
 	sky_tr_lambda = sky_trans_all_X[:, 0]
 	sky_tr = sky_trans_all_X[:, data_index]
 
-	mask_range_output = (sky_tr_lambda > lambs[0]*0.9)*(sky_tr_lambda < lambs[-1]*1.1)
+	mask_range_output = (sky_tr_lambda > lambs[0]*0.99)*(sky_tr_lambda < lambs[-1]*1.01)
 	sky_tr_lambda = sky_tr_lambda[mask_range_output]
 	sky_tr = sky_tr[mask_range_output]
 
