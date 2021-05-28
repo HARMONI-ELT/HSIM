@@ -13,7 +13,7 @@ from src.modules.misc_utils import path_setup
 from src.modules.rebin import *
 from src.modules.adr import apply_adr
 
-import matplotlib.pylab as plt
+import matplotlib.pyplot as plt
 
 bgpath = path_setup('../../' + config_data["data_dir"] + 'sky/')
 

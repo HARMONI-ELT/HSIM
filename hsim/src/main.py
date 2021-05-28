@@ -460,7 +460,7 @@ def main(input_parameters):
 	#
 	logging.info("Saving output")
 	if debug_plots:
-		import matplotlib.pylab as plt
+		import matplotlib.pyplot as plt
 		
 		plt.clf()
 

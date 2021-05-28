@@ -8,7 +8,7 @@
 \usepackage[a4paper,left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
 \usepackage{fancyhdr}
 \usepackage{datetime}
-
+\usepackage{diagbox}
 
 \usepackage[listings]{tcolorbox}
 
@@ -79,7 +79,7 @@ Version & Date & Comments \\
 1.3b & 2019-10-16 & HSIM v300 release \\
 1.4 & 2019-12-16 & HSIM v302 release \\
 1.5 & 2020-04-21 & HSIM v303 release \\
-1.6 & 2020-10-16 & HSIM v310 release \\
+1.6 & 2021-06-01 & HSIM v310 release \\
 \hline
 \end{tabular}
 \end{table*}
@@ -107,10 +107,10 @@ HSIM depends on the following Python packages to work:
 
 \begin{itemize}
 \setlength\itemsep{-0.5ex}
-\item astropy 3.2.1
-\item numpy 1.18.3
-\item scipy 1.4.1
-\item matplotlib 3.1.3
+\item astropy 4.1
+\item numpy 1.19.5
+\item scipy 1.5.4
+\item matplotlib 3.3.4
 \item photutils 0.7
 \end{itemize}
 
@@ -194,7 +194,7 @@ BUNIT & Flux units of the cube & any surface spectral flux density unit supporte
 \subsection{HSIM Gratings}
 
 The gratings that can be selected in HSIM are detailed below in Table~\ref{tab:gratings}.
-\begin{table*}[h]
+\begin{table*}[!h]
 \centering
 \caption{HSIM grating parameters}
 \label{tab:gratings}
@@ -287,7 +287,7 @@ In the case of conflicting input parameters, preference is given to the GUI, the
 
 The available HSIM options are listed below. The complete list is also available by running 
 \begin{commandshell}
-$ python3 hsim3.py -h
+python3 hsim3.py -h
 \end{commandshell}
 
 These options are preceded by \texttt{--} when included in the command-line. When they are used in a configuration file the ``\texttt{-}'' in their names should be replaced by ``\texttt{\_}'' (see example below).
@@ -383,6 +383,68 @@ HSIM stores the results of the simulation in the specified output directory (the
 \item \texttt{\_total\_tr.txt}. Total transmission stored as a text file.
 
 \end{enumerate}
+
+\subsection{AO jitter in HSIM}
+
+To calculate the AO performance, HSIM adds the following jitter to the PSF depending on the AO mode and observing conditions.
+
+For SCAO, the jitter is always 2\,mas. For LTAO, the jitter is estimated from the H magnitude and distance to the AO star according to Table~\ref{tab:jitter}. The jitter value from this table, $j_{\rm star}$, is then scaled depending on the seeing and air mass.
+To do this, the input zenith seeing, $\alpha_{\rm zenith}$, is transformed into an effective seeing, $\alpha\left(\theta\right)$, at the zenith angle $\theta$ (i.e. air mass) using
+\begin{equation}
+\alpha\left(\theta\right) = \frac{\alpha_{\rm zenith}}{\sqrt{\cos \theta}}
+\end{equation}
+
+\begin{table*}[!ht]
+\centering
+\caption{LTAO jitter in mas}
+\label{tab:jitter}
+\begin{tabular}{l|ccc}
+\hline
+\diagbox[width=10em]{H mag}{Distance}& 15$"$ & 30$"$ & 45$"$ \\ \hline
+15.0 & 2 & 3 & 4 \\
+17.5 & 3 & 4 & 6 \\ 
+19.0 & 5 & 7 & 10 \\ 
+\hline
+\end{tabular}
+\end{table*}
+
+
+\begin{table*}[!h]
+\centering
+\caption{Seeing scaling jitter factor}
+\label{tab:scaling_seeing}
+\begin{tabular}{cccc}
+\hline
+Effective Seeing & $f_{\rm s}$ & \\
+(arcsec) & &  \\
+\hline
+0.64 & 1.0\\
+0.74 & 1.5\\ 
+1.04 & 2.0\\ 
+1.40 & 3.0\\ 
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[!h]
+\centering
+\caption{Air mass scaling jitter factor}
+\label{tab:scaling_airmass}
+\begin{tabular}{cccc}
+\hline
+Air mass & $f_{\rm a}$ & \\
+\hline
+1.1 & 1.00\\
+1.3 & 1.02\\ 
+1.5 & 1.20\\ 
+2.0 & 1.40\\ 
+\hline
+\end{tabular}
+\end{table*}
+
+A seeing scaling factor, $f_{\rm s}$, is derived from the effective seeing interpolating the values in Table~\ref{tab:scaling_seeing}. The air mass scaling factor, $f_{\rm a}$, is obtained from Table~\ref{tab:scaling_airmass}. The final LTAO jitter is $f_{\rm s} \times f_{\rm a} \times j_{\rm star}$.
+
+
 
 
 % \clearpage
