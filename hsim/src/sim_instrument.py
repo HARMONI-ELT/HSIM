@@ -269,7 +269,7 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 		
 	logging.info("Output resolution: {:.3f} AA".format(new_res*10000.))
 	logging.info("Input resolution: {:.3f} AA".format(input_spec_res*10000.))
-	logging.info("LSF FWHM = {:.3f} AA".format(new_res_pix*pix_size*10000.))
+	logging.info("Effective LSF FWHM = {:.3f} AA".format(new_res_pix*pix_size*10000.))
 	
 	LSF_size = 0
 	if new_res_pix > 1.: # avoid convolution with a kernel narrower than 1 pixel
@@ -297,7 +297,7 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 		LSF_size = npix_LSF*(ext_lambs[1] - ext_lambs[0])*10000. # AA
 		logging.info("Range for the LSF convolution: {:.3f} AA".format(LSF_size))
 	else:
-		logging.warning("LSF convolution not performed because the LSF FWHM is < 1 pix")
+		logging.warning("LSF convolution not performed because the effective LSF FWHM is < 1 pix")
 
 
 	

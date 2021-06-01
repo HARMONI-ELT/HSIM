@@ -291,14 +291,12 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 					jitter_matrix[19.0, 60] = 10.
 					
 					jitter_PSD = jitter_matrix[float(input_parameters["ao_star_hmag"]), int(input_parameters["ao_star_distance"])]
-					logging.info("LTAO jitter star = {:.2f} mas".format(jitter_PSD))
+					logging.info("Initial LTAO jitter = {:.2f} mas".format(jitter_PSD))
 					
 					# scaling jitter depending on zenit seeing and air mass
 					zenit_angle = np.arccos(1./air_mass)
 					seeing_scaling = 1./(np.cos(zenit_angle))**0.5
 					effective_seeing = seeing_scaling*zenith_seeing
-					
-					logging.info("Effective seeing at airmass = {:.2f} arcsec".format(effective_seeing))
 					
 					if effective_seeing < 0.64:
 						scaling_jitter_seeing = 1.
@@ -314,11 +312,13 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 					scaling_jitter = scaling_jitter_seeing*scaling_jitter_airmass
 					
 					logging.info("LTAO jitter scaling factor = {:.2f}".format(scaling_jitter))
+					logging.info("  Effective seeing at airmass = {:.2f} arcsec".format(effective_seeing))
+					logging.info("  Airmass = {:.2f}".format(air_mass))
 					
 					jitter_PSD = scaling_jitter*jitter_PSD
 					
 				
-				logging.info("PSD jitter = {:.2f} mas".format(jitter_PSD))
+				logging.info("Total AO jitter = {:.2f} mas".format(jitter_PSD))
 				
 				# combine PSD jitter and instrument and extra user defined jitter
 				jitter = (jitter**2 + jitter_PSD**2)**0.5
