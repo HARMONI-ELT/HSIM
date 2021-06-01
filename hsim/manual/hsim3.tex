@@ -133,10 +133,11 @@ HARMONI & Recommended\\
 Spaxel scale & input scale\\
 (mas) & (mas) \\
 \hline
-4$\times$4   & 1 \\
-10$\times$10 & 2 \\
-20$\times$20 & 3 \\
-30$\times$60 & 3 \\
+4$\times$4   & 0.8 \\
+10$\times$10 & 2.0 \\
+20$\times$20 & 2.8 \\
+30$\times$60 & 3.3 \\
+60$\times$60, 120$\times$60 & 3.5 \\
 \hline
 \end{tabular}
 \end{table*}
@@ -287,7 +288,7 @@ In the case of conflicting input parameters, preference is given to the GUI, the
 
 The available HSIM options are listed below. The complete list is also available by running 
 \begin{commandshell}
-python3 hsim3.py -h
+$ python3 hsim3.py -h
 \end{commandshell}
 
 These options are preceded by \texttt{--} when included in the command-line. When they are used in a configuration file the ``\texttt{-}'' in their names should be replaced by ``\texttt{\_}'' (see example below).
@@ -333,6 +334,10 @@ These options are preceded by \texttt{--} when included in the command-line. Whe
 \item \texttt{noise-seed}: Random number generator seed using during the simulation. It only affects the observed outputs (see Section~\ref{s:output}).
 
 \item \texttt{n-cpus}: Number of processors used by HSIM.
+
+\item \texttt{spectral-sampling}: Internal spectral oversampling factor. If not specified, the default internal sampling is 4 times the spectral resolution of the selected grating.
+
+\item \texttt{spatial-sampling}: Internal spatial oversampling factor. If not specified, the default internal sampling is between 5 and $>$15 times the output pixel size (see Table~\ref{tab:scale}).
 
 \end{description}
 
@@ -394,7 +399,9 @@ To do this, the input zenith seeing, $\alpha_{\rm zenith}$, is transformed into 
 \alpha\left(\theta\right) = \frac{\alpha_{\rm zenith}}{\sqrt{\cos \theta}}
 \end{equation}
 
-\begin{table*}[!ht]
+A seeing scaling factor, $f_{\rm s}$, is derived from the effective seeing interpolating the values in Table~\ref{tab:scaling_seeing}. The air mass scaling factor, $f_{\rm a}$, is obtained from Table~\ref{tab:scaling_airmass}. The final LTAO jitter is $f_{\rm s} \times f_{\rm a} \times j_{\rm star}$.
+
+\begin{table*}[!h]
 \centering
 \caption{LTAO jitter in mas}
 \label{tab:jitter}
@@ -407,7 +414,6 @@ To do this, the input zenith seeing, $\alpha_{\rm zenith}$, is transformed into 
 \hline
 \end{tabular}
 \end{table*}
-
 
 \begin{table*}[!h]
 \centering
@@ -442,7 +448,7 @@ Air mass & $f_{\rm a}$ & \\
 \end{tabular}
 \end{table*}
 
-A seeing scaling factor, $f_{\rm s}$, is derived from the effective seeing interpolating the values in Table~\ref{tab:scaling_seeing}. The air mass scaling factor, $f_{\rm a}$, is obtained from Table~\ref{tab:scaling_airmass}. The final LTAO jitter is $f_{\rm s} \times f_{\rm a} \times j_{\rm star}$.
+
 
 
 
