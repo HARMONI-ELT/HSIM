@@ -255,8 +255,8 @@ def main(input_parameters):
 		output_cube[k, :, :] = frebin2d(cube_exp[k, :, :], (out_size_x, out_size_y))
 	
 	# and update header
-	head['CDELT1'] = spax_scale.xscale
-	head['CDELT2'] = spax_scale.yscale
+	head['CDELT1'] = spax_scale.xscale*np.sign(head['CDELT1'])
+	head['CDELT2'] = spax_scale.yscale*np.sign(head['CDELT2'])
 		
 	# rebin spectral axis
 	scale_z = config_data["spectral_sampling"]["output"]/config_data["spectral_sampling"]["internal"]

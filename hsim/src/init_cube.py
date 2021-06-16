@@ -150,7 +150,7 @@ def spatial_res(datacube, head, spax):
 	
 	xmax = head['CDELT1']*(x-1)
 	ymax = head['CDELT2']*(y-1)
-	if xmax < min_internal_pix or ymax < min_internal_pix:
+	if abs(xmax) < min_internal_pix or abs(ymax) < min_internal_pix:
 		raise HSIMError('The input cube spatial dimension is too small. Minimum size is {s}x{s} mas'.format(s=int(min_internal_pix*spax_scale.psfscale)))
 	
 
@@ -158,15 +158,15 @@ def spatial_res(datacube, head, spax):
 		
 		# regrid image and conserve flux
 		
-		xgrid_in = np.linspace(0, xmax, x)
-		ygrid_in = np.linspace(0, ymax, y)
+		xgrid_in = np.linspace(0, abs(xmax), x)
+		ygrid_in = np.linspace(0, abs(ymax), y)
 		
-		xgrid_out = np.arange(0, xmax, new_sampling_x)
-		ygrid_out = np.arange(0, ymax, new_sampling_y)
-		
+		xgrid_out = np.arange(0, abs(xmax), abs(new_sampling_x))
+		ygrid_out = np.arange(0, abs(ymax), abs(new_sampling_y))
+
 		new_cube = np.zeros((z, len(ygrid_out), len(xgrid_out)), dtype=float)
 
-		if new_sampling_x < head['CDELT1']:
+		if abs(new_sampling_x) < abs(head['CDELT1']):
 			logging.warning('Interpolating data cube - spatial')
 			for k in np.arange(0, z):
 				image = interp2d(xgrid_in, ygrid_in, datacube[k,:,:], kind='linear')
@@ -275,19 +275,12 @@ def init_cube(datacube, grating, spax):
 	try:
 		head['CDELT1'] *= u.Unit(head["CUNIT1"]).to("mas")
 		head['CUNIT1'] = 'mas'
-		if head['CDELT1'] < 0:
-			head['CDELT1'] = abs(head['CDELT1'])
-			logging.warning("Negative CDELT1 assuming abs(CDELT1)")
-		
 	except ValueError as e:
 		raise HSIMError("CUNIT1 error: " + str(e))
 	
 	try:
 		head['CDELT2'] *= u.Unit(head["CUNIT2"]).to("mas")
 		head['CUNIT2'] = 'mas'
-		if head['CDELT2'] < 0:
-			head['CDELT2'] = abs(head['CDELT2'])
-			logging.warning("Negative CDELT2 assuming abs(CDELT2)")
 	except ValueError as e:
 		raise HSIMError("CUNIT2 error: " + str(e))
 	
