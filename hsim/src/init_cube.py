@@ -275,12 +275,19 @@ def init_cube(datacube, grating, spax):
 	try:
 		head['CDELT1'] *= u.Unit(head["CUNIT1"]).to("mas")
 		head['CUNIT1'] = 'mas'
+		if head['CDELT1'] < 0:
+			head['CDELT1'] = abs(head['CDELT1'])
+			logging.warning("Negative CDELT1 assuming abs(CDELT1)")
+		
 	except ValueError as e:
 		raise HSIMError("CUNIT1 error: " + str(e))
 	
 	try:
 		head['CDELT2'] *= u.Unit(head["CUNIT2"]).to("mas")
 		head['CUNIT2'] = 'mas'
+		if head['CDELT2'] < 0:
+			head['CDELT2'] = abs(head['CDELT2'])
+			logging.warning("Negative CDELT2 assuming abs(CDELT2)")
 	except ValueError as e:
 		raise HSIMError("CUNIT2 error: " + str(e))
 	
