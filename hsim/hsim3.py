@@ -144,7 +144,10 @@ if __name__ == "__main__":
 			input_parameters[key] = value
 			
 		input_parameters["config_file"] = args.config_file
-			
+	else:
+		input_parameters["config_file"] = "command line"
+		
+		
 	# Override with command line options
 	for key, value in args.__dict__.items():
 		key = key.lower()
