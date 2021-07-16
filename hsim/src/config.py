@@ -64,10 +64,10 @@ config_data = {
 	
 	'spaxel_scale': {'4x4':SpaxelScaleInfo(4., 4., 0.8, 1250),
 		  '10x10':SpaxelScaleInfo(10., 10., 2., 800),
-		  '20x20':SpaxelScaleInfo(20., 20., 2.857, 800),
-		  '30x60':SpaxelScaleInfo(30., 60., 3.333, 600),
-		  '60x60':SpaxelScaleInfo(60., 60., 3.529, 560),
-		  '120x60':SpaxelScaleInfo(120., 60., 3.529, 560)
+		  '20x20':SpaxelScaleInfo(20., 20., 4., 580),
+		  '30x60':SpaxelScaleInfo(30., 60., 6., 400),
+		  '60x60':SpaxelScaleInfo(60., 60., 6., 400),
+		  '120x60':SpaxelScaleInfo(120., 60., 6., 400)
 		  },
 	
 	
@@ -75,9 +75,9 @@ config_data = {
 	#Factors taken into account:
 	#design image quality, manufacturing and assembly tolerances, vibration, flexure, diff refraction,
 	'dynamic_instrument_psf': 4.8,
-	'static_instrument_psf': {'4x4': 0.,
+	'static_instrument_psf': {'4x4': 3.,
     		  '10x10':10.,
-		  '20x20':26.,
+		  '20x20':20.,
 		  '30x60':30.,
 		  '60x60':30.,
 		  '120x60':30.

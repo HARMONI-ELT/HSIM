@@ -121,7 +121,7 @@ The code has been tested with the indicated package version, although more recen
 
 \subsection{Preparing the Input Datacube}
 
-Before running HSIM, you will need an input model of your astronomical object stored as a datacube in a \textsc{fits} file. The recommended sizes for the spatial pixels (spaxels) are 1, 2, or 3 mas depending on the selected spaxel scale for HARMONI (see Table~\ref{tab:scale}). If your datacube has a different spaxel scale, HSIM will automatically interpolate\slash rebin the input datacube to the recommended values.
+Before running HSIM, you will need an input model of your astronomical object stored as a datacube in a \textsc{fits} file. The recommended sizes for the spatial pixels (spaxels) are 0.8, 2, 4, or 6 mas depending on the selected spaxel scale for HARMONI (see Table~\ref{tab:scale}). If your datacube has a different spaxel scale, HSIM will automatically interpolate\slash rebin the input datacube to the recommended values.
 
 \begin{table*}[h]
 \centering
@@ -135,9 +135,8 @@ Spaxel scale & input scale\\
 \hline
 4$\times$4   & 0.8 \\
 10$\times$10 & 2.0 \\
-20$\times$20 & 2.8 \\
-30$\times$60 & 3.3 \\
-60$\times$60, 120$\times$60 & 3.5 \\
+20$\times$20 & 4.0 \\
+30$\times$60, 60$\times$60, 120$\times$60 & 6.0 \\
 \hline
 \end{tabular}
 \end{table*}
