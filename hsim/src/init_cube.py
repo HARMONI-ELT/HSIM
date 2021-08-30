@@ -328,7 +328,7 @@ def init_cube(datacube, grating, spax):
 		
 		head['BUNIT'] = str(internal_cube_units)
 		
-	except u.UnitConversionError as e:
+	except (ValueError, u.UnitConversionError) as e:
 		raise HSIMError("BUNIT error: " + str(e))
 	
 	logging.info('The flux range of the input cube is {:.2e} - {:.2e} ph/s/m2/um/arcsec2'.format(np.min(cube), np.max(cube)))

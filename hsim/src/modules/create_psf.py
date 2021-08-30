@@ -24,6 +24,7 @@ except:
 	from modules.rebin import *
 
 psf_path = path_setup('../../' + config_data["data_dir"] + 'PSF/')
+hc_path = path_setup('../../' + config_data["data_dir"] + 'HC/')
 
 
 # Thierry FUSCO 18/12/17 17:42
@@ -252,14 +253,19 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 	zenith_seeing = input_parameters["zenith_seeing"]
 	air_mass = input_parameters["air_mass"]
 	
-	if AO_mode in ["LTAO", "SCAO", "AIRY"]:
+	if AO_mode in ["LTAO", "SCAO", "HCAO", "AIRY"]:
 		jitter = _jitter
 		diameter = config_data["telescope"]["diameter"]
 		logging.info("define AO PSF - " + AO_mode)
-		if os.path.isfile(os.path.join(psf_path,"ELT_pup.fits")):
+		if os.path.isfile(os.path.join(psf_path, "ELT_pup.fits")):
 			
 			# PSD
-			pup = fits.getdata(os.path.join(psf_path,"ELT_pup.fits"))
+			if AO_mode == "HCAO":
+				pup = fits.getdata(os.path.join(hc_path, input_parameters["hc_apodizer"] + "_1024.fits.gz"))
+				logging.info("Using HC pupil: " + input_parameters["hc_apodizer"] + "_1024.fits.gz")
+			else:
+				pup = fits.getdata(os.path.join(psf_path, "ELT_pup.fits"))
+			
 			
 			if AO_mode == "AIRY":
 				stats = None
@@ -268,12 +274,16 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 				stats = fits.getdata(os.path.join(psf_path, "ELT_statics.fits"))
 				
 				
-				logging.info("Using PSD file: " + config_data["PSD_file"][AO_mode])
+				if AO_mode == "HCAO":
+					psd_ao_file = "SCAO"
+				else:
+					psd_ao_file = AO_mode
 				
-				psd = fits.getdata(os.path.join(psf_path, config_data["PSD_file"][AO_mode]))
+				logging.info("Using PSD file: " + config_data["PSD_file"][psd_ao_file])
+				psd = fits.getdata(os.path.join(psf_path, config_data["PSD_file"][psd_ao_file]))
 				
 				# estimate PSD jitter
-				if AO_mode == "SCAO":
+				if AO_mode == "SCAO" or AO_mode == "HCAO":
 					jitter_PSD = 2.
 				elif AO_mode == "LTAO":
 					# jitter dependency on AO star mag and distance
@@ -328,7 +338,7 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		else:
 			#Test PSF
 			logging.warning("Using test PSD files")
-			pup = fits.getdata(os.path.join(psf_path,"demo_pup.fits"))
+			pup = fits.getdata(os.path.join(psf_path, "demo_pup.fits"))
 			if AO_mode == "AIRY":
 				stats = np.zeros(pup.shape)
 				psd = np.zeros((640, 640))
@@ -382,7 +392,7 @@ def create_psf(lamb, Airy=False):
 	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode, rotation
 	global zenith_seeing, air_mass
 
-	if AO_mode in ["LTAO", "SCAO", "AIRY"]:
+	if AO_mode in ["LTAO", "SCAO", "HCAO", "AIRY"]:
 		# size of a pixel returned by psd_to_psf
 		pix_psf = lamb*1e-6/(2.*diameter)*1/(4.85*1e-9) # mas
 		

@@ -107,9 +107,12 @@ def main(input_parameters):
 	if input_parameters["detector_systematics"] == True:
 		simulation_conf.append(Conf('Detectors tmp path', 'HSM_DDIR', 'detector_tmp_path'))
 	
-	if input_parameters["ao_mode"] in ["LTAO", "SCAO"]:
-		simulation_conf.append(Conf('AO star H mag', 'HSM_AOMA', 'ao_star_hmag'))
-		simulation_conf.append(Conf('AO star H mag', 'HSM_AODI', 'ao_star_distance'))
+	if input_parameters["ao_mode"] == "LTAO":
+		simulation_conf.append(Conf('LTAO star H mag', 'HSM_AOMA', 'ao_star_hmag'))
+		simulation_conf.append(Conf('LTAO star H mag', 'HSM_AODI', 'ao_star_distance'))
+	elif input_parameters["ao_mode"] == "HCAO":
+		simulation_conf.append(Conf('HC apodizer', 'HSM_HCAP', 'hc_apodizer'))
+		simulation_conf.append(Conf('HC mask', 'HSM_HCMK', 'hc_fp_mask'))
 	elif input_parameters["ao_mode"] == "User":
 		simulation_conf.append(Conf('User defined PSF file', 'HSM_UPSF', 'user_defined_psf'))
 	
@@ -136,6 +139,19 @@ def main(input_parameters):
 	if input_parameters["spaxel_scale"] in ["60x60", "120x60"] and input_parameters["grating"] != "V+R":
 		logging.error(input_parameters["spaxel_scale"] + ' is only available for the V+R grating. ')
 		return
+	
+	# Check HCAO configuration
+	if input_parameters["ao_mode"] == "HCAO":
+		if input_parameters["spaxel_scale"] !=  "4x4":
+			logging.error("4x4 spaxel scale must be used for the HCAO mode.")
+			return
+		if input_parameters["grating"] in ["V+R", "Iz", "z-high"]:
+			logging.error("V+R, Iz, and z-high gratings are not compatible with the HCAO mode.")
+			return
+		
+		if input_parameters["adr"]:
+			logging.warning("Disabling standard ADR simulation for HCAO")
+			input_parameters["adr"] = False
 		
 	# Get oversampling factor
 	# spectral axis

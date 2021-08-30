@@ -4,9 +4,10 @@ Calculates LSF, instrument background and transmission
 import logging
 
 import numpy as np
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, interp2d
 import scipy.constants as sp
 from astropy.convolution import Gaussian1DKernel
+from astropy.io import fits
 
 from src.config import *
 from src.modules.misc_utils import path_setup
@@ -14,6 +15,7 @@ from src.modules.em_model import *
 
 
 tppath = path_setup('../../' + config_data["data_dir"] + 'throughput/')
+hc_path = path_setup('../../' + config_data["data_dir"] + 'HC/')
 
 class InstrumentPart:
 	substrate = "Suprasil3001_50mm_Emissivity.txt"
@@ -50,7 +52,7 @@ class InstrumentPart:
 		
 		# Read emissivity from file or use "filename" as a number
 		if type(filename) == str:
-			l, emi = np.loadtxt(tppath + filename, unpack=True, comments="#", delimiter=",")
+			l, emi = np.loadtxt(os.path.join(tppath, filename), unpack=True, comments="#", delimiter=",")
 		else:
 			l = lamb
 			emi = np.zeros_like(lamb) + filename
@@ -209,11 +211,11 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	aoMode = input_parameters["ao_mode"]
 	if aoMode == "LTAO":
 		harmoni.addPart(InstrumentPart("LTAO dichroic", TTel, AreaIns, n_lenses=1, emis_lens="LTAO_0.6_dichroic.txt", dust_lens=2.*dustfrac))
-	elif aoMode == "SCAO":
+	elif aoMode in ["SCAO", "HCAO"]:
 		harmoni.addPart(InstrumentPart("SCAO dichroic", TTel, AreaIns, n_lenses=1, emis_lens="SCAO_0.8_dichroic.txt", dust_lens=2.*dustfrac))
 
 
-	if aoMode in ["LTAO", "SCAO"]:
+	if aoMode in ["LTAO", "SCAO", "HCAO"]:
 		harmoni.addPart(InstrumentPart("AO cold trap", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=0.03, emis_dust=ecoldtrap))
 	
 	harmoni.addPart(InstrumentPart("Outer window", TTel-6, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=dustfrac + InstrumentPart.mindustfrac))
@@ -299,6 +301,34 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	else:
 		logging.warning("LSF convolution not performed because the effective LSF FWHM is < 1 pix")
 
+
+	# Apply high-constrast focal plane mask
+	if aoMode == "HCAO":
+		logging.info("Apply HC focal plane mask " + input_parameters["hc_fp_mask"])
+		fpm = fits.getdata(os.path.join(hc_path, input_parameters["hc_fp_mask"] + ".fits.gz"), 0, memmap=True) # 0.39 mas sampling
+		fpm_sampling = 0.39 # mas
+		y, x = fpm.shape
+		
+		mask_xsize = x*fpm_sampling
+		mask_ysize = y*fpm_sampling
+
+		spax = input_parameters["spaxel_scale"]
+		pix_size = config_data["spaxel_scale"][spax].psfscale
+		cube_xsize = cube.shape[2]*pix_size
+		cube_ysize = cube.shape[1]*pix_size
+		
+		xgrid_in = np.linspace(-abs(mask_xsize)*0.5, abs(mask_xsize)*0.5, x)
+		ygrid_in = np.linspace(-abs(mask_ysize)*0.5, abs(mask_ysize)*0.5, y)
+
+		xgrid_out = np.arange(-abs(cube_xsize)*0.5, abs(cube_xsize)*0.5, abs(pix_size))
+		ygrid_out = np.arange(-abs(cube_ysize)*0.5, abs(cube_ysize)*0.5, abs(pix_size))
+
+		fpm_interp = interp2d(xgrid_in, ygrid_in, fpm, kind='linear')
+		fpm_final = fpm_interp(xgrid_out, ygrid_out)
+		
+		for i in range(cube.shape[0]):
+			cube[i,:,:] *= fpm_final
+	
 
 	
 	return (cube, back_emission, transmission), LSF_size

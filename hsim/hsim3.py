@@ -63,10 +63,12 @@ if __name__ == "__main__":
 				Parameter("spaxel_scale", "Spaxel Scale", choices = ["4x4", "10x10", "20x20", "30x60", "60x60", "120x60"]),
 				Parameter("exposure_time", "Exposure time [s]", type=int),
 				Parameter("n_exposures", "Number of exposures", type=int),
-				Parameter("ao_mode", "AO Mode", choices = ["LTAO", "SCAO", "noAO", "Airy", "User"]),
+				Parameter("ao_mode", "AO Mode", choices = ["LTAO", "SCAO", "HCAO", "noAO", "Airy", "User"]),
 				Parameter("user_defined_psf", "User defined PSF FITS file when ao-mode is set to User", default="''"),
 				Parameter("ao_star_hmag", "H magnitude of the LTAO AO star", type=float, default=17.5, choices = [15., 17.5, 19.]),
 				Parameter("ao_star_distance", "Distance from the HARMONI FoV center to the LTAO AO star [arcsec]", type=int, default=45, choices = [30, 45, 60]),
+				Parameter("hc_apodizer", "High-contrast apodizer", default="HSP1", choices = ["HSP1", "HSP2"]),
+				Parameter("hc_fp_mask", "High-contrast focal plane mask", default="FPM1", choices = ["FPM1"]),
 				Parameter("zenith_seeing", "Optical 500nm atmospheric seeing FWHM at zenith [arcsec]", type=float, choices = config_data["PSD_params"]["seeings"]),
 				Parameter("air_mass", "Air mass of the observation", type=float, choices = config_data["PSD_params"]["air_masses"]),
 				Parameter("moon_illumination", "Moon fractional illumination", type=float, default = 0., choices = [0.0, 0.5, 1.0]),
@@ -309,9 +311,13 @@ if __name__ == "__main__":
 				ao_choices = list(parameter_actions["ao_mode"].choices)
 				create_field("ao_mode", panel_telescope.add_field("AO mode", OptionMenu, extra=ao_choices))
 				ao_star_hmag_choices = list(parameter_actions["ao_star_hmag"].choices)
-				create_field("ao_star_hmag", panel_telescope.add_field("AO star H mag", OptionMenu, extra=ao_star_hmag_choices))
+				create_field("ao_star_hmag", panel_telescope.add_field("LTAO star H mag", OptionMenu, extra=ao_star_hmag_choices))
 				ao_star_distance_choices = list(parameter_actions["ao_star_distance"].choices)
-				create_field("ao_star_distance", panel_telescope.add_field("AO star distance [arcsec]", OptionMenu, extra=ao_star_distance_choices))
+				create_field("ao_star_distance", panel_telescope.add_field("LTAO star distance [arcsec]", OptionMenu, extra=ao_star_distance_choices))
+				hc_apodizer_choices = list(parameter_actions["hc_apodizer"].choices)
+				create_field("hc_apodizer", panel_telescope.add_field("High-contrast apodizer", OptionMenu, extra=hc_apodizer_choices))
+				hc_mask_choices = list(parameter_actions["hc_fp_mask"].choices)
+				create_field("hc_fp_mask", panel_telescope.add_field("High-contrast mask", OptionMenu, extra=hc_mask_choices))
 				create_field("user_defined_psf", panel_telescope.add_field("Used defined PSF", Button, command=lambda : browse_psf_file(self)))
 				
 				air_mass_choices = list(parameter_actions["air_mass"].choices)

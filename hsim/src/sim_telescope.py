@@ -103,7 +103,7 @@ def sim_telescope(input_parameteres, cube, back_emission, transmission, ext_lamb
 	# PSF + Jitter + Instrument PSF
 	logging.info("Define PSF")
 	jitter = input_parameteres["jitter"]
-	spax= input_parameteres["spaxel_scale"]
+	spax = input_parameteres["spaxel_scale"]
 	
 	FWHM_instrument = (config_data["dynamic_instrument_psf"]**2 + config_data["static_instrument_psf"][spax]**2)**0.5
 	sigma_instrument = FWHM_instrument/2.35482
