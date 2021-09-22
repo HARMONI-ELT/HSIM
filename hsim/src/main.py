@@ -779,6 +779,8 @@ def main(input_parameters):
 		logging.warning('Simulation with problems - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")
 	
 	
+	logger.removeHandler(std)
+	
 	return
 	
 
