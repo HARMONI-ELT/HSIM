@@ -253,7 +253,7 @@ def main(input_parameters):
 	#	- Instrument transmission
 	simulated_data, LSF_width_A = sim_instrument(input_parameters, *simulated_data, *lambda_data, input_spec_res, debug_plots=debug_plots, output_file=base_filename)
 	
-	cube_exp, back_emission, transmission = simulated_data
+	cube_exp, back_emission, transmission, fpm_mask = simulated_data
 	
 	# 4 - Rebin cube to output spatial and spectral pixel size
 	logging.info("Rebin data")
@@ -269,6 +269,9 @@ def main(input_parameters):
 	
 	for k in np.arange(0, z):
 		output_cube[k, :, :] = frebin2d(cube_exp[k, :, :], (out_size_x, out_size_y))
+	
+	if fpm_mask is not None:
+		fpm_mask_rebin = frebin2d(fpm_mask, (out_size_x, out_size_y))
 	
 	# and update header
 	head['CDELT1'] = spax_scale.xscale*np.sign(head['CDELT1'])
@@ -342,7 +345,10 @@ def main(input_parameters):
 	output_back_emission_cube = np.zeros_like(output_cube_spec) + output_back_emission
 	if det_switch == True:
 		output_back_emission_cube = trim_cube(output_back_emission_cube)
-	
+		
+	if input_parameters["ao_mode"] == "HCAO":
+		output_back_emission_cube *= fpm_mask_rebin
+		
 	# - mask saturated pixels
 	output_back_emission_cube, saturated_back = mask_saturated_pixels(output_back_emission_cube, grating)
 	

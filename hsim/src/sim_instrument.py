@@ -329,6 +329,8 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 		for i in range(cube.shape[0]):
 			cube[i,:,:] *= fpm_final
 	
+	else:
+		fpm_final = None
 
 	
-	return (cube, back_emission, transmission), LSF_size
+	return (cube, back_emission, transmission, fpm_final), LSF_size
