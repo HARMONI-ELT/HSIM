@@ -29,22 +29,6 @@ hc_path = path_setup('../../' + config_data["data_dir"] + 'HC/')
 
 # Thierry FUSCO 18/12/17 17:42
 # SIMUL_PSF_DataPackage.zip
-#
-#; $Id: eclat.pro,v 1.2 2002-10-25 11:26:32+02 conan Exp $
-def eclat(imag, inverse = False):
-	if inverse:
-		sens = 1
-	else:
-		sens = -1
-		
-	sszz = imag.shape
-	
-	gami = np.roll(imag, sens*sszz[0]//2, axis=0)
-	gami = np.roll(gami, sens*sszz[1]//2, axis=1)
-	
-	return gami
-
-
 #Programme pour prendre en compte la multi-analyse les geometries
 #d'etoiles et la postion de la galaxie
 def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb = 2.2*1.e-6, jitter=0.):
@@ -72,10 +56,11 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 	convnm = (2*np.pi/(lamb*1e9)) # nm to rad
 
 	#;; from PSD to structure function
-	Bg        = np.fft.fft2(psd*convnm**2)/L**2
+	Bg        = np.fft.fft2(np.fft.fftshift(psd)*convnm**2)/L**2
+	
 	##;;creation of the structure function
 	Dphi      = np.real(2*(Bg[0, 0]-Bg))
-	Dphi      = eclat(Dphi)
+	Dphi      = np.fft.fftshift(Dphi)
 
 	if samp is not None:
 		sampin = samp
@@ -153,14 +138,14 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 	
 
 	dlFTO     = np.real(np.fft.ifft2(np.abs(np.fft.fft2(tab))**2))
-	dlFTO     = eclat(np.abs(dlFTO)/np.sum(pup))
+	dlFTO     = np.fft.fftshift(np.abs(dlFTO)/np.sum(pup))
 	
 	##;creation of AO OTF
 	aoFTO     = np.exp(-Dphi2/2.)
 	
 	##;;Computation of final OTF
 	sysFTO = aoFTO*dlFTO
-	sysFTO = eclat(sysFTO)
+	sysFTO = np.fft.fftshift(sysFTO)
 
 	## add Gaussian jitter
 	if np.sum(jitter) > 0.:
@@ -172,7 +157,7 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 		xgrid = np.linspace(1, sysFTO.shape[0], sysFTO.shape[0]) - sysFTO.shape[0]*0.5 - 0.5
 		ygrid = np.linspace(1, sysFTO.shape[1], sysFTO.shape[1]) - sysFTO.shape[1]*0.5 - 0.5
 		xx, yy = np.meshgrid(xgrid, ygrid)
-		kernel = eclat(Gauss2D(xx, yy))
+		kernel = np.fft.fftshift(Gauss2D(xx, yy))
 		sysFTO = sysFTO*kernel
 
 	# simulate the rotation of the PSF
@@ -180,18 +165,18 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 		#nsteps = 15
 		#angles = np.linspace(0, rotation_angle, nsteps)
 		
-		#tmpFTO = eclat(sysFTO)
+		#tmpFTO = np.fft.fftshift(sysFTO)
 		
 		#sysFTO_tmp = np.zeros_like(tmpFTO)
 		#for a in angles:
 			#sysFTO_tmp += scipy.ndimage.rotate(tmpFTO, a, reshape=False)
 
 		#sysFTO_tmp /= nsteps
-		#sysFTO = eclat(sysFTO_tmp)
+		#sysFTO = np.fft.fftshift(sysFTO_tmp)
 		
 	
 	##;;Computation of final PSF
-	sysPSF = np.real(eclat((np.fft.fft2(sysFTO))))
+	sysPSF = np.real(np.fft.fftshift((np.fft.fft2(sysFTO))))
 	sysPSF = sysPSF/np.sum(sysPSF) #normalisation to 1
 
 	return sysPSF
@@ -343,7 +328,7 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 				stats = np.zeros(pup.shape)
 				psd = np.zeros((640, 640))
 			else:
-				stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))	
+				stats = fits.getdata(os.path.join(psf_path, "demo_static_phase.fits"))
 				psd = fits.getdata(os.path.join(psf_path, "PSD_HARMONI_test_D=37_L=148_6LGS_LGSFOV=60arcmin_median_Cn2_Zenith=30.fits"))
 	
 	
@@ -394,12 +379,13 @@ def create_psf(lamb, Airy=False):
 
 	if AO_mode in ["LTAO", "SCAO", "HCAO", "AIRY"]:
 		# size of a pixel returned by psd_to_psf
-		pix_psf = lamb*1e-6/(2.*diameter)*1/(4.85*1e-9) # mas
+		psf_sampling = 2.
+		pix_psf = lamb*1e-6/(psf_sampling*diameter)*1/(4.85*1e-9) # mas
 		
 		if not Airy:
-			psf = psd_to_psf(psd, pup, diameter, phase_static = stats, lamb=lamb*1e-6, samp=2., jitter=jitter/pix_psf)
+			psf = psd_to_psf(psd, pup, diameter, phase_static = stats, lamb=lamb*1e-6, samp=psf_sampling, jitter=jitter/pix_psf)
 		else:
-			psf = psd_to_psf(psd*0., pup, diameter, phase_static = None, lamb=lamb*1e-6, samp=2., jitter=np.repeat(0., 2))
+			psf = psd_to_psf(psd*0., pup, diameter, phase_static = None, lamb=lamb*1e-6, samp=psf_sampling, jitter=np.repeat(0., 2))
 		
 		area_scale = (pix_psf/psfscale)**2
 		#print(area_scale)
