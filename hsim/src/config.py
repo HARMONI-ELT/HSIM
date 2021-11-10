@@ -10,7 +10,7 @@ GratingInfo = collections.namedtuple('GratingInfo', 'lmin, lmax, R')
 SpaxelScaleInfo = collections.namedtuple('SpaxelScaleInfo', 'xscale, yscale, psfscale, psfsize')
 	
 config_data = {
-	'read_noise': {"vis":2.0, "nir":5.0, "nir_lowexp":12.0}, # e/pix
+	'read_noise': {"vis":2.0, "nir":6.0, "nir_lowexp":15.0}, # e/pix
 	'side_length':4096,
 	'N_IR_det':8,
 	'dark_current': {"vis":0.00042, "nir":0.0053}, # e/pix/s
