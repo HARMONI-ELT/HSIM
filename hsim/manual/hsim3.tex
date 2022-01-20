@@ -390,7 +390,7 @@ HSIM stores the results of the simulation in the specified output directory (the
 
 \subsection{AO jitter in HSIM}
 
-To calculate the AO performance, HSIM adds the following jitter to the PSF depending on the AO mode and observing conditions.
+To calculate the AO performance, HSIM adds the following jitter ($\sigma$) to the PSF depending on the AO mode and observing conditions.
 
 For SCAO, the jitter is always 2\,mas. For LTAO, the jitter is estimated from the H magnitude and distance to the AO star according to Table~\ref{tab:jitter}. The jitter value from this table, $j_{\rm star}$, is then scaled depending on the seeing and air mass.
 To do this, the input zenith seeing, $\alpha_{\rm zenith}$, is transformed into an effective seeing, $\alpha\left(\theta\right)$, at the zenith angle $\theta$ (i.e. air mass) using
@@ -407,9 +407,9 @@ A seeing scaling factor, $f_{\rm s}$, is derived from the effective seeing inter
 \begin{tabular}{l|ccc}
 \hline
 \diagbox[width=10em]{H mag}{Distance}& 15$"$ & 30$"$ & 45$"$ \\ \hline
-15.0 & 2 & 3 & 4 \\
-17.5 & 3 & 4 & 6 \\ 
-19.0 & 5 & 7 & 10 \\ 
+15.0 & 1.7 & 2.0 & 2.7 \\
+17.5 & 2.5 & 3.5 & 3.7 \\ 
+19.0 & 6.0 & 9.0 & 10 \\ 
 \hline
 \end{tabular}
 \end{table*}

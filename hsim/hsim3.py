@@ -66,7 +66,7 @@ if __name__ == "__main__":
 				Parameter("ao_mode", "AO Mode", choices = ["LTAO", "SCAO", "HCAO", "noAO", "Airy", "User"]),
 				Parameter("user_defined_psf", "User defined PSF FITS file when ao-mode is set to User", default="''"),
 				Parameter("ao_star_hmag", "H magnitude of the LTAO AO star", type=float, default=17.5, choices = [15., 17.5, 19.]),
-				Parameter("ao_star_distance", "Distance from the HARMONI FoV center to the LTAO AO star [arcsec]", type=int, default=45, choices = [30, 45, 60]),
+				Parameter("ao_star_distance", "Distance from the HARMONI FoV center to the LTAO AO star [arcsec]", type=int, default=30, choices = [15, 30, 45]),
 				Parameter("hc_apodizer", "High-contrast apodizer", default="HSP1", choices = ["HSP1", "HSP2"]),
 				Parameter("hc_fp_mask", "High-contrast focal plane mask", default="FPM1", choices = ["FPM1"]),
 				Parameter("zenith_seeing", "Optical 500nm atmospheric seeing FWHM at zenith [arcsec]", type=float, choices = config_data["PSD_params"]["seeings"]),

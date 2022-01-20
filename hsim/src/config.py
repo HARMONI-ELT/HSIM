@@ -38,8 +38,8 @@ config_data = {
 	
 	'telescope': {'diameter':37., 'area':980.0}, #diam [m], area [m^2]
 	
-	'HARMONI_FPRS_diff_temp':20., # Tamb - 20 K for the FPRS
-	'HARMONI_cryo_temp':130., # K
+	'HARMONI_FPRS_temp': -15., # C
+	'HARMONI_cryo_temp': 130., # K
 	
 	'data_dir':"sim_data/",
 	

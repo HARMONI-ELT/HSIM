@@ -203,6 +203,10 @@ air_mass = None
 # user-defined PSF
 user_psf = None
 
+def set_jitter(_jitter):
+	global jitter
+	jitter = _jitter
+
 def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 	'''
 	Define parameters used for the PSF generation
@@ -273,17 +277,17 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 				elif AO_mode == "LTAO":
 					# jitter dependency on AO star mag and distance
 					jitter_matrix = {} # [Star H mag, distance (arcsec)] = jitter (mas)
-					jitter_matrix[15.0, 30] = 2.
-					jitter_matrix[15.0, 45] = 3.
-					jitter_matrix[15.0, 60] = 4.
+					jitter_matrix[15.0, 15] = 1.7
+					jitter_matrix[15.0, 30] = 2.0
+					jitter_matrix[15.0, 45] = 2.7
 
-					jitter_matrix[17.5, 30] = 3.
-					jitter_matrix[17.5, 45] = 4.
-					jitter_matrix[17.5, 60] = 6.
+					jitter_matrix[17.5, 15] = 2.5
+					jitter_matrix[17.5, 30] = 3.5
+					jitter_matrix[17.5, 45] = 3.7
 
-					jitter_matrix[19.0, 30] = 5.
-					jitter_matrix[19.0, 45] = 7.
-					jitter_matrix[19.0, 60] = 10.
+					jitter_matrix[19.0, 15] = 6.
+					jitter_matrix[19.0, 30] = 9.
+					jitter_matrix[19.0, 45] = 10.
 					
 					jitter_PSD = jitter_matrix[float(input_parameters["ao_star_hmag"]), int(input_parameters["ao_star_distance"])]
 					logging.info("Initial LTAO jitter = {:.2f} mas".format(jitter_PSD))

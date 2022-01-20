@@ -184,10 +184,12 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	# Instrument temperatures
 	TTel = input_parameters["telescope_temp"]
 	#TCool = TTel - config_data['HARMONI_FPRS_diff_temp']
-	TCool = 273.15 - 10
+	TCool = 273.15 + config_data['HARMONI_FPRS_temp'] # fixed FPRS temp
 	TCryo = config_data['HARMONI_cryo_temp']
-	TCryoMech = TCryo - 5.
+	TCryoMech = TCryo
 	TTrap = TCool
+	Touter_window = TTel - 0.2*(TTel - TCool)
+	Tinner_window = TCool + 0.2*(TTel - TCool)
 	AreaIns = (config_data['telescope']['diameter']*0.5)**2*np.pi	# Full 37m2 aperture, including central obstruction -- this what we see from a thermal point of view after cold stop
 	AreaTel = config_data['telescope']['area']			# 37m with 11m central obscuration -- this is what we see before the cold stop
 
@@ -200,7 +202,7 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	rwindow = 0.01	# 1% AR coating on each surface
 	# -------------------------
 	
-	logging.debug("HARMONI model. TCool = {:d} K TCryo = {:d} K TCryoMech = {:d} K TTrap  = {:d} K".format(*map(int, [TCool, TCryo, TCryoMech, TTrap])))
+	logging.debug("HARMONI model. TCool = {:d} K TCryo = {:d} K TCryoMech = {:d} K TTrap  = {:d} K Touter_window = {:d} K Tinner_window = {:d} K".format(*map(int, [TCool, TCryo, TCryoMech, TTrap, Touter_window, Tinner_window])))
 	logging.debug("AreaIns = {:6.1f} m2 AreaTel = {:6.1f} m2".format(AreaIns, AreaTel))
 	logging.debug("edust = {:6.3f} dustfrac = {:6.3f} mindustfrac = {:6.3f}".format(InstrumentPart.edust, dustfrac, InstrumentPart.mindustfrac))
 	logging.debug("ecoldtrap = {:6.3f} rwindow = {:6.3f}".format(ecoldtrap, rwindow))
@@ -211,21 +213,19 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	aoMode = input_parameters["ao_mode"]
 	if aoMode == "LTAO":
 		harmoni.addPart(InstrumentPart("LTAO dichroic", TTel, AreaIns, n_lenses=1, emis_lens="LTAO_0.6_dichroic.txt", dust_lens=2.*dustfrac))
-	elif aoMode in ["SCAO", "HCAO"]:
-		harmoni.addPart(InstrumentPart("SCAO dichroic", TTel, AreaIns, n_lenses=1, emis_lens="SCAO_0.8_dichroic.txt", dust_lens=2.*dustfrac))
-
-
-	if aoMode in ["LTAO", "SCAO", "HCAO"]:
 		harmoni.addPart(InstrumentPart("AO cold trap", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=0.03, emis_dust=ecoldtrap))
 	
-	harmoni.addPart(InstrumentPart("Outer window", TTel-6, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=dustfrac + InstrumentPart.mindustfrac))
-	harmoni.addPart(InstrumentPart("Inner window", TCool+6, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=2.*InstrumentPart.mindustfrac))
+	harmoni.addPart(InstrumentPart("Outer window", Touter_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=dustfrac + InstrumentPart.mindustfrac))
+	harmoni.addPart(InstrumentPart("Inner window", Tinner_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=2.*InstrumentPart.mindustfrac))
 
 	harmoni.addPart(InstrumentPart("Window cold trap", TCool, AreaTel, n_mirrors=4, global_scaling=2.*2.0*rwindow))
 	harmoni.addPart(InstrumentPart("Window reflected", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.*0.8*2.0*rwindow, emis_dust=ecoldtrap))
 
 	# FPRS
 	harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=4))
+	
+	if aoMode in ["SCAO", "HCAO"]:
+		harmoni.addPart(InstrumentPart("SCAO dichroic", TCool, AreaIns, n_lenses=1, emis_lens="SCAO_0.8_dichroic.txt", dust_lens=2.*dustfrac))
 
 	harmoni.addPart(InstrumentPart("Cryo window", TCool, AreaTel, n_lenses=1, emis_scaling=0.4, dust_lens=InstrumentPart.mindustfrac))
 	harmoni.addPart(InstrumentPart("Cryo window inner dust", TCryo+50., AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=InstrumentPart.mindustfrac))
