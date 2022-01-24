@@ -218,7 +218,6 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	harmoni.addPart(InstrumentPart("Outer window", Touter_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=dustfrac + InstrumentPart.mindustfrac))
 	harmoni.addPart(InstrumentPart("Inner window", Tinner_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=2.*InstrumentPart.mindustfrac))
 
-	harmoni.addPart(InstrumentPart("Window cold trap", TCool, AreaTel, n_mirrors=4, global_scaling=2.*2.0*rwindow))
 	harmoni.addPart(InstrumentPart("Window reflected", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.*0.8*2.0*rwindow, emis_dust=ecoldtrap))
 
 	# FPRS
