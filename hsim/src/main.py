@@ -84,7 +84,8 @@ def main(input_parameters):
 			Conf('Zenith seeing', 'HSM_SEEI', 'zenith_seeing'),
 			Conf('Air Mass', 'HSM_AIRM', 'air_mass'),
 			Conf('Extra jitter', 'HSM_JITT', 'extra_jitter'),
-			Conf('Telescope temperature', 'HSM_TEMP', 'telescope_temp'),
+			Conf('Telescope temperature [K]', 'HSM_TEMP', 'telescope_temp'),
+			Conf('FPRS temperature [C]', 'HSM_FPRS', 'fprs_temp'),
 			Conf('Moon', 'HSM_MOON', 'moon_illumination'),
 			Conf('ADR', 'HSM_ADR', 'adr'),
 			Conf('Detectors', 'HSM_DET', 'detector_systematics'),
@@ -165,6 +166,9 @@ def main(input_parameters):
 			logging.warning("The selected spectral oversampling (" + str(input_parameters["spectral_sampling"]) + ") is lower than the defaul value: " + str(config_data["spectral_sampling"]["internal"]))
 			
 		config_data["spectral_sampling"]["internal"] = input_parameters["spectral_sampling"]
+		
+	# Update FPRS temperature
+	config_data["HARMONI_FPRS_temp"] = input_parameters["fprs_temp"]
 
 	# spatial axes
 	spax_scale = config_data['spaxel_scale'][input_parameters["spaxel_scale"]]

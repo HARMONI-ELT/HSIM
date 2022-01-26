@@ -76,6 +76,7 @@ if __name__ == "__main__":
 				Parameter("detector_tmp_path", "Directory to save interim detector files", default="''"),
 				Parameter("adr", "Simulate atmospheric differential refraction", default="True", choices = ["True", "False"]),
 				Parameter("telescope_temp", "Telescope temperature [K]", type=float, default = 280),
+				Parameter("fprs_temp", "FPRS temperature [C]", type=float, default = -15),
 				Parameter("extra_jitter", "Additional telescope PSF blur [mas]", type=str, default = "0"),
 				Parameter("noise_seed", "Noise random number generator seed", type=int, default = 100),
 				Parameter("n_cpus", "Number of processors", type=int, default = get_cpu_count()),
@@ -328,6 +329,7 @@ if __name__ == "__main__":
 				# Misc frame
 				panel_misc = panel_gui(parent, "Miscellaneous", 3)
 				create_field("telescope_temp", panel_misc.add_field("Telescope temperature [K]", Entry))
+				create_field("fprs_temp", panel_misc.add_field("FPRS temperature [C]", Entry))
 				create_field("extra_jitter", panel_misc.add_field("Additional jitter [mas]", Entry))
 				create_field("adr", panel_misc.add_field("ADR on/off", Checkbutton, default=1, height=1000))
 				create_field("detector_systematics", panel_misc.add_field("Detector systematics", Checkbutton))
