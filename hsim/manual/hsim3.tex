@@ -328,6 +328,8 @@ These options are preceded by \texttt{--} when included in the command-line. Whe
 
 \item \texttt{telescope-temp}: Temperature of the site\slash telescope in K. This is used to calculate the telescope and part of the instrument background emission. The default value is \texttt{280}.
 
+\item \texttt{fprs-temp}: Temperature of the HARMONI Focal Plane Relay Subsystem (FPRS) in C degrees. This is used to calculate part of the instrument background emission. The default value is \texttt{-15}.
+
 \item \texttt{extra-jitter}: Additional telescope PSF blur in mas. The default is \texttt{0}. It is possible to define independent jitter values for the each axis (e.g., \texttt{2x4}).
 
 \item \texttt{noise-seed}: Random number generator seed using during the simulation. It only affects the observed outputs (see Section~\ref{s:output}).
