@@ -8,11 +8,21 @@ import argparse
 import configparser
 import multiprocessing as mp
 import collections
+import subprocess
 
 from src.config import config_data
 
 
 def get_version_number():
+	try:
+		result = subprocess.run(['git', 'describe'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		version = result.stdout.strip().decode("utf-8")
+		if version[0] == "v":
+			version = version[1:]
+		return version
+	except:
+		pass
+	
 	try:
 		dir_path = os.path.dirname(os.path.realpath(__file__))
 		with open(dir_path + '/PKG-INFO') as f:

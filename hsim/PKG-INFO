@@ -1,6 +1,6 @@
 Metadata-Version: 3.0
 Name: hsim
-Version: 310
+Version: 311
 Summary: HARMONI Simulation Pipeline
 Authors: Miguel Pereira, Laurence Routledge, Simon Zieleniewski, Sarah Kendrew (ADR), Thierry Fusco (PSD to PSF)
 Author-email: miguel.pereira@physics.ox.ac.uk; laurence.routledge@physics.ox.ac.uk
