@@ -143,12 +143,19 @@ def main(input_parameters):
 	
 	# Check HCAO configuration
 	if input_parameters["ao_mode"] == "HCAO":
+		
+		logging.warning("HCAO mode is experimental. Please use with caution the results.")
+		
 		if input_parameters["spaxel_scale"] !=  "4x4":
 			logging.error("4x4 spaxel scale must be used for the HCAO mode.")
 			return
 		if input_parameters["grating"] in ["V+R", "Iz", "z-high"]:
 			logging.error("V+R, Iz, and z-high gratings are not compatible with the HCAO mode.")
 			return
+		
+		if input_parameters["exposure_time"]*input_parameters["n_exposures"] > 10.:
+			logging.warning("The total exposure time (DIT*NDIT) should be < 10s since field rotation is not simulated by HSIM")
+		
 		
 		if input_parameters["adr"]:
 			logging.warning("Disabling standard ADR simulation for HCAO")

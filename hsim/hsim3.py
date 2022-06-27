@@ -86,7 +86,7 @@ if __name__ == "__main__":
 				Parameter("detector_tmp_path", "Directory to save interim detector files", default="''"),
 				Parameter("adr", "Simulate atmospheric differential refraction", default="True", choices = ["True", "False"]),
 				Parameter("telescope_temp", "Telescope temperature [K]", type=float, default = 280),
-				Parameter("fprs_temp", "FPRS temperature [C]", type=float, default = -15),
+				Parameter("fprs_temp", "FPRS temperature [C]", type=float, default = +2),
 				Parameter("extra_jitter", "Additional telescope PSF blur [mas]", type=str, default = "0"),
 				Parameter("noise_seed", "Noise random number generator seed", type=int, default = 100),
 				Parameter("n_cpus", "Number of processors", type=int, default = get_cpu_count()),

@@ -140,12 +140,9 @@ class Instrument:
 			throughput *= part_t
 			emission *= part_t
 			emission = emission + part_emi
-			
-	
+				
+		logging.info("Total HARMONI backround: lambda = {:7.4f} throughput = {:6.3f} emission = {:.2e} ph/um/m2/arcsec2/s".format(np.median(lamb), np.median(throughput), np.median(emission)/DIT))
 		return throughput, emission
-
-
-
 
 
 
@@ -220,13 +217,22 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 
 	harmoni.addPart(InstrumentPart("Window reflected", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.*0.8*2.0*rwindow, emis_dust=ecoldtrap))
 
+	low_dust_iso6 = 1
 	# FPRS
-	harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=4))
+	if low_dust_iso6:
+		harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=4))
+	else:
+		harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=3, dust_mirror=0.032))
+		harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=1, dust_mirror=0.008))
 	
 	if aoMode in ["SCAO", "HCAO"]:
 		harmoni.addPart(InstrumentPart("SCAO dichroic", TCool, AreaIns, n_lenses=1, emis_lens="SCAO_0.8_dichroic.txt", dust_lens=2.*dustfrac))
-
-	harmoni.addPart(InstrumentPart("Cryo window", TCool, AreaTel, n_lenses=1, emis_scaling=0.4, dust_lens=InstrumentPart.mindustfrac))
+	
+	if low_dust_iso6:
+		harmoni.addPart(InstrumentPart("Cryo window", TCool, AreaTel, n_lenses=1, emis_scaling=0.4, dust_lens=InstrumentPart.mindustfrac))
+	else:
+		harmoni.addPart(InstrumentPart("Cryo window", TCool, AreaTel, n_lenses=1, emis_scaling=0.4, dust_lens=0.125))
+		
 	harmoni.addPart(InstrumentPart("Cryo window inner dust", TCryo+50., AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=InstrumentPart.mindustfrac))
 	harmoni.addPart(InstrumentPart("Cryo window cold trap", TCryo+50., AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.0*rwindow, emis_dust=ecoldtrap))
 
