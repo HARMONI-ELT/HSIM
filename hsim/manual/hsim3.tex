@@ -48,7 +48,7 @@
 \textbf{
 HSIM Manual\\[0.5ex]
 \Large
-v310}
+v311}
 \vspace{2cm}
 
 \large
@@ -80,6 +80,7 @@ Version & Date & Comments \\
 1.4 & 2019-12-16 & HSIM v302 release \\
 1.5 & 2020-04-21 & HSIM v303 release \\
 1.6 & 2021-06-01 & HSIM v310 release \\
+1.7 & & HSIM v311 release \\
 \hline
 \end{tabular}
 \end{table*}
@@ -306,13 +307,17 @@ These options are preceded by \texttt{--} when included in the command-line. Whe
 
 \item \texttt{n-exposures}: Number of exposures (e.g., \texttt{3}).
 
-\item \texttt{ao-mode}: Adaptive optics mode of the observations. Available values are: \texttt{LTAO, SCAO, noAO, Airy, User}. \texttt{LTAO} corresponds to the Laser Tomography Adaptive Optics mode,  \texttt{SCAO} to the Single Conjugate Adaptive Optics mode, \texttt{noAO} indicates that no adaptive optics corrections are applied, \texttt{Airy} uses the diffraction limit of the ELT, and \texttt{User} uses the 2D user-defined PSF indicated by the parameter \texttt{user-defined-psf}.
+\item \texttt{ao-mode}: Adaptive optics mode of the observations. Available values are: \texttt{LTAO, SCAO, HCAO, noAO, Airy, User}. \texttt{LTAO} corresponds to the Laser Tomography Adaptive Optics mode, \texttt{SCAO} to the Single Conjugate Adaptive Optics mode, \texttt{HCAO} to the High Contrast Adaptive Optics mode, \texttt{noAO} indicates that no adaptive optics corrections are applied, \texttt{Airy} uses the diffraction limit of the ELT, and \texttt{User} uses the 2D user-defined PSF indicated by the parameter \texttt{user-defined-psf}.
 
 \item \texttt{user-defined-psf}: \textsc{fits} file containing a 2D user-defined PSF.
 
 \item \texttt{ao-star-hmag}: H magnitude of the LTAO AO star. Available values are: \texttt{15.0, 17.5, 19.0}. The default is \texttt{17.5}.
 
 \item \texttt{ao-star-distance}: Distance from the HARMONI FoV center to the LTAO AO star in arcsec. Available values are: \texttt{15, 30, 45}. The default is \texttt{30}.
+
+\item \texttt{hc-apodizer}: High-contrast apodizer used for the HCAO mode. Available values are: \texttt{HSP1, HSP2}. The default is \texttt{HSP1}.
+
+\item \texttt{hc-fp-mask}: High-contrast mask used for the HCAO mode. Available values are: \texttt{FPM1}. The default is \texttt{FPM1}.
 
 \item \texttt{zenith-seeing}: Optical (500\,nm) zenith atmospheric seeing FWHM in arcsec. Available values are: \texttt{0.43, 0.57, 0.64, 0.72, 1.04}.
 
