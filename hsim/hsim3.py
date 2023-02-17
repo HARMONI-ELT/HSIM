@@ -85,6 +85,7 @@ if __name__ == "__main__":
 				Parameter("detector_systematics", "FITS input cube", default="False", choices = ["True", "False"]),
 				Parameter("detector_tmp_path", "Directory to save interim detector files", default="''"),
 				Parameter("adr", "Simulate atmospheric differential refraction", default="True", choices = ["True", "False"]),
+				Parameter("mcp", "Use minimum compliant instrument parameters", default="False", choices = ["True", "False"]),
 				Parameter("telescope_temp", "Telescope temperature [K]", type=float, default = 280),
 				Parameter("fprs_temp", "FPRS temperature [C]", type=float, default = +2),
 				Parameter("extra_jitter", "Additional telescope PSF blur [mas]", type=str, default = "0"),
@@ -349,6 +350,7 @@ if __name__ == "__main__":
 				panel_misc.add_field("Internal oversampling:", None)
 				create_field("spectral_sampling", panel_misc.add_field("   Spectral (default = -1)", Entry))
 				create_field("spatial_sampling", panel_misc.add_field("   Spatial (default = -1)", Entry))
+				create_field("mcp", panel_misc.add_field("Minimum compliant instrument", Checkbutton, default=1, height=1000))
 
 
 				def OnClick():

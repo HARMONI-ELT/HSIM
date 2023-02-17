@@ -237,7 +237,7 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	harmoni.addPart(InstrumentPart("Cryo window cold trap", TCryo+50., AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.0*rwindow, emis_dust=ecoldtrap))
 
 	# Cryostat
-	harmoni.addPart(InstrumentPart("Pre-optics+IFU+Spectrograph", TCryoMech, AreaIns, n_lenses=8, n_mirrors=19))
+	harmoni.addPart(InstrumentPart("Pre-optics+IFU+Spectrograph", TCryoMech, AreaIns, n_lenses=11, n_mirrors=23))
 
 	# Grating
 	grating = input_parameters["grating"]
@@ -245,6 +245,11 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	
 	lamb_grid = np.linspace(2, 2.5, 50)
 	HARMONI_transmission, HARMONI_background = harmoni.calcThroughputAndEmission(ext_lambs, input_parameters["exposure_time"], output_file=output_file)
+	
+	if input_parameters["mcp"]:
+		logging.info("Using minimum compliant instrument background and throughput")
+		HARMONI_transmission = np.zeros_like(lamb) + 0.26
+		HARMONI_background = HARMONI_background/3.860e-5*2.7e-5 # scaled background to match specifictaion at 2.2um at 9C
 
 
 	back_emission = back_emission*HARMONI_transmission

@@ -17,7 +17,6 @@ from scipy.interpolate import interp1d
 from scipy.signal import convolve2d
 from astropy.io import fits
 import astropy.constants as const
-from photutils import aperture_photometry, CircularAperture
 
 from src.config import *
 from src.init_cube import init_cube
@@ -55,9 +54,10 @@ def main(input_parameters):
 		
 		'extra_jitter': Residual telescope jitter. 1 or 2 x separated numbers [mas]
 		'detector_systematics': Boolean - use detector systematics
-		'detector_tmp_path':  Directory to save interim detector files		
+		'detector_tmp_path':  Directory to save interim detector files
 		'telescope_temp': Telescope temperature [K]
 		'adr': Boolean - turn ADR on or off
+		'mcp': Boolean - Use minimum compliant instrument
 		
 		'noise_seed': 100,
 		'config_file': configuration file
@@ -88,6 +88,7 @@ def main(input_parameters):
 			Conf('FPRS temperature [C]', 'HSM_FPRS', 'fprs_temp'),
 			Conf('Moon', 'HSM_MOON', 'moon_illumination'),
 			Conf('ADR', 'HSM_ADR', 'adr'),
+			Conf('MCP', 'HSM_MCP', 'mcp'),
 			Conf('Detectors', 'HSM_DET', 'detector_systematics'),
 			Conf('Seed', 'HSM_SEED', 'noise_seed'),
 			Conf('AO', 'HSM_AO', 'ao_mode'),
@@ -103,6 +104,7 @@ def main(input_parameters):
 	# change type to bool
 	str2bool("debug")
 	str2bool("adr")
+	str2bool("mcp")
 	str2bool("detector_systematics")
 	
 	if input_parameters["detector_systematics"] == True:
@@ -249,7 +251,7 @@ def main(input_parameters):
 	#	- Sky emission (lines + continuum)
 	#	- Sky transmission
 	#	- Moon
-	#	- Atmospheric differential refration
+	#	- Atmospheric differential refraction
 	simulated_data = sim_sky(input_parameters, *simulated_data, head, *lambda_data, input_spec_res, debug_plots=debug_plots, output_file=base_filename)
 	
 	# 2 - Telescope:
@@ -335,7 +337,7 @@ def main(input_parameters):
 		logging.info("Trimming datacubes to correct size")
 		output_cube_spec = trim_cube(output_cube_spec, verbose=True)
 	elif det_switch == True and grating == "V+R":
-		logging.warning("IR detector systematics selected for visibile grating. Ignoring detector systematics.")
+		logging.warning("IR detector systematics selected for visible grating. Ignoring detector systematics.")
 		det_switch = False
 	
 	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current, thermal_background = \
@@ -504,33 +506,41 @@ def main(input_parameters):
 		
 		total_telescope_sky_em = np.zeros_like(lambs_extended)
 		
+		# photon/m2/um/arcsec2 -> W/m2/um/sr
+		ph2en_conv_fac = 1./DIT*2.99792458e8/(lambs_extended*1.e-6)*6.62607015e-34*4.25451702962e10
+		
+		# a. Sky contribution to the background
+		_, tel_tr = np.loadtxt(base_filename + "_tel_tr.txt", unpack=True)
+		
 		w, e = np.loadtxt(base_filename + "_sky_em.txt", unpack=True)
-		plt.plot(w, e, label="sky", color=colors[-1])
-		total_telescope_sky_em += e
-		w, e = np.loadtxt(base_filename + "_tel_em.txt", unpack=True)
-		plt.plot(w, e, label="telescope", color=colors[-2])
-		total_telescope_sky_em += e
+		plt.plot(w, tel_tr*e*ph2en_conv_fac, label="sky", color=colors[-1])
 
 		if input_parameters["moon_illumination"] > 0.:
 			w, e = np.loadtxt(base_filename + "_moon_em.txt", unpack=True)
-			plt.plot(w, e, label="Moon", color=colors[6])
-			total_telescope_sky_em += e
+			plt.plot(w, tel_tr*e*ph2en_conv_fac, label="Moon", color=colors[6])
 		
+		# b. Telescope background emission
+		w, e = np.loadtxt(base_filename + "_tel_em.txt", unpack=True)
+		plt.plot(w, e*ph2en_conv_fac, label="telescope", color=colors[-2])
 		
 		# HARMONI parts
 		total_instrument_em = np.zeros_like(lambs_extended)
+		total_instrument_tr = np.ones_like(lambs_extended)
 		harmoni_files_em = sorted(glob.glob(base_filename + "_HARMONI_*_em.txt"))
+		
 		for harmoni_file, color in zip(harmoni_files_em, colors):
 			# Read part emission
 			w, e = np.loadtxt(harmoni_file, unpack=True)
 			m = re.search('.+HARMONI_(.+)_em.txt', harmoni_file)
-			plt.plot(w, e, label=m.group(1), color=color, ls="--", lw=1.2)
-			# and throuhgput
+			# and throughput
 			w, t = np.loadtxt(base_filename + "_HARMONI_" + m.group(1) + "_tr.txt", unpack=True)
-			# Compute the total contribution
+			plt.plot(w, e/total_instrument_tr*ph2en_conv_fac, label=m.group(1), color=color, ls="--", lw=1.2)
 			total_instrument_em = total_instrument_em*t + e
+			total_instrument_tr = total_instrument_tr*t
 		
-		plt.plot(w, total_instrument_em, label="HARMONI total", color="red")
+		plt.plot(w, total_instrument_em/total_instrument_tr*ph2en_conv_fac, label="HARMONI total", color="red")
+		
+		logging.info("HARMONI emission at input focal plane at {:.4f} um = {:.4e} W/m2/um/sr".format(np.median(w), np.median(total_instrument_em/total_instrument_tr*ph2en_conv_fac)))
 		
 		np.savetxt(base_filename + "_total_HARMONI_em.txt", np.c_[w, total_instrument_em], comments="#", header="\n".join([
 			'TYPE: Total emission.',
@@ -538,9 +548,8 @@ def main(input_parameters):
 
 		plt.legend(prop={'size': 6})
 		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel(r"back emission [photon/m$^2$/$\mu$m/arcsec$^2$]")
+		plt.ylabel(r"back at HRM input [W/m$^2$/$\mu$m/sr]")
 		plt.yscale("log")
-		#plt.text(0.1, 0.2, "HARMONI/(Telescope+Sky) = {:.2f}".format(np.nanmedian(total_instrument_em/total_telescope_sky_em)), transform=ax.transAxes)
 		plt.savefig(base_filename + "_total_em.pdf")
 
 		plt.clf()
@@ -661,16 +670,22 @@ def main(input_parameters):
 	peak_psf = np.max(psf_internal)
 	flux_fraction_psf_core = np.sum(psf_internal[psf_internal > 0.5*peak_psf])
 
-	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*np.median(output_transmission)*flux_fraction_psf_core # electron/s 
-	factor_calibration = flux_cal_star/np.median(flux_cal_star_electrons) # erg/s/cm2/um / (electron/s)
+	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*output_transmission*flux_fraction_psf_core # electron/s 
+	factor_calibration = flux_cal_star/flux_cal_star_electrons # erg/s/cm2/um / (electron/s)
+	
+	# Reshape factor to match output cube shape
+	output_shape = output_cube_spec_wo_back.shape
+	factor_calibration = np.repeat(factor_calibration, output_shape[1], axis=0).reshape(output_shape[0], output_shape[1]) 
+	factor_calibration = np.repeat(factor_calibration, output_shape[2], axis=0).reshape(output_shape[0], output_shape[1], output_shape[2]) 
+	
 	
 	outFile_flux_cal_noiseless = base_filename + "_noiseless_obj_flux_cal.fits"
 	outFile_flux_cal_reduced = base_filename + "_reduced_flux_cal.fits"
 	
 	
 	head['BUNIT'] = "erg/s/cm2/um/arcsec2"
-	save_fits_cube(outFile_flux_cal_noiseless, output_cube_spec_wo_back/DIT*factor_calibration/spaxel_area, "Flux cal Noiseless O", head)
-	save_fits_cube(outFile_flux_cal_reduced, sim_reduced/(NDIT*DIT)*factor_calibration/spaxel_area, "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
+	save_fits_cube(outFile_flux_cal_noiseless, output_cube_spec_wo_back*factor_calibration/(DIT*spaxel_area), "Flux cal Noiseless O", head)
+	save_fits_cube(outFile_flux_cal_reduced, sim_reduced*factor_calibration/(NDIT*DIT*spaxel_area), "Flux cal Reduced (O+B1+Noise1) - (B2+Noise2)", head)
 	
 	if det_switch == True:
 		save_fits_cube(outFile_alldets, sim_det_systematics1, "All simulated detectors", head)
@@ -684,7 +699,7 @@ def main(input_parameters):
 		save_fits_cube(outFile_ddetector_thermal, noise_cube_thermal, "detector thermal noise variance", head)
 	
 	# Calculate 5-sigma sensitivity
-	sens_5sigma = 5.*np.median(noise_cube_total)/DIT*factor_calibration # erg/s/cm2/um
+	sens_5sigma = 5.*np.median(noise_cube_total)/DIT*np.median(factor_calibration) # erg/s/cm2/um
 	lcentral = np.median(output_lambs) # micron
 	fnu = sens_5sigma*lcentral**2/(const.c.value*1e6) # erg/s/cm2/Hz
 	sens_ABmag = -2.5*np.log10(fnu/3631./1e-23) # AB mag
@@ -733,7 +748,7 @@ def main(input_parameters):
 		return arr.reshape(shape).sum(-1).sum(1)
 	psf_info = config_data["spaxel_scale"][input_parameters["spaxel_scale"]]
 	
-	# Calcualte the offset needed to keep the PSF center
+	# Calculate the offset needed to keep the PSF center
 	# at the output image center after rebining
 	psf_oversampling = int(round(min([psf_info.xscale, psf_info.yscale])/psf_info.psfscale))
 	psf_spaxel_shape = psf_info.psfsize//psf_oversampling + 1
