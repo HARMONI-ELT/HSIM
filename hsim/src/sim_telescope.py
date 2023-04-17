@@ -46,7 +46,7 @@ def save_result(results):
 	result_cube[i, :, :] = conv_image[y0:y1, x0:x1]
 
 
-def sim_telescope(input_parameteres, cube, back_emission, transmission, ext_lambs, cube_lamb_mask, debug_plots=False, output_file=""):
+def sim_telescope(input_parameters, cube, back_emission, transmission, ext_lambs, cube_lamb_mask, debug_plots=False, output_file=""):
 	''' Simulates telescope effects
 	Inputs:
 		input_parameters: input dictionary
@@ -80,14 +80,20 @@ def sim_telescope(input_parameteres, cube, back_emission, transmission, ext_lamb
 	
 	# Get telescope reflectivity
 	logging.info("Calculating telescope reflectivity")
-	telescope_reflectivity = load_transmission_curve(ext_lambs, "ELT_mirror_reflectivity.txt", debug_plots, [output_file, "tel"], "telescope transmission")
-	#telescope_reflectivity = load_transmission_curve(ext_lambs, "ELT_mirror_reflectivity_age0.txt", debug_plots, [output_file, "tel"], "telescope transmission")
+	if input_parameters["mci"]:
+		logging.info("Using ELT reflectivity ESO-253082_4")
+		telescope_reflectivity = load_transmission_curve(ext_lambs, "ELT_mirror_reflectivity_mci.txt", debug_plots, [output_file, "tel"], "telescope transmission")
+	else:
+		telescope_reflectivity = load_transmission_curve(ext_lambs, "ELT_mirror_reflectivity.txt", debug_plots, [output_file, "tel"], "telescope transmission")
+		#telescope_reflectivity = load_transmission_curve(ext_lambs, "ELT_mirror_reflectivity_age0.txt", debug_plots, [output_file, "tel"], "telescope transmission")
+		
+		
 	back_emission *= telescope_reflectivity
 	transmission *= telescope_reflectivity
 	
 	# Get telescope background
 	logging.info("Calculating telescope background")
-	telescope_background = get_background_emission(ext_lambs, input_parameteres["telescope_temp"], 1. - telescope_reflectivity, input_parameteres["exposure_time"], debug_plots, [output_file, "tel"], "telescope emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
+	telescope_background = get_background_emission(ext_lambs, input_parameters["telescope_temp"], 1. - telescope_reflectivity, input_parameters["exposure_time"], debug_plots, [output_file, "tel"], "telescope emission [photons/m$^2$/$\mu$m/arcsec$^2$]")
 	back_emission += telescope_background
 	
 	# Add telescope emission/transmission to the input cube
@@ -102,8 +108,8 @@ def sim_telescope(input_parameteres, cube, back_emission, transmission, ext_lamb
 	
 	# PSF + Jitter + Instrument PSF
 	logging.info("Define PSF")
-	jitter = input_parameteres["jitter"]
-	spax = input_parameteres["spaxel_scale"]
+	jitter = input_parameters["jitter"]
+	spax = input_parameters["spaxel_scale"]
 	
 	FWHM_instrument = (config_data["dynamic_instrument_psf"]**2 + config_data["static_instrument_psf"][spax]**2)**0.5
 	sigma_instrument = FWHM_instrument/2.35482
@@ -115,7 +121,7 @@ def sim_telescope(input_parameteres, cube, back_emission, transmission, ext_lamb
 	
 	psf_size = config_data["spaxel_scale"][spax].psfsize
 	
-	define_psf(input_parameteres, sigma_combined, psf_size, config_data["spaxel_scale"][spax].psfscale)
+	define_psf(input_parameters, sigma_combined, psf_size, config_data["spaxel_scale"][spax].psfscale)
 	lambs = ext_lambs[cube_lamb_mask]
 	
 	# padding with back_emission
@@ -140,7 +146,7 @@ def sim_telescope(input_parameteres, cube, back_emission, transmission, ext_lamb
 	
 	bar_str = "[ {:2d}% {:" + str(len(str(len(lambs)))) + "d}/{:" + str(len(str(len(lambs)))) + "d} ]"
 	
-	ncpus = input_parameteres["n_cpus"]
+	ncpus = input_parameters["n_cpus"]
 	
 	logging.info(("Using {:d} CPU" + ("s" if ncpus > 1 else "")).format(ncpus))
 	if ncpus > 1:

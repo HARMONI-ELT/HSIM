@@ -97,26 +97,27 @@ class InstrumentPart:
 			logging.debug("emis_lens = {} dust_lens = {:5.3f}".format(self.emis_lens, self.dust_lens))
 			
 		logging.debug("lambda = {:7.4f} emissivity = {:6.3f} throughput = {:6.3f} emission_ph = {:.2e}".format(np.median(lamb), np.median(emissivity), np.median(throughput), np.median(emission_ph)))
-
-		plot_file = output_file + "_HARMONI_" + "{:02d}".format(self.number) + "_" + self.name.replace(" ", "_").lower()
-			
-		plt.clf()
-		plt.plot(lamb, throughput)
-		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel("Throughput " + self.name)
-		plt.savefig(plot_file + "_tr.pdf")
-		np.savetxt(plot_file + "_tr.txt", np.c_[lamb, throughput])
-				
-				
-		plt.clf()
-		plt.plot(lamb, emission_ph, label="Blackbody T = {:.1f} K".format(self.temp))
-		plt.legend()
-		plt.xlabel(r"wavelength [$\mu$m]")
-		plt.ylabel("Emissivity " + self.name)
-		plt.savefig(plot_file + "_em.pdf")
-		np.savetxt(plot_file + "_em.txt", np.c_[lamb, emission_ph])
 		logging.debug("-------")
+		
+		if output_file is not None:
+			plot_file = output_file + "_HARMONI_" + "{:02d}".format(self.number) + "_" + self.name.replace(" ", "_").lower()
+				
+			plt.clf()
+			plt.plot(lamb, throughput)
+			plt.xlabel(r"wavelength [$\mu$m]")
+			plt.ylabel("Throughput " + self.name)
+			plt.savefig(plot_file + "_tr.pdf")
+			np.savetxt(plot_file + "_tr.txt", np.c_[lamb, throughput])
 
+			plt.clf()
+			plt.plot(lamb, emission_ph, label="Blackbody T = {:.1f} K".format(self.temp))
+			plt.legend()
+			plt.xlabel(r"wavelength [$\mu$m]")
+			plt.ylabel("Emissivity " + self.name)
+			plt.savefig(plot_file + "_em.pdf")
+			np.savetxt(plot_file + "_em.txt", np.c_[lamb, emission_ph])
+			
+		
 		return throughput, emission_ph
 		
 	
@@ -140,8 +141,11 @@ class Instrument:
 			throughput *= part_t
 			emission *= part_t
 			emission = emission + part_emi
-				
-		logging.info("Total HARMONI backround: lambda = {:7.4f} throughput = {:6.3f} emission = {:.2e} ph/um/m2/arcsec2/s".format(np.median(lamb), np.median(throughput), np.median(emission)/DIT))
+		
+		if output_file is not None:
+			logging.info("Total HARMONI backround: lambda = {:7.4f} throughput = {:6.3f} emission = {:.2e} ph/um/m2/arcsec2/s".format(np.median(lamb), np.median(throughput), np.median(emission)/DIT))
+			
+		
 		return throughput, emission
 
 
@@ -246,11 +250,41 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	lamb_grid = np.linspace(2, 2.5, 50)
 	HARMONI_transmission, HARMONI_background = harmoni.calcThroughputAndEmission(ext_lambs, input_parameters["exposure_time"], output_file=output_file)
 	
-	if input_parameters["mcp"]:
+	if input_parameters["mci"]:
 		logging.info("Using minimum compliant instrument background and throughput")
-		HARMONI_transmission = np.zeros_like(lamb) + 0.26
-		HARMONI_background = HARMONI_background/3.860e-5*2.7e-5 # scaled background to match specifictaion at 2.2um at 9C
+		
+		bandws = config_data['gratings'][grating]
+		mci_lamb = np.arange(bandws.lmin, bandws.lmax, (bandws.lmax+bandws.lmin)*0.5/bandws.R)
+		mci_HARMONI_transmission, _ = harmoni.calcThroughputAndEmission(mci_lamb, input_parameters["exposure_time"], output_file=None)
+		
+		scaling_transmission = 1./np.mean(mci_HARMONI_transmission)*0.26
+		
+		scaling_bkg_K = 1.824
+		HARMONI_background = HARMONI_background/3.860e-5*2.7e-5*scaling_bkg_K # scaled background to match specifictaion at 2.2um at 9C
+		
+		HARMONI_transmission = np.interp(ext_lambs, mci_lamb, mci_HARMONI_transmission*scaling_transmission)
 
+		plot_file = output_file + "_HARMONI_mci"
+		
+		plt.clf()
+		plt.plot(ext_lambs, HARMONI_transmission)
+		plt.xlabel(r"wavelength [$\mu$m]")
+		plt.ylabel("Throughput mci")
+		plt.savefig(plot_file + "_tr.pdf")
+		np.savetxt(plot_file + "_tr.txt", np.c_[ext_lambs, HARMONI_transmission])
+
+		plt.clf()
+		plt.plot(ext_lambs, HARMONI_background, label="HARMONI mci")
+		plt.legend()
+		plt.xlabel(r"wavelength [$\mu$m]")
+		plt.ylabel("Emissivity mci")
+		plt.savefig(plot_file + "_em.pdf")
+		np.savetxt(plot_file + "_em.txt", np.c_[ext_lambs, HARMONI_background])
+		
+		
+		
+		
+		
 
 	back_emission = back_emission*HARMONI_transmission
 	transmission = transmission*HARMONI_transmission
@@ -270,7 +304,11 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	# - LSF
 	logging.info("Convolve with LSF")
 	# Assume Gaussian LSF
-	bandws = config_data['gratings'][grating]
+	if input_parameters["mci"]:
+		bandws = config_data['gratings_nominal'][grating]
+	else:
+		bandws = config_data['gratings'][grating]
+		
 	new_res = (bandws.lmin + bandws.lmax)/(2.*bandws.R) # micron
 	pix_size = (ext_lambs[1] - ext_lambs[0])
 	if new_res > input_spec_res:

@@ -48,7 +48,7 @@ def convolve_1d_spectrum(input_lambda, input_flux, output_spec_res):
 		return input_flux
 	
 	
-def sky_background(lambs, air_mass, dit, input_spec_res, debug_plots, output_file):
+def sky_background(input_parameters, lambs, air_mass, dit, input_spec_res, debug_plots, output_file):
 	'''Function that generates a sky background curve combining
 	sky continuum, sky thermal emission and sky emission lines.
 	
@@ -77,9 +77,21 @@ def sky_background(lambs, air_mass, dit, input_spec_res, debug_plots, output_fil
 	sky_em_lambda = sky_em_all_X[:, 0]
 	sky_em_flux = sky_em_all_X[:, data_index]
 	
+	# estimate scattered background
+	bandws = config_data['gratings'][input_parameters["grating"]]
+	mask_range_scatter = (sky_em_lambda > bandws.lmin)*(sky_em_lambda < bandws.lmax)
+	mean_sky = np.median(sky_em_flux[mask_range_scatter])
+	if input_parameters["mci"]:
+		scattered_sky = mean_sky*0.2
+	else:
+		scattered_sky = mean_sky*input_parameters["scattered_sky"]/100.
+	
+	logging.info("Extra scatter sky = " + str(scattered_sky) + " photons/m2/um/arcsec2")
+	
+
 	mask_range_output = (sky_em_lambda > lambs[0]*0.99)*(sky_em_lambda < lambs[-1]*1.01)
 	sky_em_lambda = sky_em_lambda[mask_range_output]
-	sky_em_flux = sky_em_flux[mask_range_output]
+	sky_em_flux = sky_em_flux[mask_range_output] + scattered_sky
 	
 	# Match input cube spectral resolution
 	sky_em_flux = convolve_1d_spectrum(sky_em_lambda, sky_em_flux, input_spec_res)
@@ -252,7 +264,7 @@ def sim_sky(input_parameters, cube, back_emission, transmission, header, ext_lam
 	
 	# Get sky emission (lines + continuum)
 	logging.info("Calculating sky emission")
-	sky_emission = sky_background(ext_lambs, air_mass, exposure_time, input_spec_res, debug_plots, output_file)
+	sky_emission = sky_background(input_parameters, ext_lambs, air_mass, exposure_time, input_spec_res, debug_plots, output_file)
 	
 	# Get moon emission
 	logging.info("Calculating Moon emission")

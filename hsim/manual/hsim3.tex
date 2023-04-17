@@ -80,7 +80,7 @@ Version & Date & Comments \\
 1.4 & 2019-12-16 & HSIM v302 release \\
 1.5 & 2020-04-21 & HSIM v303 release \\
 1.6 & 2021-06-01 & HSIM v310 release \\
-1.7 & & HSIM v311 release \\
+1.7 & 2023-04-17 & HSIM v311 release \\
 \hline
 \end{tabular}
 \end{table*}
@@ -330,9 +330,13 @@ These options are preceded by \texttt{--} when included in the command-line. Whe
 
 \item \texttt{adr}: When this option is set, the atmospheric differential refraction is first simulated and then corrected in the output cubes in a way similar to what is expected from the pipieline. If it is set to \texttt{False}, the atmospheric differential refraction and its correction are not simulated. Available values are \texttt{True, False}. The default is \texttt{True}.
 
+\item \texttt{mci}: Set all simulation parameters to match the minimum compliant instrument. Available values are \texttt{True, False}. The default is \texttt{False}.
+
 \item \texttt{telescope-temp}: Temperature of the site\slash telescope in K. This is used to calculate the telescope and part of the instrument background emission. The default value is \texttt{280}.
 
 \item \texttt{fprs-temp}: Temperature of the HARMONI Focal Plane Relay Subsystem (FPRS) in C degrees. This is used to calculate part of the instrument background emission. The default value is \texttt{-15}.
+
+\item \texttt{scattered-sky}: Fraction of the total sky emission that is scattered as an additional flat continuum background in \%. The default is \texttt{20}.
 
 \item \texttt{extra-jitter}: Additional telescope PSF blur in mas. The default is \texttt{0}. It is possible to define independent jitter values for the each axis (e.g., \texttt{2x4}).
 

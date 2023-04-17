@@ -57,7 +57,7 @@ def main(input_parameters):
 		'detector_tmp_path':  Directory to save interim detector files
 		'telescope_temp': Telescope temperature [K]
 		'adr': Boolean - turn ADR on or off
-		'mcp': Boolean - Use minimum compliant instrument
+		'mci': Boolean - Use minimum compliant instrument
 		
 		'noise_seed': 100,
 		'config_file': configuration file
@@ -86,9 +86,10 @@ def main(input_parameters):
 			Conf('Extra jitter', 'HSM_JITT', 'extra_jitter'),
 			Conf('Telescope temperature [K]', 'HSM_TEMP', 'telescope_temp'),
 			Conf('FPRS temperature [C]', 'HSM_FPRS', 'fprs_temp'),
+			Conf('Scattered background [%]', 'HSM_SCSK', 'scattered_sky'),
 			Conf('Moon', 'HSM_MOON', 'moon_illumination'),
 			Conf('ADR', 'HSM_ADR', 'adr'),
-			Conf('MCP', 'HSM_MCP', 'mcp'),
+			Conf('MCI', 'HSM_MCI', 'mci'),
 			Conf('Detectors', 'HSM_DET', 'detector_systematics'),
 			Conf('Seed', 'HSM_SEED', 'noise_seed'),
 			Conf('AO', 'HSM_AO', 'ao_mode'),
@@ -104,7 +105,7 @@ def main(input_parameters):
 	# change type to bool
 	str2bool("debug")
 	str2bool("adr")
-	str2bool("mcp")
+	str2bool("mci")
 	str2bool("detector_systematics")
 	
 	if input_parameters["detector_systematics"] == True:
@@ -143,6 +144,10 @@ def main(input_parameters):
 		logging.error(input_parameters["spaxel_scale"] + ' is only available for the V+R grating. ')
 		return
 	
+	if input_parameters["mci"]:
+		logging.info("mci: forcing air mass = 1.3 = 40deg")
+		input_parameters["air_mass"] = 1.3
+	
 	# Check HCAO configuration
 	if input_parameters["ao_mode"] == "HCAO":
 		
@@ -157,7 +162,6 @@ def main(input_parameters):
 		
 		if input_parameters["exposure_time"]*input_parameters["n_exposures"] > 10.:
 			logging.warning("The total exposure time (DIT*NDIT) should be < 10s since field rotation is not simulated by HSIM")
-		
 		
 		if input_parameters["adr"]:
 			logging.warning("Disabling standard ADR simulation for HCAO")
@@ -523,23 +527,28 @@ def main(input_parameters):
 		w, e = np.loadtxt(base_filename + "_tel_em.txt", unpack=True)
 		plt.plot(w, e*ph2en_conv_fac, label="telescope", color=colors[-2])
 		
-		# HARMONI parts
-		total_instrument_em = np.zeros_like(lambs_extended)
-		total_instrument_tr = np.ones_like(lambs_extended)
-		harmoni_files_em = sorted(glob.glob(base_filename + "_HARMONI_*_em.txt"))
-		
-		for harmoni_file, color in zip(harmoni_files_em, colors):
-			# Read part emission
-			w, e = np.loadtxt(harmoni_file, unpack=True)
-			m = re.search('.+HARMONI_(.+)_em.txt', harmoni_file)
-			# and throughput
-			w, t = np.loadtxt(base_filename + "_HARMONI_" + m.group(1) + "_tr.txt", unpack=True)
-			plt.plot(w, e/total_instrument_tr*ph2en_conv_fac, label=m.group(1), color=color, ls="--", lw=1.2)
-			total_instrument_em = total_instrument_em*t + e
-			total_instrument_tr = total_instrument_tr*t
-		
+		if not input_parameters["mci"]:
+			# HARMONI parts
+			total_instrument_em = np.zeros_like(lambs_extended)
+			total_instrument_tr = np.ones_like(lambs_extended)
+			harmoni_files_em = sorted(glob.glob(base_filename + "_HARMONI_*_em.txt"))
+			
+			for harmoni_file, color in zip(harmoni_files_em, colors):
+				# Read part emission
+				w, e = np.loadtxt(harmoni_file, unpack=True)
+				m = re.search('.+HARMONI_(.+)_em.txt', harmoni_file)
+				# and throughput
+				w, t = np.loadtxt(base_filename + "_HARMONI_" + m.group(1) + "_tr.txt", unpack=True)
+				plt.plot(w, e/total_instrument_tr*ph2en_conv_fac, label=m.group(1), color=color, ls="--", lw=1.2)
+				total_instrument_em = total_instrument_em*t + e
+				total_instrument_tr = total_instrument_tr*t
+
+		else:
+			# mci estimate
+			w, total_instrument_em = np.loadtxt(base_filename + "_HARMONI_mci_em.txt", unpack=True)
+			total_instrument_tr = np.ones_like(total_instrument_em)
+
 		plt.plot(w, total_instrument_em/total_instrument_tr*ph2en_conv_fac, label="HARMONI total", color="red")
-		
 		logging.info("HARMONI emission at input focal plane at {:.4f} um = {:.4e} W/m2/um/sr".format(np.median(w), np.median(total_instrument_em/total_instrument_tr*ph2en_conv_fac)))
 		
 		np.savetxt(base_filename + "_total_HARMONI_em.txt", np.c_[w, total_instrument_em], comments="#", header="\n".join([
@@ -551,6 +560,10 @@ def main(input_parameters):
 		plt.ylabel(r"back at HRM input [W/m$^2$/$\mu$m/sr]")
 		plt.yscale("log")
 		plt.savefig(base_filename + "_total_em.pdf")
+
+			
+
+		## Transmission
 
 		plt.clf()
 		w, e = np.loadtxt(base_filename + "_sky_tr.txt", unpack=True)
@@ -565,15 +578,20 @@ def main(input_parameters):
 			return
 		total_tr *= e
 		
-		total_instrument_tr = np.ones_like(total_tr)
-		# HARMONI parts
-		harmoni_files_tr = sorted(glob.glob(base_filename + "_HARMONI_*tr.txt"))
-		for harmoni_file, color in zip(harmoni_files_tr, colors):
-			w, e = np.loadtxt(harmoni_file, unpack=True)
-			m = re.search('.+HARMONI_(.+)_tr.txt', harmoni_file)
-			plt.plot(w, e, label=m.group(1), color=color, ls="--", lw=1.2)
-			total_instrument_tr *= e
-			total_tr *= e
+		if not input_parameters["mci"]:
+			total_instrument_tr = np.ones_like(total_tr)
+			# HARMONI parts
+			harmoni_files_tr = sorted(glob.glob(base_filename + "_HARMONI_*tr.txt"))
+			for harmoni_file, color in zip(harmoni_files_tr, colors):
+				w, e = np.loadtxt(harmoni_file, unpack=True)
+				m = re.search('.+HARMONI_(.+)_tr.txt', harmoni_file)
+				plt.plot(w, e, label=m.group(1), color=color, ls="--", lw=1.2)
+				total_instrument_tr *= e
+				total_tr *= e
+		else:
+			# mci estimate
+			w, total_instrument_tr = np.loadtxt(base_filename + "_HARMONI_mci_tr.txt", unpack=True)
+			total_tr *= total_instrument_tr
 		
 		plt.plot(w, total_instrument_tr, label="HARMONI total", color="red")
 		
@@ -668,7 +686,7 @@ def main(input_parameters):
 
 	# Calculate the flux in the PSF core 
 	peak_psf = np.max(psf_internal)
-	flux_fraction_psf_core = np.sum(psf_internal[psf_internal > 0.5*peak_psf])
+	flux_fraction_psf_core = 1. # np.sum(psf_internal[psf_internal > 0.5*peak_psf])
 
 	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*output_transmission*flux_fraction_psf_core # electron/s 
 	factor_calibration = flux_cal_star/flux_cal_star_electrons # erg/s/cm2/um / (electron/s)

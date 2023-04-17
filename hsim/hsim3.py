@@ -85,9 +85,10 @@ if __name__ == "__main__":
 				Parameter("detector_systematics", "FITS input cube", default="False", choices = ["True", "False"]),
 				Parameter("detector_tmp_path", "Directory to save interim detector files", default="''"),
 				Parameter("adr", "Simulate atmospheric differential refraction", default="True", choices = ["True", "False"]),
-				Parameter("mcp", "Use minimum compliant instrument parameters", default="False", choices = ["True", "False"]),
+				Parameter("mci", "Use minimum compliant instrument parameters", default="False", choices = ["True", "False"]),
 				Parameter("telescope_temp", "Telescope temperature [K]", type=float, default = 280),
 				Parameter("fprs_temp", "FPRS temperature [C]", type=float, default = +2),
+				Parameter("scattered_sky", "Scattered sky fraction [%%]", type=float, default = 20),
 				Parameter("extra_jitter", "Additional telescope PSF blur [mas]", type=str, default = "0"),
 				Parameter("noise_seed", "Noise random number generator seed", type=int, default = 100),
 				Parameter("n_cpus", "Number of processors", type=int, default = get_cpu_count()),
@@ -341,6 +342,7 @@ if __name__ == "__main__":
 				panel_misc = panel_gui(parent, "Miscellaneous", 3)
 				create_field("telescope_temp", panel_misc.add_field("Telescope temperature [K]", Entry))
 				create_field("fprs_temp", panel_misc.add_field("FPRS temperature [C]", Entry))
+				create_field("scattered_sky", panel_misc.add_field("Scattered sky fraction [%]", Entry))
 				create_field("extra_jitter", panel_misc.add_field("Additional jitter [mas]", Entry))
 				create_field("adr", panel_misc.add_field("ADR on/off", Checkbutton, default=1, height=1000))
 				create_field("detector_systematics", panel_misc.add_field("Detector systematics", Checkbutton))
@@ -350,7 +352,7 @@ if __name__ == "__main__":
 				panel_misc.add_field("Internal oversampling:", None)
 				create_field("spectral_sampling", panel_misc.add_field("   Spectral (default = -1)", Entry))
 				create_field("spatial_sampling", panel_misc.add_field("   Spatial (default = -1)", Entry))
-				create_field("mcp", panel_misc.add_field("Minimum compliant instrument", Checkbutton, default=1, height=1000))
+				create_field("mci", panel_misc.add_field("Minimum compliant instrument", Checkbutton, default=1, height=1000))
 
 
 				def OnClick():
@@ -376,5 +378,4 @@ if __name__ == "__main__":
 		root.option_add("*Font", default_font)
 		gui = HSIM_GUI(root)
 
-		#lab.pack()
 		root.mainloop()

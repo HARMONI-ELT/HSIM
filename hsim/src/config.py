@@ -62,6 +62,24 @@ config_data = {
 			'K-long':GratingInfo(2.199, 2.400, 17385.)
 			},
 	
+	'gratings_nominal': {	#low resolution
+			'V+R':GratingInfo(0.458, 0.8200, 3000.), ##
+			'Iz+J':GratingInfo(0.83, 1.09, 3000.),
+			'H+K':GratingInfo(1.450, 1.925, 3000.),
+			# med-resolution
+			'Iz':GratingInfo(0.830, 0.94, 7000.),
+			'J':GratingInfo(1.05, 1.185, 7000.),
+			'H':GratingInfo(1.45, 1.625, 7000.),
+			'K':GratingInfo(1.97, 2.185, 7000.),
+			# high-resolution
+			'z-high':GratingInfo(0.828, 0.865, 17000.),
+			'J-short':GratingInfo(1.012, 1.102, 17000.), ##
+			'J-long':GratingInfo(1.098, 1.189, 17000.), ##
+			'H-high':GratingInfo(1.538, 1.608, 17000.),
+			'K-short':GratingInfo(2.017, 2.109, 17000.),
+			'K-long':GratingInfo(2.199, 2.300, 17000.)
+			},
+	
 	'spaxel_scale': {'4x4':SpaxelScaleInfo(4., 4., 0.8, 1250),
 		  '10x10':SpaxelScaleInfo(10., 10., 2., 800),
 		  '20x20':SpaxelScaleInfo(20., 20., 4., 580),
