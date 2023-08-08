@@ -10,12 +10,34 @@ GratingInfo = collections.namedtuple('GratingInfo', 'lmin, lmax, R')
 SpaxelScaleInfo = collections.namedtuple('SpaxelScaleInfo', 'xscale, yscale, psfscale, psfsize')
 	
 config_data = {
-	'read_noise': {"vis":2.0, "nir":6.0, "nir_lowexp":15.0}, # e/pix
+	'detector':{
+		"avg":{
+			'read_noise': {"vis":2.0, "nir":6.0, "nir_lowexp":15.0}, # e/pix
+			'dark_current': {"vis":0.00042, "nir":0.0053}, # e/pix/s
+			'qe':'file',
+		},
+		"best":{
+			'read_noise': {"vis":2.0, "nir":4.0, "nir_lowexp":10.0}, # e/pix
+			'dark_current': {"vis":0.00042, "nir":0.0042}, # e/pix/s
+			'qe':{"w":[0.9, 1.2, 2.0], "qe":[0.85, 0.90, 0.95]},
+		},
+		"worst":{
+			'read_noise': {"vis":2.0, "nir":8.0, "nir_lowexp":12.0}, # e/pix
+			'dark_current': {"vis":0.00042, "nir":0.0220}, # e/pix/s
+			'qe':{"w":[0.9, 1.2, 2.0], "qe":[0.70, 0.80, 0.90]},
+		},
+		"contractual":{
+			'read_noise': {"vis":2.0, "nir":30.0, "nir_lowexp":30.0}, # e/pix
+			'dark_current': {"vis":0.00042, "nir":0.1}, # e/pix/s
+			'qe':{"w":[0.9, 1.2, 2.0], "qe":[0.50, 0.50, 0.50]},
+		},
+	},
+	
+	'saturation': {"vis":72000., "nir":30000.}, # e
+	
+	'crosstalk': 0.02, # fraction of photons going to each of the 4 contiguous pixels
 	'side_length':4096,
 	'N_IR_det':8,
-	'dark_current': {"vis":0.00042, "nir":0.0053}, # e/pix/s
-	'saturation': {"vis":72000., "nir":30000.}, # e
-	'crosstalk': 0.02, # fraction of photons going to each of the 4 contiguous pixels
 
 	#Detector systematics parameters
 	'systematics': {"rd":2.845,
@@ -76,7 +98,7 @@ config_data = {
 			'J-short':GratingInfo(1.012, 1.102, 17000.), ##
 			'J-long':GratingInfo(1.098, 1.189, 17000.), ##
 			'H-high':GratingInfo(1.538, 1.608, 17000.),
-			'K-short':GratingInfo(2.017, 2.109, 17000.),
+			'K-short':GratingInfo(2.017, 2.201, 17000.),
 			'K-long':GratingInfo(2.199, 2.300, 17000.)
 			},
 	
@@ -92,13 +114,23 @@ config_data = {
 	#FWHM of Instrument PSF depending on output spaxel scale in mas
 	#Factors taken into account:
 	#design image quality, manufacturing and assembly tolerances, vibration, flexure, diff refraction,
-	'dynamic_instrument_psf': 4.8,
+	'dynamic_instrument_psf': 5.5,
 	'static_instrument_psf': {'4x4': 3.,
-    		  '10x10':10.,
-		  '20x20':20.,
+    		  '10x10':14.,
+		  '20x20':28.,
 		  '30x60':30.,
 		  '60x60':30.,
 		  '120x60':30.
+		},
+	
+	# minimum compliant instrument
+	'mci_dynamic_instrument_psf': 5.5,
+	'mci_static_instrument_psf': {'4x4': 3.,
+    		  '10x10':14.,
+		  '20x20':28.,
+		  '30x60':135.,
+		  '60x60':135.,
+		  '120x60':135.
 		},
 
 	#Each PSD file containts 1 seeing  [0.43] and 1 zenith angle [25]

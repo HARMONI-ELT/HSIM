@@ -58,6 +58,7 @@ def main(input_parameters):
 		'telescope_temp': Telescope temperature [K]
 		'adr': Boolean - turn ADR on or off
 		'mci': Boolean - Use minimum compliant instrument
+		'detector': Near-IR detector performance
 		
 		'noise_seed': 100,
 		'config_file': configuration file
@@ -90,7 +91,8 @@ def main(input_parameters):
 			Conf('Moon', 'HSM_MOON', 'moon_illumination'),
 			Conf('ADR', 'HSM_ADR', 'adr'),
 			Conf('MCI', 'HSM_MCI', 'mci'),
-			Conf('Detectors', 'HSM_DET', 'detector_systematics'),
+			Conf('Near-IR detector performace', 'HSM_DETP', 'detector'),
+			Conf('Detector systematics', 'HSM_DET', 'detector_systematics'),
 			Conf('Seed', 'HSM_SEED', 'noise_seed'),
 			Conf('AO', 'HSM_AO', 'ao_mode'),
 			Conf('No. of processes', 'HSM_NPRC', 'n_cpus'),
@@ -108,17 +110,6 @@ def main(input_parameters):
 	str2bool("mci")
 	str2bool("detector_systematics")
 	
-	if input_parameters["detector_systematics"] == True:
-		simulation_conf.append(Conf('Detectors tmp path', 'HSM_DDIR', 'detector_tmp_path'))
-	
-	if input_parameters["ao_mode"] == "LTAO":
-		simulation_conf.append(Conf('LTAO star H mag', 'HSM_AOMA', 'ao_star_hmag'))
-		simulation_conf.append(Conf('LTAO star H mag', 'HSM_AODI', 'ao_star_distance'))
-	elif input_parameters["ao_mode"] == "HCAO":
-		simulation_conf.append(Conf('HC apodizer', 'HSM_HCAP', 'hc_apodizer'))
-		simulation_conf.append(Conf('HC mask', 'HSM_HCMK', 'hc_fp_mask'))
-	elif input_parameters["ao_mode"] == "User":
-		simulation_conf.append(Conf('User defined PSF file', 'HSM_UPSF', 'user_defined_psf'))
 	
 	# Init logger
 	base_name = os.path.splitext(os.path.basename(input_parameters['input_cube']))[0]
@@ -138,15 +129,37 @@ def main(input_parameters):
 
 	hsimlog = HSIMLoggingHandler()
 	logger.addHandler(hsimlog)
-
-	# Check that the 60x60 and 120x60 are only used with the V+R grating
-	if input_parameters["spaxel_scale"] in ["60x60", "120x60"] and input_parameters["grating"] != "V+R":
-		logging.error(input_parameters["spaxel_scale"] + ' is only available for the V+R grating. ')
-		return
+	
 	
 	if input_parameters["mci"]:
 		logging.info("mci: forcing air mass = 1.3 = 40deg")
 		input_parameters["air_mass"] = 1.3
+		if input_parameters["ao_mode"] == "LTAO":
+			input_parameters["ao_mode"] = "MCI_LTAO"
+		elif input_parameters["ao_mode"] == "SCAO":
+			input_parameters["ao_mode"] = "MCI_SCAO"
+		else:
+			logging.error("No valid AO mode for MCI.")
+			return
+
+	
+	if input_parameters["detector_systematics"] == True:
+		simulation_conf.append(Conf('Detectors tmp path', 'HSM_DDIR', 'detector_tmp_path'))
+	
+	if input_parameters["ao_mode"] == "LTAO":
+		simulation_conf.append(Conf('LTAO star H mag', 'HSM_AOMA', 'ao_star_hmag'))
+		simulation_conf.append(Conf('LTAO star H mag', 'HSM_AODI', 'ao_star_distance'))
+	elif input_parameters["ao_mode"] == "HCAO":
+		simulation_conf.append(Conf('HC apodizer', 'HSM_HCAP', 'hc_apodizer'))
+		simulation_conf.append(Conf('HC mask', 'HSM_HCMK', 'hc_fp_mask'))
+	elif input_parameters["ao_mode"] == "User":
+		simulation_conf.append(Conf('User defined PSF file', 'HSM_UPSF', 'user_defined_psf'))
+
+
+	# Check that the 60x60 and 120x60 are only used with the V+R grating
+	if input_parameters["spaxel_scale"] in ["60x60", "120x60"] and input_parameters["grating"] != "V+R":
+		logging.error(input_parameters["spaxel_scale"] + ' is only available for the V+R grating.')
+		return
 	
 	# Check HCAO configuration
 	if input_parameters["ao_mode"] == "HCAO":
@@ -382,8 +395,9 @@ def main(input_parameters):
 	sim_object_plus_back = np.random.poisson(abs(output_cube_spec*NDIT)).astype(np.float32)
 	# Apply crosstalk only to NIR detectors
 	if grating != "V+R":
-		logging.info("Applying detector crosstalk")
-		sim_object_plus_back = apply_crosstalk(sim_object_plus_back, config_data["crosstalk"])
+		if not input_parameters["mci"]:
+			logging.info("Applying detector crosstalk")
+			sim_object_plus_back = apply_crosstalk(sim_object_plus_back, config_data["crosstalk"])
 	
 	if np.sum(saturated_obj_back) > 0:
 		logging.warning(str(np.sum(saturated_obj_back)) + " pixels are saturated in the obj + back frames")
@@ -416,7 +430,8 @@ def main(input_parameters):
 	sim_back = np.random.poisson(abs(output_back_emission_cube*NDIT)).astype(np.float32)
 	# Apply crosstalk only to NIR detectors
 	if grating != "V+R":
-		sim_back = apply_crosstalk(sim_back, config_data["crosstalk"])
+		if not input_parameters["mci"]:
+			sim_back = apply_crosstalk(sim_back, config_data["crosstalk"])
 
 	if np.sum(saturated_back) > 0:
 		logging.warning(str(np.sum(saturated_back)) + " pixels are saturated in the back frames")
@@ -453,8 +468,13 @@ def main(input_parameters):
 	logging.info("Pipeline interpolation effects")
 	# Convolve the reduced cube with a 1pix FWHM Gaussian to account for the 
 	# interpolation during the data reduction
-	sigma = 1./2.35482 # pix
-	kernel_size = 5
+	if input_parameters["mci"]:
+		sigma = 1.325/2.35482 # 5.3mas = 1.325 pix
+		kernel_size = 6
+	else:
+		sigma = 1./2.35482 # pix
+		kernel_size = 5
+		
 	Gauss2D = lambda x, y: np.exp(-(x**2 + y**2)/(2.*sigma**2))
 	xgrid = np.linspace(1, kernel_size, kernel_size) - kernel_size*0.5 - 0.5
 	ygrid = np.linspace(1, kernel_size, kernel_size) - kernel_size*0.5 - 0.5
@@ -546,7 +566,7 @@ def main(input_parameters):
 		else:
 			# mci estimate
 			w, total_instrument_em = np.loadtxt(base_filename + "_HARMONI_mci_em.txt", unpack=True)
-			total_instrument_tr = np.ones_like(total_instrument_em)
+			w, total_instrument_tr = np.loadtxt(base_filename + "_HARMONI_mci_tr.txt", unpack=True)
 
 		plt.plot(w, total_instrument_em/total_instrument_tr*ph2en_conv_fac, label="HARMONI total", color="red")
 		logging.info("HARMONI emission at input focal plane at {:.4f} um = {:.4e} W/m2/um/sr".format(np.median(w), np.median(total_instrument_em/total_instrument_tr*ph2en_conv_fac)))
@@ -661,9 +681,10 @@ def main(input_parameters):
 	
 	# Apply crosstalk to the noiseless cubes
 	if grating != "V+R":
-		output_cube_spec = apply_crosstalk(output_cube_spec, config_data["crosstalk"])
-		output_back_emission_cube = apply_crosstalk(output_back_emission_cube, config_data["crosstalk"])
-		output_cube_spec_wo_back = apply_crosstalk(output_cube_spec_wo_back, config_data["crosstalk"])
+		if not input_parameters["mci"]:
+			output_cube_spec = apply_crosstalk(output_cube_spec, config_data["crosstalk"])
+			output_back_emission_cube = apply_crosstalk(output_back_emission_cube, config_data["crosstalk"])
+			output_cube_spec_wo_back = apply_crosstalk(output_cube_spec_wo_back, config_data["crosstalk"])
 	
 	save_fits_cube(outFile_noiseless_object_plus_back, output_cube_spec*NDIT, "Noiseless O+B", head)
 	save_fits_cube(outFile_noiseless_background, output_back_emission_cube*NDIT, "Noiseless B", head)
@@ -734,7 +755,8 @@ def main(input_parameters):
 
 	# Save transmission with crosstalk
 	if grating != "V+R":
-		output_transmission = apply_crosstalk_1d(output_transmission, config_data["crosstalk"])
+		if not input_parameters["mci"]:
+			output_transmission = apply_crosstalk_1d(output_transmission, config_data["crosstalk"])
 	
 	np.savetxt(base_filename + "_total_tr.txt", np.c_[output_lambs, output_transmission], comments="#", header="\n".join([
 		'TYPE: Total transmission.',

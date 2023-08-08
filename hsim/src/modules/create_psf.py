@@ -9,7 +9,7 @@ from scipy.interpolate import interp1d
 import scipy.ndimage
 from astropy.io import fits
 from scipy.interpolate import interp2d
-from astropy.convolution import Gaussian2DKernel
+from scipy.signal import fftconvolve
 
 try:
 	from ..config import *
@@ -130,7 +130,7 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 
 
 	##;creation of a diff limited OTF (pupil autocorrelation)
-	tab = np.zeros((int(dimover), int(dimover)), dtype=np.complex)
+	tab = np.zeros((int(dimover), int(dimover)), dtype=complex)
 	if phase_static is None:
 		tab[0:pupover.shape[0], 0:pupover.shape[1]] = pupover
 	else:
@@ -229,7 +229,6 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode, rotation_angle
 	global zenith_seeing, air_mass
 	global user_psf
-	
 	
 	AO_mode = input_parameters["ao_mode"].upper()
 	rotation_angle = rotation
@@ -363,7 +362,130 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 			raise HSIMError("The PSF pixel scale must be = " + str(psfscale) + " mas.")
 		
 		logging.info("User PSF x={0} y={1} flux={sum}".format(*user_psf.shape, sum=np.sum(user_psf)))
-	
+		
+	elif AO_mode == "MCI_LTAO" or AO_mode == "MCI_SCAO":
+		import tiptop.tiptop as tiptop
+		#from matplotlib import rc
+
+		if AO_mode == "MCI_LTAO":
+			tiptop_ini_file = "HarmoniLTAO_3_SR50.ini"
+			jitter_FHWM = 8.9 # AO jitter FWHM in mas - Low order AO
+		elif AO_mode == "MCI_SCAO":
+			tiptop_ini_file = "HarmoniSCAO_1.ini"
+			jitter_FHWM = 6.8 # Telescope environment
+
+		tiptopini = os.path.join(psf_path, tiptop_ini_file)
+		with open(tiptopini, 'r') as file :
+			filedata = file.read()
+
+		mci_grating_w = {'V+R':0.639e-6, # in meters
+			'Iz+J':1.0885e-6,
+			'H+K':2.20e-6,
+			# med-resolution
+			'Iz':0.94e-6,
+			'J':1.185e-6,
+			#'H':1.76e-6,
+			'H':1.45e-6,
+			'K':2.20e-6,
+			# high-resolution
+			'z-high':0.865e-6,
+			'H-high':1.6076e-6,
+			'K-short':2.20e-6,
+			'K-long':2.20e-6}
+
+		mci_wavelength_meters = mci_grating_w[input_parameters["grating"]]
+
+		filedata = filedata.replace('2200e-9', str(mci_wavelength_meters))
+		with open('HarmoniAO_3.ini', 'w') as file:
+			file.write(filedata)
+
+		tiptop.overallSimulation('.', "HarmoniAO_3", '.', "PSF_mci", addSrAndFwhm=True)
+
+		user_psf, head = fits.getdata("PSF_mci.fits", header=True)
+		user_psf = user_psf[0, :, :]
+		mci_pix_psf = float(head["PIX_MAS"])
+		assert(mci_pix_psf == 2.0)
+		user_psf = user_psf/np.sum(user_psf)
+		
+		# resize AO PSF
+		area_scale = (mci_pix_psf/psfscale)**2
+		if area_scale > 1:
+			xgrid_in = (np.linspace(0, user_psf.shape[0]-1, user_psf.shape[0]) - user_psf.shape[0]*0.5)*mci_pix_psf
+			ygrid_in = (np.linspace(0, user_psf.shape[1]-1, user_psf.shape[1]) - user_psf.shape[1]*0.5)*mci_pix_psf
+			image = interp2d(xgrid_in, ygrid_in, user_psf, kind='cubic', fill_value=0.)
+			user_psf = image(xgrid_out, ygrid_out)/area_scale
+		else:
+			side = int(user_psf.shape[0]*mci_pix_psf/psfscale/2)*2
+			rebin_psf = frebin2d(user_psf, (side, side))/area_scale
+			center = side//2
+			user_psf = rebin_psf[center-fov//2:center+fov//2, center-fov//2:center+fov//2]
+		
+		user_psf[user_psf < 0] = 0.
+		
+		# convolve with Gaussian
+		spax = input_parameters["spaxel_scale"]
+		FWHM_instrument = (config_data["mci_dynamic_instrument_psf"]**2 + config_data["mci_static_instrument_psf"][spax]**2)**0.5
+		sigma_instrument = FWHM_instrument/2.35482
+		sigma_AO = jitter_FHWM/2.35482
+		sigma_combined = ((sigma_AO)**2 + sigma_instrument**2)**0.5
+		
+		logging.info("FWHM LO AO = {:.2f} mas".format(jitter_FHWM))
+		logging.info("FWHM instrument = {:.2f} mas".format(FWHM_instrument))
+		logging.info("MCI Combined σ = {:.2f} mas".format(sigma_combined))
+		
+		# Low order AO jitter
+		Gauss2D_instrument = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*sigma_instrument**2))
+		Gauss2D_AO = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*sigma_AO**2))
+		
+		xx, yy = np.meshgrid(xgrid_out, ygrid_out)
+		kernel_jitter_AO = Gauss2D_AO(xx, yy)
+		kernel_jitter_AO = kernel_jitter_AO/np.sum(kernel_jitter_AO)
+
+		peak_psf_tiptop = np.max(user_psf)
+		user_psf_AO = fftconvolve(user_psf, kernel_jitter_AO, mode="same")
+		peak_psf_AO = np.max(user_psf_AO)
+
+		SR_AO = float(head["SR0000"])/peak_psf_tiptop*peak_psf_AO
+		logging.info("FWHM tiptop = {:.4f} mas".format(float(head["FWHM0000"])))
+		logging.info("SR tiptop = {:.4f}".format(float(head["SR0000"])))
+
+		logging.info("SR AO = {:.4f}".format(SR_AO))
+		
+		#
+		if AO_mode == "MCI_LTAO":
+			tiptop_FWHM = float(head["FWHM0000"])
+			
+			e2e_fwhm_correction = interp1d([0.8, 1.0, 1.22, 1.45, 1.65, 2.20], [0.67, 0.3, 0.17, 0.10, 0.07, 0.03], kind='linear', bounds_error=False, fill_value="extrapolate")
+			correction_fwhm = e2e_fwhm_correction(mci_wavelength_meters/1e-6)
+			target_FWHM = tiptop_FWHM*(1. + correction_fwhm)
+			
+			kernel_e2e_corr_sigma = (target_FWHM**2 - tiptop_FWHM**2)**0.5/2.35482
+			
+			kernel_e2e_corr = Gauss2D_instrument(xx, yy)
+			kernel_e2e_corr = kernel_e2e_corr/np.sum(kernel_e2e_corr)
+			user_psf_AO = fftconvolve(user_psf_AO, kernel_e2e_corr, mode="same")
+			peak_psf_AO = np.max(user_psf_AO)
+			SR_E2E_corr = float(head["SR0000"])/peak_psf_tiptop*peak_psf_AO
+			
+			logging.info("FWHM E2E correction = {:.4f} mas - corr = {:.4f}".format(target_FWHM, correction_fwhm))
+			logging.info("SR E2E correction = {:.4f}".format(SR_E2E_corr))
+		
+		
+
+		# Instrument jitter
+		kernel_jitter_instrument = Gauss2D_instrument(xx, yy)
+		kernel_jitter_instrument = kernel_jitter_instrument/np.sum(kernel_jitter_instrument)
+		user_psf = fftconvolve(user_psf_AO, kernel_jitter_instrument, mode="same")
+		peak_psf_final = np.max(user_psf)
+
+		SR_w_inst = float(head["SR0000"])/peak_psf_tiptop*peak_psf_final
+		logging.info("SR w/ inst = {:.4f}".format(SR_w_inst))
+
+		# recenter PSF
+		if user_psf.shape[0] % 2 == 0:
+			user_psf = np.roll(user_psf, (-1, -1), axis=(0,1))
+
+		
 	
 	return
 
@@ -427,6 +549,8 @@ def create_psf(lamb, Airy=False):
 	elif AO_mode == "USER":
 		# user defined PSF
 		return user_psf
-		
-		
+	elif AO_mode == "MCI_LTAO" or AO_mode == "MCI_SCAO":
+		return user_psf
+	else:
+		assert(1 == 0) # this should never happen
 

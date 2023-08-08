@@ -86,6 +86,7 @@ if __name__ == "__main__":
 				Parameter("detector_tmp_path", "Directory to save interim detector files", default="''"),
 				Parameter("adr", "Simulate atmospheric differential refraction", default="True", choices = ["True", "False"]),
 				Parameter("mci", "Use minimum compliant instrument parameters", default="False", choices = ["True", "False"]),
+				Parameter("detector", "Near-IR detector performance", default="avg", choices = ["avg", "best", "worst", "contractual"]),
 				Parameter("telescope_temp", "Telescope temperature [K]", type=float, default = 280),
 				Parameter("fprs_temp", "FPRS temperature [C]", type=float, default = +2),
 				Parameter("scattered_sky", "Scattered sky fraction [%%]", type=float, default = 20),
@@ -353,6 +354,9 @@ if __name__ == "__main__":
 				create_field("spectral_sampling", panel_misc.add_field("   Spectral (default = -1)", Entry))
 				create_field("spatial_sampling", panel_misc.add_field("   Spatial (default = -1)", Entry))
 				create_field("mci", panel_misc.add_field("Minimum compliant instrument", Checkbutton, default=1, height=1000))
+				
+				det_choices = list(parameter_actions["detector"].choices)
+				create_field("detector", panel_misc.add_field("Near-IR detector", OptionMenu, extra=det_choices))
 
 
 				def OnClick():

@@ -336,7 +336,7 @@ def init_cube(datacube, grating, spax):
 	spax_scale = config_data['spaxel_scale'][spax]
 	
 	area_spaxel = spax_scale.xscale*spax_scale.yscale/1000.**2 # arcsec2
-	um_per_pixel = head['SPECRES'] # micron/pixel
+	um_per_pixel = head['CDELT3'] # micron/pixel
 	factor = config_data["telescope"]["area"]*area_spaxel*um_per_pixel
 	
 	logging.info('The flux range of the input cube is {:.2e} - {:.2e} ph/s/output pixel'.format(np.min(cube)*factor, np.max(cube)*factor))

@@ -7,6 +7,7 @@ import logging
 import numpy as np
 import scipy.constants as sp
 from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import interp1d
 from scipy import integrate
 from astropy.convolution import Gaussian1DKernel
 from astropy.io import fits
@@ -138,9 +139,31 @@ def sim_detector(input_parameters, cube, back_emission, transmission, lambs, deb
 	DIT = input_parameters["exposure_time"]
 	grating = input_parameters["grating"]
 	
+	detector_performance = config_data['detector'][input_parameters["detector"]]
+	
 	# Get QE curve
 	logging.info("Calculating detector QE")
-	qe_curve, orig_qe_lambda, orig_qe = detector_QE_curve(lambs, grating, debug_plots, output_file)
+	if type(detector_performance['qe']) == str and detector_performance['qe'] == "file":
+		qe_curve, orig_qe_lambda, orig_qe = detector_QE_curve(lambs, grating, debug_plots, output_file)
+	else:
+		f = interp1d(detector_performance['qe']["w"], detector_performance['qe']["qe"], fill_value="extrapolate")
+		qe_curve = f(lambs)
+		
+		if debug_plots:
+			plot_file = [output_file, "det_qe"]
+			plot_label = "detector QE"
+			plt.clf()
+			plt.plot(lambs, qe_curve)
+			plt.xlabel(r"wavelength [$\mu$m]")
+			plt.ylabel(plot_label)
+			plt.savefig("_".join(plot_file) + "_tr.pdf")
+			np.savetxt("_".join(plot_file) + "_tr.txt", np.c_[lambs, qe_curve])
+			
+		
+		orig_qe_lambda = np.linspace(0.4, 2.6, 200)
+		orig_qe = f(orig_qe_lambda)
+		
+		
 	back_emission *= qe_curve
 	transmission *= qe_curve
 	
@@ -149,24 +172,24 @@ def sim_detector(input_parameters, cube, back_emission, transmission, lambs, deb
 
 	# read noise
 	if grating == "V+R":
-		read_noise = config_data["read_noise"]["vis"]
+		read_noise = detector_performance["read_noise"]["vis"]
 	else:
 		if DIT <= 120.:
-			read_noise = config_data["read_noise"]["nir_lowexp"]
+			read_noise = detector_performance["read_noise"]["nir_lowexp"]
 		else:
-			read_noise = config_data["read_noise"]["nir"]
+			read_noise = detector_performance["read_noise"]["nir"]
 
 
 	# dark current
 	if grating == "V+R":
-		dark = config_data["dark_current"]["vis"]
+		dark = detector_performance["dark_current"]["vis"]
 		# dark current increases due to pixel binning
 		if config_data["spaxel_scale"] == "60x60":
 			dark = dark*2
 		elif config_data["spaxel_scale"] == "120x60":
 			dark = dark*4
 	else:
-		dark = config_data["dark_current"]["nir"]
+		dark = detector_performance["dark_current"]["nir"]
 
 
 	# Thermal emission seen by the detector
