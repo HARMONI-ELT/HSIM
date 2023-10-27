@@ -247,7 +247,6 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	grating = input_parameters["grating"]
 	harmoni.addPart(InstrumentPart("Grating " + grating, TCryoMech, AreaIns, n_mirrors=1, emis_mirror=grating + "_grating.txt", dust_mirror=0))
 	
-	lamb_grid = np.linspace(2, 2.5, 50)
 	HARMONI_transmission, HARMONI_background = harmoni.calcThroughputAndEmission(ext_lambs, input_parameters["exposure_time"], output_file=output_file)
 	
 	if input_parameters["mci"]:
@@ -260,10 +259,10 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 		scaling_transmission = 1./np.mean(mci_HARMONI_transmission)*0.26
 		HARMONI_transmission = np.interp(ext_lambs, mci_lamb, mci_HARMONI_transmission*scaling_transmission)
 		
-		scaling_background = 2.031e3/(np.median(HARMONI_background)/input_parameters["exposure_time"])*np.median(HARMONI_transmission)/0.289
-		HARMONI_background = scaling_background*HARMONI_background # scaled background to match specifictaion at 2.2um at 9C
+		#scaling_background = 2.031e3/(np.median(HARMONI_background)/input_parameters["exposure_time"])*np.median(HARMONI_transmission)/0.289
+		scaling_background = 1.0754 # scaled background to match specifictaion at 2.2um at 9C
+		HARMONI_background = scaling_background*HARMONI_background
 		
-		#HARMONI_background = HARMONI_background*0.6341 # scaled background to match specifictaion at 2.2um at 9C
 
 		logging.info("Total MCI HARMONI backround: lambda = {:7.4f} throughput = {:6.3f} emission = {:.3e} ph/um/m2/arcsec2/s".format(np.median(ext_lambs), np.median(HARMONI_transmission), np.median(HARMONI_background)/input_parameters["exposure_time"]))
 

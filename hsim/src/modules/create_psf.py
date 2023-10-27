@@ -460,8 +460,9 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 			target_FWHM = tiptop_FWHM*(1. + correction_fwhm)
 			
 			kernel_e2e_corr_sigma = (target_FWHM**2 - tiptop_FWHM**2)**0.5/2.35482
-			
-			kernel_e2e_corr = Gauss2D_instrument(xx, yy)
+			Gauss2D_e2e = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*kernel_e2e_corr_sigma**2))
+
+			kernel_e2e_corr = Gauss2D_e2e(xx, yy)
 			kernel_e2e_corr = kernel_e2e_corr/np.sum(kernel_e2e_corr)
 			user_psf_AO = fftconvolve(user_psf_AO, kernel_e2e_corr, mode="same")
 			peak_psf_AO = np.max(user_psf_AO)

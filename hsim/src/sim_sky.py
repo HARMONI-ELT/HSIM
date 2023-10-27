@@ -80,13 +80,13 @@ def sky_background(input_parameters, lambs, air_mass, dit, input_spec_res, debug
 	# estimate scattered background
 	bandws = config_data['gratings'][input_parameters["grating"]]
 	mask_range_scatter = (sky_em_lambda > bandws.lmin)*(sky_em_lambda < bandws.lmax)
-	mean_sky = np.mean(sky_em_flux[mask_range_scatter])
+	mean_sky = np.median(sky_em_flux[mask_range_scatter])
 	if input_parameters["mci"]:
 		scattered_sky = mean_sky*0.2
 	else:
 		scattered_sky = mean_sky*input_parameters["scattered_sky"]/100.
 	
-	logging.info("Extra scatter sky = " + str(scattered_sky) + " photons/m2/um/arcsec2")
+	logging.info("Extra scatter sky = " + str(scattered_sky) + " photons/m2/um/arcsec2/s")
 	
 
 	mask_range_output = (sky_em_lambda > lambs[0]*0.99)*(sky_em_lambda < lambs[-1]*1.01)
