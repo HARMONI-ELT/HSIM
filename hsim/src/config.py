@@ -58,7 +58,7 @@ config_data = {
 	'spectral_sampling':{"output":2.2, "internal":4.}, # spectral sampling of the output cube and internal. Nyquist = 2
 	'LSF_kernel_size':12., # LSF kernel size in sigma units
 	
-	'telescope': {'diameter':37., 'area':980.0}, #diam [m], area [m^2]
+	'telescope': {'diameter':37., 'area':{"VRIz":996.3, "JHK":896.3}}, #diam [m], area [m^2]
 	
 	'HARMONI_FPRS_temp': +2., # C
 	'HARMONI_cryo_temp': 130., # K
@@ -140,6 +140,15 @@ config_data = {
 		'seeings':[0.43, 0.57, 0.64, 0.72, 1.04]}
 
 }
+	
+	
+def get_telescope_area(grating_name):
+	if grating_name in ['V+R', 'Iz+J', 'Iz', 'z-high']:
+		return config_data["telescope"]["area"]["VRIz"]
+	else:
+		return config_data["telescope"]["area"]["JHK"]
+	
+
 
 class HSIMError(Exception):
 	pass

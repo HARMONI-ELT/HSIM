@@ -202,6 +202,7 @@ air_mass = None
 
 # user-defined PSF
 user_psf = None
+onlyAO_psf = None
 
 def set_jitter(_jitter):
 	global jitter
@@ -228,7 +229,7 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 	'''
 	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode, rotation_angle
 	global zenith_seeing, air_mass
-	global user_psf
+	global user_psf, onlyAO_psf
 	
 	AO_mode = input_parameters["ao_mode"].upper()
 	rotation_angle = rotation
@@ -473,6 +474,8 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		
 		
 
+		onlyAO_psf = user_psf_AO
+
 		# Instrument jitter
 		kernel_jitter_instrument = Gauss2D_instrument(xx, yy)
 		kernel_jitter_instrument = kernel_jitter_instrument/np.sum(kernel_jitter_instrument)
@@ -480,11 +483,12 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		peak_psf_final = np.max(user_psf)
 
 		SR_w_inst = float(head["SR0000"])/peak_psf_tiptop*peak_psf_final
-		logging.info("SR w/ inst = {:.4f}".format(SR_w_inst))
+		logging.info("SR with inst = {:.4f}".format(SR_w_inst))
 
 		# recenter PSF
 		if user_psf.shape[0] % 2 == 0:
 			user_psf = np.roll(user_psf, (-1, -1), axis=(0,1))
+			onlyAO_psf = np.roll(user_psf_AO, (-1, -1), axis=(0,1))
 
 		
 	

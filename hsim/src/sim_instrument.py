@@ -16,6 +16,7 @@ from src.modules.em_model import *
 
 tppath = path_setup('../../' + config_data["data_dir"] + 'throughput/')
 hc_path = path_setup('../../' + config_data["data_dir"] + 'HC/')
+AreaTel = 0.
 
 class InstrumentPart:
 	substrate = "Suprasil3001_50mm_Emissivity.txt"
@@ -64,7 +65,7 @@ class InstrumentPart:
 		# Calculate emissivity for n elements
 		emi = 1. - (1. - emi)**n # ~= n*emi for small emi
 		# Scale depending on the effective area
-		emi = emi*self.area/config_data['telescope']['area']
+		emi = emi*self.area/AreaTel
 		# Interpolate emissivity to output lambda grid
 		emi_interp = interp1d(l, emi, kind='linear', bounds_error=False, fill_value=0.)
 		
@@ -192,7 +193,8 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	Touter_window = TTel - 0.2*(TTel - TCool)
 	Tinner_window = TCool + 0.2*(TTel - TCool)
 	AreaIns = (config_data['telescope']['diameter']*0.5)**2*np.pi	# Full 37m2 aperture, including central obstruction -- this what we see from a thermal point of view after cold stop
-	AreaTel = config_data['telescope']['area']			# 37m with 11m central obscuration -- this is what we see before the cold stop
+	global AreaTel
+	AreaTel = get_telescope_area(input_parameters["grating"])	# 37m with 11m central obscuration -- this is what we see before the cold stop
 
 	# Dust properties
 	dustfrac = 0.01

@@ -241,6 +241,9 @@ def main(input_parameters):
 	logging.info("# end configuration file")
 
 	#
+	logging.info("Telescope area = "+ str(get_telescope_area(input_parameters["grating"])) + " m2")
+
+	#
 	np.random.seed(input_parameters["noise_seed"])
 
 	# Read input FITS cube and resample depending on grating and spaxel scale
@@ -338,8 +341,8 @@ def main(input_parameters):
 	spaxel_area = spax_scale.xscale/1000.*spax_scale.yscale/1000. # arcsec2
 	channel_width = new_lamb_per_pix # micron
 	
-	output_cube_spec = output_cube_spec*spaxel_area*channel_width*config_data["telescope"]["area"]
-	output_back_emission = output_back_emission*spaxel_area*channel_width*config_data["telescope"]["area"]
+	output_cube_spec = output_cube_spec*spaxel_area*channel_width*get_telescope_area(input_parameters["grating"])
+	output_back_emission = output_back_emission*spaxel_area*channel_width*get_telescope_area(input_parameters["grating"])
 	head['BUNIT'] = "photon"
 	
 	# 6 - Detector
@@ -709,7 +712,7 @@ def main(input_parameters):
 	peak_psf = np.max(psf_internal)
 	flux_fraction_psf_core = 1. # np.sum(psf_internal[psf_internal > 0.5*peak_psf])
 
-	flux_cal_star_electrons = flux_cal_star_photons*channel_width*config_data["telescope"]["area"]*output_transmission*flux_fraction_psf_core # electron/s 
+	flux_cal_star_electrons = flux_cal_star_photons*channel_width*get_telescope_area(input_parameters["grating"])*output_transmission*flux_fraction_psf_core # electron/s 
 	factor_calibration = flux_cal_star/flux_cal_star_electrons # erg/s/cm2/um / (electron/s)
 	
 	# Reshape factor to match output cube shape
@@ -743,7 +746,7 @@ def main(input_parameters):
 	fnu = sens_5sigma*lcentral**2/(const.c.value*1e6) # erg/s/cm2/Hz
 	sens_ABmag = -2.5*np.log10(fnu/3631./1e-23) # AB mag
 	
-	logging.info("Sensitivity point-source 5sigma = {:.2f} mag = {:.2e} erg/s/cm2/um at {:.3f} um".format(sens_ABmag, sens_5sigma, lcentral))
+	logging.info("Sensitivity 5sigma = {:.2f} mag = {:.2e} erg/s/cm2/um at {:.3f} um".format(sens_ABmag, sens_5sigma, lcentral))
 
 	noise_total = np.max(noise_cube_object) + np.median(n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
 	
@@ -793,57 +796,63 @@ def main(input_parameters):
 	psf_oversampling = int(round(min([psf_info.xscale, psf_info.yscale])/psf_info.psfscale))
 	psf_spaxel_shape = psf_info.psfsize//psf_oversampling + 1
 	
-	tmp = np.zeros((psf_spaxel_shape*psf_oversampling, psf_spaxel_shape*psf_oversampling))
 	psfcenter = psf_info.psfsize//2 + 1
 	psfcenter_offset = psfcenter % psf_oversampling
-	
 	x0 = psf_oversampling//2 + 1 - psfcenter_offset
-	tmp[x0:x0 + psf_info.psfsize, x0:x0 + psf_info.psfsize] = psf_internal[:, :]
-	
-	psf_spaxel_shape_x, psf_spaxel_shape_y = psf_spaxel_shape, psf_spaxel_shape
-	
-	psf_spaxel = rebin_psf(tmp, (psf_spaxel_shape, psf_spaxel_shape))
-	
-	if input_parameters["spaxel_scale"] == "30x60":
-		# an extra rebin is needed for the y axis
-		psf_spaxel_shape_y = psf_spaxel_shape_y//2
-	elif input_parameters["spaxel_scale"] == "120x60":
-		# an extra rebin is needed for the x axis
-		psf_spaxel_shape_x = psf_spaxel_shape_x//2
-	
-	psf_spaxel = frebin2d(tmp, (psf_spaxel_shape_x, psf_spaxel_shape_y))
-	psf_spaxel = psf_spaxel/np.sum(psf_spaxel)*np.sum(tmp) # Normalize PSF
-	
-	# center PSF on the output array
-	center_x_output = (output_cube_spec.shape[2] - 1) // 2 - (output_cube_spec.shape[2] % 2 - 1)
-	center_y_output = (output_cube_spec.shape[1] - 1) // 2 - (output_cube_spec.shape[1] % 2 - 1)
-	center_x_psf = (psf_spaxel.shape[1] - 1) // 2 - (psf_spaxel.shape[1] % 2 - 1)
-	center_y_psf = (psf_spaxel.shape[0] - 1) // 2 - (psf_spaxel.shape[0] % 2 - 1)
 
-	# adjust y axis
-	tmp = np.zeros((output_cube_spec.shape[1], psf_spaxel.shape[1]))
-	if tmp.shape[0] > psf_spaxel.shape[0]:
-		yi = center_y_output - center_y_psf
-		tmp[yi:yi+psf_spaxel.shape[0], :] = psf_spaxel
-	else:
-		yi = center_y_psf - center_y_output
-		tmp[:, :] = psf_spaxel[yi:yi+tmp.shape[0], :]
-	psf_spaxel = tmp
+	def save_rebin_psf(psf, psf_spaxel_shape, suffix):
+		psf_spaxel_shape_x, psf_spaxel_shape_y = psf_spaxel_shape, psf_spaxel_shape
+		tmp = np.zeros((psf_spaxel_shape*psf_oversampling, psf_spaxel_shape*psf_oversampling))
+		tmp[x0:x0 + psf_info.psfsize, x0:x0 + psf_info.psfsize] = psf[:, :]
 
-	# adjust x axis
-	tmp = np.zeros((output_cube_spec.shape[1], output_cube_spec.shape[2]))
-	if tmp.shape[1] > psf_spaxel.shape[1]:
-		xi = center_x_output - center_x_psf
-		tmp[:, xi:xi+psf_spaxel.shape[1]] = psf_spaxel
-	else:
-		xi = center_x_psf - center_x_output
-		tmp[:, :] = psf_spaxel[:, xi:xi+tmp.shape[1]]
-	psf_spaxel = tmp
+		psf_spaxel = rebin_psf(tmp, (psf_spaxel_shape, psf_spaxel_shape))
+
+		if input_parameters["spaxel_scale"] == "30x60":
+			# an extra rebin is needed for the y axis
+			psf_spaxel_shape_y = psf_spaxel_shape_y//2
+		elif input_parameters["spaxel_scale"] == "120x60":
+			# an extra rebin is needed for the x axis
+			psf_spaxel_shape_x = psf_spaxel_shape_x//2
+
+		psf_spaxel = frebin2d(tmp, (psf_spaxel_shape_x, psf_spaxel_shape_y))
+		psf_spaxel = psf_spaxel/np.sum(psf_spaxel)*np.sum(tmp) # Normalize PSF
+
+		# center PSF on the output array
+		center_x_output = (output_cube_spec.shape[2] - 1) // 2 - (output_cube_spec.shape[2] % 2 - 1)
+		center_y_output = (output_cube_spec.shape[1] - 1) // 2 - (output_cube_spec.shape[1] % 2 - 1)
+		center_x_psf = (psf_spaxel.shape[1] - 1) // 2 - (psf_spaxel.shape[1] % 2 - 1)
+		center_y_psf = (psf_spaxel.shape[0] - 1) // 2 - (psf_spaxel.shape[0] % 2 - 1)
+
+		# adjust y axis
+		tmp = np.zeros((output_cube_spec.shape[1], psf_spaxel.shape[1]))
+		if tmp.shape[0] > psf_spaxel.shape[0]:
+			yi = center_y_output - center_y_psf
+			tmp[yi:yi+psf_spaxel.shape[0], :] = psf_spaxel
+		else:
+			yi = center_y_psf - center_y_output
+			tmp[:, :] = psf_spaxel[yi:yi+tmp.shape[0], :]
+		psf_spaxel = tmp
+
+		# adjust x axis
+		tmp = np.zeros((output_cube_spec.shape[1], output_cube_spec.shape[2]))
+		if tmp.shape[1] > psf_spaxel.shape[1]:
+			xi = center_x_output - center_x_psf
+			tmp[:, xi:xi+psf_spaxel.shape[1]] = psf_spaxel
+		else:
+			xi = center_x_psf - center_x_output
+			tmp[:, :] = psf_spaxel[:, xi:xi+tmp.shape[1]]
+		psf_spaxel = tmp
+
+		head_PSF['CDELT1'] = spax_scale.xscale
+		head_PSF['CDELT2'] = spax_scale.yscale
+		save_fits_cube(base_filename + "_" + suffix + ".fits", psf_spaxel, suffix, head_PSF)
 	
-	head_PSF['CDELT1'] = spax_scale.xscale
-	head_PSF['CDELT2'] = spax_scale.yscale
-	save_fits_cube(base_filename + "_PSF.fits", psf_spaxel, "PSF", head_PSF)
-	
+
+	save_rebin_psf(psf_internal, psf_spaxel_shape, "PSF")
+	if input_parameters["mci"]:
+		from src.modules.create_psf import onlyAO_psf
+		save_rebin_psf(onlyAO_psf, psf_spaxel_shape, "PSF_AO")
+
 
 	if hsimlog.count_error == 0 and hsimlog.count_warning == 0:
 		logging.info('Simulation OK - ' + str(hsimlog.count_error) + " errors and " + str(hsimlog.count_warning) + " warnings")

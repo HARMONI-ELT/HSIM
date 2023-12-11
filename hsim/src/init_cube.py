@@ -246,6 +246,16 @@ def init_cube(datacube, grating, spax):
 	if len(missing_headers) != 0:
 		raise HSIMError('Missing headers. Please correct datacube header.')
 	
+	
+	# remove CDx_x WCS keywords if present to avoid WCS inconsistencies in the output cube
+	for i in range(1,4):
+		for j in range(1,4):
+			CD_kw = "CD" + str(i) + "_" + str(j)
+			if CD_kw in head:
+				del head[CD_kw]
+				logging.warning("The WCS keyword " + CD_kw + " was removed.")
+		
+	
 	# define CRVAL{1,2} and CRPIX{1,2} if not included in the header
 	if "CRVAL1" not in head:
 		head["CRVAL1"] = 0
@@ -337,7 +347,7 @@ def init_cube(datacube, grating, spax):
 	
 	area_spaxel = spax_scale.xscale*spax_scale.yscale/1000.**2 # arcsec2
 	um_per_pixel = head['CDELT3'] # micron/pixel
-	factor = config_data["telescope"]["area"]*area_spaxel*um_per_pixel
+	factor = get_telescope_area(grating)*area_spaxel*um_per_pixel
 	
 	logging.info('The flux range of the input cube is {:.2e} - {:.2e} ph/s/output pixel'.format(np.min(cube)*factor, np.max(cube)*factor))
 
