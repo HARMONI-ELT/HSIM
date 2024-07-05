@@ -248,7 +248,7 @@ def main(input_parameters):
 
 	# Read input FITS cube and resample depending on grating and spaxel scale
 	# output is in ph/s/m2/um/arcsec2 units
-	cube, head, lambs, input_spec_res = init_cube(input_parameters["input_cube"], input_parameters["grating"], input_parameters["spaxel_scale"])
+	cube_exp, head, lambs, input_spec_res = init_cube(input_parameters["input_cube"], input_parameters["grating"], input_parameters["spaxel_scale"])
 	
 	# Calculate extended lambda range to convolve with the LSF
 	LSF_width = int(config_data["spectral_sampling"]["internal"]/2.35482*config_data['LSF_kernel_size'])
@@ -259,7 +259,7 @@ def main(input_parameters):
 
 	# calculate the cube in photons for a single exposure
 	# in ph/m2/um/arcsec2
-	cube_exp = cube*input_parameters["exposure_time"]
+	cube_exp *= input_parameters["exposure_time"]
 	back_emission = np.zeros(len(lambs_extended)) # Background exposure
 	transmission = np.ones(len(lambs_extended)) # Telluric correction
 
