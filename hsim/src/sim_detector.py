@@ -9,7 +9,6 @@ import scipy.constants as sp
 from scipy.interpolate import UnivariateSpline
 from scipy.interpolate import interp1d
 from scipy import integrate
-from astropy.convolution import Gaussian1DKernel
 from astropy.io import fits
 
 from src.modules.misc_utils import path_setup

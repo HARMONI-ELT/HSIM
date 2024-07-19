@@ -7,7 +7,6 @@ import collections
 import glob
 import re
 import datetime
-import multiprocessing as mp
 import os.path
 import logging
 import warnings

@@ -10,7 +10,6 @@ import signal
 import time
 
 import numpy as np
-import scipy.constants as sp
 from scipy.signal import fftconvolve
 
 from src.config import *

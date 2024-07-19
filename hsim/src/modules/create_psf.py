@@ -6,7 +6,6 @@ import logging
 
 import numpy as np
 from scipy.interpolate import interp1d
-import scipy.ndimage
 from astropy.io import fits
 from scipy.interpolate import interp2d
 from scipy.signal import fftconvolve

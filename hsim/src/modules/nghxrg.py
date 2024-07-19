@@ -72,7 +72,6 @@ import warnings
 from astropy.io import fits
 import numpy as np
 from scipy.ndimage.interpolation import zoom
-from scipy.interpolate import UnivariateSpline
 from astropy.stats.funcs import median_absolute_deviation as mad
 import datetime
 # import matplotlib.pyplot as plt # Handy for debugging
