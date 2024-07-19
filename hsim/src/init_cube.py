@@ -8,7 +8,6 @@ import logging
 import astropy.io.fits as fits
 import astropy.units as u
 import numpy as np
-import scipy.constants as sp
 from scipy.interpolate import interp2d
 
 from src.config import *
