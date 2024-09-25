@@ -7,7 +7,6 @@ import collections
 import glob
 import re
 import datetime
-import multiprocessing as mp
 import os.path
 import logging
 import warnings
@@ -155,6 +154,11 @@ def main(input_parameters):
 	elif input_parameters["ao_mode"] == "User":
 		simulation_conf.append(Conf('User defined PSF file', 'HSM_UPSF', 'user_defined_psf'))
 
+
+	# Check minimum exposure time
+	if input_parameters["exposure_time"] < 1.3:
+		logging.error("The minimum exposure time is 1.3s")
+		return
 
 	# Check that the 60x60 and 120x60 are only used with the V+R grating
 	if input_parameters["spaxel_scale"] in ["60x60", "120x60"] and input_parameters["grating"] != "V+R":
@@ -315,8 +319,12 @@ def main(input_parameters):
 	
 	lambs = lambs_extended[cube_lamb_mask]
 	new_lamb_per_pix = (lambs[1] - lambs[0])/scale_z # micron
-	
-	output_lambs = new_lamb_per_pix*np.arange(int(len(lambs)*scale_z)) + lambs[0]
+
+	# define a common wavelength output grid based on the grating
+	bandws = config_data['gratings'][input_parameters["grating"]]
+	initial_channel = int(int((lambs[0] - bandws.lmin)/new_lamb_per_pix) + 1)*new_lamb_per_pix + bandws.lmin
+	n_channels = int(len(lambs)*scale_z) - 1
+	output_lambs = new_lamb_per_pix*np.arange(n_channels) + initial_channel
 	
 	logging.info("- Output spectral sampling: {:.2f} AA".format(new_lamb_per_pix*10000.))
 	
