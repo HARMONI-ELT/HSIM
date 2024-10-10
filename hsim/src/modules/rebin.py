@@ -22,9 +22,8 @@ def rebin1d(xout, xin, yin):
 		# rebin if output is coarser
 		temp = np.zeros((len(xout)), dtype=np.float64)
 		#Loop on output values
-		box = float(dx_out)/float(dx_in)
 		
-		in_i = np.interp(xout - dx_out*0.5, xin, range(len(xin)))
+		in_i = np.interp(xout - dx_out*0.5, xin - dx_in*0.5, range(len(xin)))
 		
 		for i in range(len(xout)):
 			rstart = in_i[i]
@@ -71,8 +70,7 @@ def rebin_cube_1d(xout, xin, cube):
 	else:
 		# rebin if output is coarser
 		#Loop on output values
-		box = float(dx_out)/float(dx_in)
-		in_i = np.interp(xout - dx_out*0.5, xin, range(len(xin)))
+		in_i = np.interp(xout - dx_out*0.5, xin - dx_in*0.5, range(len(xin)))
 
 		for i in range(len(xout)):
 			rstart = in_i[i]

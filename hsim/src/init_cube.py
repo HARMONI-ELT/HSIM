@@ -64,6 +64,10 @@ def spectral_res(datacube, head, grating, wavels):
 	logging.info('Output resolution = %.1f AA' % (new_res*10000.))
 	logging.info('Internal sampling = %.1f AA' % (lamb_per_pix*10000.))
 
+	if len(wavels) < 2 or abs(wavels[-1] - wavels[0])/new_res < 4*2:
+		raise HSIMError('Input cube covers less than 4 output slices')
+
+
 	#Interpolate datacube onto regular pixel grid
 	if wavels[0] <= bandws.lmin and wavels[-1] >= bandws.lmax: # cube wavelength range larger than grating choice
 		logging.warning('Cube wavelength range larger than grating: chopping down to grating range')
@@ -71,13 +75,7 @@ def spectral_res(datacube, head, grating, wavels):
 		
 	elif wavels[0] > bandws.lmin and wavels[-1] < bandws.lmax: # cube wavelength range inside grating choice
 		logging.info('Cube wavelength range within grating range')
-		if len(wavels) > 1:
-			new_wavels = np.arange(wavels[0], wavels[-1], lamb_per_pix)
-		else:
-			logging.warning('Input cube only has 1 slice. This slice will be duplicated in the internal cube')
-			spec_size = 36
-			new_wavels = np.arange(wavels[0] - spec_size*0.5*lamb_per_pix, wavels[0] + spec_size*0.5*lamb_per_pix, lamb_per_pix)
-			wavels = new_wavels
+		new_wavels = np.arange(wavels[0], wavels[-1], lamb_per_pix)
 	
 	elif wavels[0] < bandws.lmin and wavels[-1] < bandws.lmax and wavels[-1] > bandws.lmin: # cube short wavelength longer than grating shortest wavelength
 		logging.warning('Cube shortest wavelength shorter than grating')
@@ -86,7 +84,6 @@ def spectral_res(datacube, head, grating, wavels):
 	elif wavels[0] > bandws.lmin and wavels[0] < bandws.lmax and wavels[-1] > bandws.lmax: # cube short wavelength longer than grating shortest wavelength
 		logging.warning('Cube longest wavelength longer than grating')
 		new_wavels = np.arange(wavels[0], bandws.lmax, lamb_per_pix)
-		
 	else:
 		raise HSIMError('The wavelength range of the input cube ' + str(wavels[0]) + " - " + str(wavels[-1]) + " is not valid for the " + grating + " grating ("  + str(bandws.lmin) + " - " + str(bandws.lmax) + ")")
 
@@ -177,7 +174,6 @@ def spatial_res(datacube, head, spax):
 				new_cube[k,:,:] = frebin2d(datacube[k,:,:], (len(xgrid_out), len(ygrid_out)))
 			
 	else:
-		
 		new_cube = datacube
 		
 		

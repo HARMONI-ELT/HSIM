@@ -110,6 +110,10 @@ def main(input_parameters):
 	str2bool("detector_systematics")
 	
 	
+	if not os.path.exists(input_parameters['output_dir']):
+		logging.error("Output directory '" + input_parameters['output_dir'] + "' does not exist.")
+		return
+
 	# Init logger
 	base_name = os.path.splitext(os.path.basename(input_parameters['input_cube']))[0]
 	base_filename = os.path.join(input_parameters['output_dir'], base_name)
