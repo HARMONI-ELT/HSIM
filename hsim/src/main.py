@@ -141,6 +141,8 @@ def main(input_parameters):
 			input_parameters["ao_mode"] = "MCI_LTAO"
 		elif input_parameters["ao_mode"] == "SCAO":
 			input_parameters["ao_mode"] = "MCI_SCAO"
+		elif input_parameters["ao_mode"] == "MORFEO":
+			input_parameters["ao_mode"] = "MCI_MORFEO"
 		else:
 			logging.error("No valid AO mode for MCI.")
 			return
@@ -151,7 +153,7 @@ def main(input_parameters):
 	
 	if input_parameters["ao_mode"] == "LTAO":
 		simulation_conf.append(Conf('LTAO star H mag', 'HSM_AOMA', 'ao_star_hmag'))
-		simulation_conf.append(Conf('LTAO star H mag', 'HSM_AODI', 'ao_star_distance'))
+		simulation_conf.append(Conf('LTAO star H distance', 'HSM_AODI', 'ao_star_distance'))
 	elif input_parameters["ao_mode"] == "HCAO":
 		simulation_conf.append(Conf('HC apodizer', 'HSM_HCAP', 'hc_apodizer'))
 		simulation_conf.append(Conf('HC mask', 'HSM_HCMK', 'hc_fp_mask'))
@@ -654,11 +656,12 @@ def main(input_parameters):
 			for _ in list_files:
 				os.remove(base_filename + "_" + _ + ".txt")
 				os.remove(base_filename + "_" + _ + ".pdf")
-				
-			for _ in harmoni_files_em+harmoni_files_tr:
-				filename = _.replace(".txt", "")
-				os.remove(filename + ".txt")
-				os.remove(filename + ".pdf")
+
+			if not input_parameters["mci"]:
+				for _ in harmoni_files_em+harmoni_files_tr:
+					filename = _.replace(".txt", "")
+					os.remove(filename + ".txt")
+					os.remove(filename + ".pdf")
 		
 		
 	# Noiseless
@@ -861,7 +864,7 @@ def main(input_parameters):
 	
 
 	save_rebin_psf(psf_internal, psf_spaxel_shape, "PSF")
-	if input_parameters["mci"]:
+	if input_parameters["mci"] and input_parameters["ao_mode"] != "MORFEO":
 		from src.modules.create_psf import onlyAO_psf
 		save_rebin_psf(onlyAO_psf, psf_spaxel_shape, "PSF_AO")
 

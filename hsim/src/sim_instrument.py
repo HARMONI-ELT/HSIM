@@ -185,8 +185,14 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	# -------------------------
 	# Instrument temperatures
 	TTel = input_parameters["telescope_temp"]
-	#TCool = TTel - config_data['HARMONI_FPRS_diff_temp']
-	TCool = 273.15 + config_data['HARMONI_FPRS_temp'] # fixed FPRS temp
+	aoMode = input_parameters["ao_mode"]
+	
+	
+	if "MORFEO" in aoMode:
+		TCool = 273.15 + 7.5
+	else:
+		TCool = 273.15 + config_data['HARMONI_FPRS_temp'] # fixed FPRS temp
+		
 	TCryo = config_data['HARMONI_cryo_temp']
 	TCryoMech = TCryo
 	TTrap = TCool
@@ -211,34 +217,77 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	logging.debug("ecoldtrap = {:6.3f} rwindow = {:6.3f}".format(ecoldtrap, rwindow))
 	logging.debug("-------")
 	
-	
-	# AO dichroic if present
-	aoMode = input_parameters["ao_mode"]
-	if aoMode == "LTAO":
-		harmoni.addPart(InstrumentPart("LTAO dichroic", TTel, AreaIns, n_lenses=1, emis_lens="LTAO_0.6_dichroic.txt", dust_lens=2.*dustfrac))
-		harmoni.addPart(InstrumentPart("AO cold trap", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=0.03, emis_dust=ecoldtrap))
-	
-	harmoni.addPart(InstrumentPart("Outer window", Touter_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=dustfrac + InstrumentPart.mindustfrac))
-	harmoni.addPart(InstrumentPart("Inner window", Tinner_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=2.*InstrumentPart.mindustfrac))
+	dust_mirror_up = 0.032
+	dust_mirror_down = 0.008
 
-	harmoni.addPart(InstrumentPart("Window reflected", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.*0.8*2.0*rwindow, emis_dust=ecoldtrap))
+	# clean surfaces for MORFEO
+	dust_mirror_up = 0.
+	dust_mirror_down = 0.
+	dustfrac = 0.
+	rwindow = 0.
+	InstrumentPart.mindustfrac = 0.
 
-	low_dust_iso6 = 1
-	# FPRS
-	if low_dust_iso6:
-		harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=4))
+	
+	if "MORFEO" in aoMode:
+		low_dust_iso6 = 0
+
+		harmoni.addPart(InstrumentPart("MORFEO total", TTel, AreaTel, n_mirrors=1, emis_mirror="MORFEO_t5000.txt", dust_mirror=0))
+
+		complete_range = np.linspace(0.56, 2.49, 3000)
+		HARMONI_transmission, HARMONI_background = harmoni.calcThroughputAndEmission(complete_range, input_parameters["exposure_time"], output_file=None)
+
+		plot_file = output_file + "_MORFEO"
+		plt.clf()
+		plt.plot(complete_range, HARMONI_transmission)
+		plt.xlabel(r"wavelength [$\mu$m]")
+		plt.ylabel("Throughput MORFEO")
+		plt.savefig(plot_file + "_tr.pdf")
+		np.savetxt(plot_file + "_tr.txt", np.c_[complete_range, HARMONI_transmission])
+
+		plt.clf()
+		plt.plot(complete_range, HARMONI_background, label="HARMONI MORFEO")
+		plt.legend()
+		plt.xlabel(r"wavelength [$\mu$m]")
+		plt.ylabel("Emissivity MORFEO")
+		plt.savefig(plot_file + "_em.pdf")
+		np.savetxt(plot_file + "_em.txt", np.c_[complete_range, HARMONI_background])
+
+
+		harmoni.addPart(InstrumentPart("NGSS outer window", Touter_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=dustfrac + InstrumentPart.mindustfrac))
+		harmoni.addPart(InstrumentPart("NGSS inner window", Tinner_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=2.*InstrumentPart.mindustfrac))
+		harmoni.addPart(InstrumentPart("NGSS window reflected", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.*0.8*2.0*rwindow, emis_dust=ecoldtrap))
+
+
 	else:
-		harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=3, dust_mirror=0.032))
-		harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=1, dust_mirror=0.008))
-	
-	if aoMode in ["SCAO", "HCAO"]:
-		harmoni.addPart(InstrumentPart("SCAO dichroic", TCool, AreaIns, n_lenses=1, emis_lens="SCAO_0.8_dichroic.txt", dust_lens=2.*dustfrac))
+		low_dust_iso6 = 1
+		# AO dichroic if present
+		if aoMode == "LTAO":
+			harmoni.addPart(InstrumentPart("LTAO dichroic", TTel, AreaIns, n_lenses=1, emis_lens="LTAO_0.6_dichroic.txt", dust_lens=2.*dustfrac))
+			harmoni.addPart(InstrumentPart("AO cold trap", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=0.03, emis_dust=ecoldtrap))
+		
+		harmoni.addPart(InstrumentPart("Outer window", Touter_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=dustfrac + InstrumentPart.mindustfrac))
+		harmoni.addPart(InstrumentPart("Inner window", Tinner_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=2.*InstrumentPart.mindustfrac))
+
+		harmoni.addPart(InstrumentPart("Window reflected", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.*0.8*2.0*rwindow, emis_dust=ecoldtrap))
+
+		# FPRS
+		if low_dust_iso6:
+			harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=4))
+		else:
+			harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=3, dust_mirror=dust_mirror_up))
+			harmoni.addPart(InstrumentPart("FPRS", TCool, AreaTel, n_mirrors=1, dust_mirror=dust_mirror_down))
+		
+		if aoMode in ["SCAO", "HCAO"]:
+			harmoni.addPart(InstrumentPart("SCAO dichroic", TCool, AreaIns, n_lenses=1, emis_lens="SCAO_0.8_dichroic.txt", dust_lens=2.*dustfrac))
+
+
 	
 	if low_dust_iso6:
 		harmoni.addPart(InstrumentPart("Cryo window", TCool, AreaTel, n_lenses=1, emis_scaling=0.4, dust_lens=InstrumentPart.mindustfrac))
 	else:
 		harmoni.addPart(InstrumentPart("Cryo window", TCool, AreaTel, n_lenses=1, emis_scaling=0.4, dust_lens=0.125))
-		
+	
+	
 	harmoni.addPart(InstrumentPart("Cryo window inner dust", TCryo+50., AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=InstrumentPart.mindustfrac))
 	harmoni.addPart(InstrumentPart("Cryo window cold trap", TCryo+50., AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.0*rwindow, emis_dust=ecoldtrap))
 
@@ -254,18 +303,36 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	if input_parameters["mci"]:
 		logging.info("Using minimum compliant instrument background and throughput")
 		
+		
+		if "MORFEO" not in aoMode:
+			scaling_background = 3.029 # scaled background to match specification at 2.2um at 9C - 2.7E-5 W/m2/um/sr at input focal plane
+		else:
+			# do not scale for MORFEO
+			logging.info("Background not scaled for MORFEO")
+			scaling_background = 1.
+		
+		
+		###
+		bandws = config_data['gratings'][grating]
+		complete_range = np.arange(bandws.lmin, bandws.lmax, (bandws.lmax+bandws.lmin)*0.5/bandws.R)
+		complete_HARMONI_transmission, complete_HARMONI_background = harmoni.calcThroughputAndEmission(complete_range, input_parameters["exposure_time"], output_file=None)
+		scaling_transmission = 1./np.mean(complete_HARMONI_transmission)*0.26
+		
+		plot_file = output_file + "_complete"
+		
+		np.savetxt(plot_file + "_" + grating + "_inst_em.txt", np.c_[complete_range, complete_HARMONI_background*scaling_background/input_parameters["exposure_time"]], header="wavelength (um) emission (ph/um/m2/arcsec2/s)")
+		np.savetxt(plot_file + "_" + grating + "_inst_tr.txt", np.c_[complete_range, complete_HARMONI_transmission*scaling_transmission])
+		###
+		
+		
 		bandws = config_data['gratings'][grating]
 		mci_lamb = np.arange(bandws.lmin, bandws.lmax, (bandws.lmax+bandws.lmin)*0.5/bandws.R)
 		mci_HARMONI_transmission, _ = harmoni.calcThroughputAndEmission(mci_lamb, input_parameters["exposure_time"], output_file=None)
 		
 		scaling_transmission = 1./np.mean(mci_HARMONI_transmission)*0.26
 		HARMONI_transmission = np.interp(ext_lambs, mci_lamb, mci_HARMONI_transmission*scaling_transmission)
-		
-		#scaling_background = 2.031e3/(np.median(HARMONI_background)/input_parameters["exposure_time"])*np.median(HARMONI_transmission)/0.289
-		scaling_background = 1.0754 # scaled background to match specifictaion at 2.2um at 9C
 		HARMONI_background = scaling_background*HARMONI_background
 		
-
 		logging.info("Total MCI HARMONI backround: lambda = {:7.4f} throughput = {:6.3f} emission = {:.3e} ph/um/m2/arcsec2/s".format(np.median(ext_lambs), np.median(HARMONI_transmission), np.median(HARMONI_background)/input_parameters["exposure_time"]))
 
 		plot_file = output_file + "_HARMONI_mci"
@@ -284,9 +351,6 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 		plt.ylabel("Emissivity mci")
 		plt.savefig(plot_file + "_em.pdf")
 		np.savetxt(plot_file + "_em.txt", np.c_[ext_lambs, HARMONI_background])
-		
-		
-		
 		
 		
 

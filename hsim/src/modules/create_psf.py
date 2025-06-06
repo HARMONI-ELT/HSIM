@@ -232,6 +232,8 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 	global user_psf, onlyAO_psf
 	
 	AO_mode = input_parameters["ao_mode"].upper()
+	
+	
 	rotation_angle = rotation
 	
 	fov = _fov
@@ -364,7 +366,8 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		
 		logging.info("User PSF x={0} y={1} flux={sum}".format(*user_psf.shape, sum=np.sum(user_psf)))
 		
-	elif AO_mode == "MCI_LTAO" or AO_mode == "MCI_SCAO":
+	elif AO_mode == "MCI_LTAO" or AO_mode == "MCI_SCAO" or AO_mode == "MCI_MORFEO":
+		
 		import tiptop.tiptop as tiptop
 		#from matplotlib import rc
 
@@ -374,6 +377,11 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		elif AO_mode == "MCI_SCAO":
 			tiptop_ini_file = "HarmoniSCAO_1.ini"
 			jitter_FHWM = 6.8 # Telescope environment
+		elif AO_mode == "MCI_MORFEO":
+			tiptop_ini_file = "MORFEO_3NGS_median_central_psf.ini"
+			jitter_FHWM = 0.0 #
+		else:
+			assert(1 == 0)
 
 		tiptopini = os.path.join(psf_path, tiptop_ini_file)
 		with open(tiptopini, 'r') as file :
@@ -397,6 +405,8 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		mci_wavelength_meters = mci_grating_w[input_parameters["grating"]]
 
 		filedata = filedata.replace('2200e-9', str(mci_wavelength_meters))
+		filedata = filedata.replace('<PSF_PATH>/', psf_path)
+
 		with open('HarmoniAO_3.ini', 'w') as file:
 			file.write(filedata)
 
@@ -434,16 +444,19 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		logging.info("FWHM instrument = {:.2f} mas".format(FWHM_instrument))
 		logging.info("MCI Combined σ = {:.2f} mas".format(sigma_combined))
 		
-		# Low order AO jitter
-		Gauss2D_instrument = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*sigma_instrument**2))
-		Gauss2D_AO = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*sigma_AO**2))
-		
 		xx, yy = np.meshgrid(xgrid_out, ygrid_out)
-		kernel_jitter_AO = Gauss2D_AO(xx, yy)
-		kernel_jitter_AO = kernel_jitter_AO/np.sum(kernel_jitter_AO)
+
+
+		# Low order AO jitter
+		if sigma_AO > 0:
+			Gauss2D_AO = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*sigma_AO**2))
+			kernel_jitter_AO = Gauss2D_AO(xx, yy)
+			kernel_jitter_AO = kernel_jitter_AO/np.sum(kernel_jitter_AO)
+			user_psf_AO = fftconvolve(user_psf, kernel_jitter_AO, mode="same")
+		else:
+			user_psf_AO = user_psf
 
 		peak_psf_tiptop = np.max(user_psf)
-		user_psf_AO = fftconvolve(user_psf, kernel_jitter_AO, mode="same")
 		peak_psf_AO = np.max(user_psf_AO)
 
 		SR_AO = float(head["SR0000"])/peak_psf_tiptop*peak_psf_AO
@@ -477,6 +490,7 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		onlyAO_psf = user_psf_AO
 
 		# Instrument jitter
+		Gauss2D_instrument = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*sigma_instrument**2))
 		kernel_jitter_instrument = Gauss2D_instrument(xx, yy)
 		kernel_jitter_instrument = kernel_jitter_instrument/np.sum(kernel_jitter_instrument)
 		user_psf = fftconvolve(user_psf_AO, kernel_jitter_instrument, mode="same")
@@ -490,7 +504,45 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 			user_psf = np.roll(user_psf, (-1, -1), axis=(0,1))
 			onlyAO_psf = np.roll(user_psf_AO, (-1, -1), axis=(0,1))
 
-		
+	elif AO_mode == "MORFEO":
+		raise HSIMError("MORFEO can only be used with the Minimum compliant instrument mode")
+		assert(1 == 0) # this should never happen
+		jitter = _jitter
+		diameter = config_data["telescope"]["diameter"]
+		logging.info("define AO PSF - " + AO_mode)
+
+		#pup = fits.getdata(os.path.join(psf_path, "EELT480pp0.0813spider.fits"))
+		pup = fits.getdata(os.path.join(psf_path, "ELT_pup.fits"))
+
+		stats = fits.getdata(os.path.join(psf_path, "ELT_statics.fits"))
+
+		if zenith_seeing == 0.43:
+			psd_profile = "JQ1"
+		elif zenith_seeing == 0.64:
+			psd_profile = "median"
+		elif zenith_seeing == 1.04:
+			psd_profile = "JQ4"
+		else:
+			print(zenith_seeing)
+			assert(1 == 0)
+
+		psd_ao_file = "PSD_morfeo_" + psd_profile + ".fits"
+
+		logging.info("Using PSD file: " + psd_ao_file)
+		psd_ao_file = os.path.join(psf_path, psd_ao_file)
+
+		psd = fits.getdata(psd_ao_file, 1, memmap=True)
+
+		jitter_PSD = 4. # fixed LO jitter
+
+		logging.info("Total AO jitter = {:.2f} mas".format(jitter_PSD))
+
+		# combine PSD jitter and instrument and extra user defined jitter
+		jitter = (jitter**2 + jitter_PSD**2)**0.5
+		logging.info("Total PSF jitter = {0:.2f}x{1:.2f} mas".format(*jitter))
+
+	else:
+		assert(1 == 0) # this should never happen
 	
 	return
 
@@ -508,7 +560,7 @@ def create_psf(lamb, Airy=False):
 	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode, rotation
 	global zenith_seeing, air_mass
 
-	if AO_mode in ["LTAO", "SCAO", "HCAO", "AIRY"]:
+	if AO_mode in ["LTAO", "SCAO", "HCAO", "AIRY", "MORFEO"]:
 		# size of a pixel returned by psd_to_psf
 		psf_sampling = 2.
 		pix_psf = lamb*1e-6/(psf_sampling*diameter)*1/(4.85*1e-9) # mas
@@ -536,6 +588,7 @@ def create_psf(lamb, Airy=False):
 		finalpsf[finalpsf < 0] = 0.
 		#fits.writeto("psf_orig.fits", psf, overwrite=True)
 		#print np.sum(finalpsf)
+
 		return finalpsf
 	
 	elif AO_mode == "NOAO": # noAO Gaussian PSF
@@ -554,7 +607,7 @@ def create_psf(lamb, Airy=False):
 	elif AO_mode == "USER":
 		# user defined PSF
 		return user_psf
-	elif AO_mode == "MCI_LTAO" or AO_mode == "MCI_SCAO":
+	elif AO_mode == "MCI_LTAO" or AO_mode == "MCI_SCAO" or AO_mode == "MCI_MORFEO":
 		return user_psf
 	else:
 		assert(1 == 0) # this should never happen

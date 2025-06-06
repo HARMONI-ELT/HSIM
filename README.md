@@ -10,13 +10,14 @@ For updated information on how to run HSIM3, you can read the manual [hsim3.pdf]
 
 
 ## System Requirements
-The pipeline is written in Python v3.6. We have tested it on Linux (Ubuntu 18.04 and 20.04), although it should be possible to run on Windows and Mac OSX.
+The pipeline is written in Python v3.10. We have tested it on Linux Ubuntu, although it should be possible to run on Windows and Mac OSX.
 
 The required Python modules are:
-- astropy 4.1
-- numpy 1.19.5
-- scipy 1.5.4
-- matplotlib 3.3.4
+- astropy 6.1.6
+- numpy 2.1.3
+- scipy 1.13.1
+- matplotlib 3.9.2
+- astro-tiptop 1.3.12
 
 The code has been tested with the indicated package version, although more recent releases of these packages are likely to work as well.
 
@@ -32,7 +33,7 @@ We point out here several useful tips that have emerged from our extensive devel
 
 ## Contact ##
 
-For questions please contact miguel.pereira@cab.inta-csic.es
+For questions please contact miguel.pereira@iff.csic.es
 
 Developers: Miguel Pereira Santaella, Laurence Routledge, Simon Zieleniewsk, Sarah Kendrew
 
