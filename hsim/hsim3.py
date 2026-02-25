@@ -70,7 +70,7 @@ if __name__ == "__main__":
 	simulation_parameters = [Parameter("input_cube", "FITS input cube"),
 				Parameter("output_dir", "Output directory"),
 				Parameter("grating", "HARMONI grating", choices = get_grating_list()),
-				Parameter("spaxel_scale", "Spaxel Scale", choices = ["4x4", "7x7", "10x10", "20x20", "25x25", "30x60", "60x60", "120x60"]),
+				Parameter("spaxel_scale", "Spaxel Scale", choices = ["4x4", "6x6", "10x10", "20x20", "25x25", "30x60", "60x60", "120x60"]),
 				Parameter("exposure_time", "Exposure time [s]", type=int),
 				Parameter("n_exposures", "Number of exposures", type=int),
 				Parameter("ao_mode", "AO Mode", choices = ["LTAO", "SCAO", "HCAO", "noAO", "Airy", "MORFEO", "User"]),
@@ -86,6 +86,7 @@ if __name__ == "__main__":
 				Parameter("detector_tmp_path", "Directory to save interim detector files", default="''"),
 				Parameter("adr", "Simulate atmospheric differential refraction", default="True", choices = ["True", "False"]),
 				Parameter("mci", "Use minimum compliant instrument parameters", default="False", choices = ["True", "False"]),
+				Parameter("constant_lsf", "Use constant LSF", default="True", choices = ["True", "False"]),
 				Parameter("detector", "Near-IR detector performance", default="avg", choices = ["avg", "best", "worst", "contractual"]),
 				Parameter("telescope_temp", "Telescope temperature [K]", type=float, default = 280),
 				Parameter("fprs_temp", "FPRS temperature [C]", type=float, default = +2),
@@ -354,6 +355,7 @@ if __name__ == "__main__":
 				create_field("spectral_sampling", panel_misc.add_field("   Spectral (default = -1)", Entry))
 				create_field("spatial_sampling", panel_misc.add_field("   Spatial (default = -1)", Entry))
 				create_field("mci", panel_misc.add_field("Minimum compliant instrument", Checkbutton, default=1, height=1000))
+				create_field("constant_lsf", panel_misc.add_field("Constant LSF", Checkbutton, default=1, height=1000))
 				
 				det_choices = list(parameter_actions["detector"].choices)
 				create_field("detector", panel_misc.add_field("Near-IR detector", OptionMenu, extra=det_choices))

@@ -90,6 +90,7 @@ def main(input_parameters):
 			Conf('Moon', 'HSM_MOON', 'moon_illumination'),
 			Conf('ADR', 'HSM_ADR', 'adr'),
 			Conf('MCI', 'HSM_MCI', 'mci'),
+			Conf('Constant LSF', 'HSM_LSF', 'constant_lsf'),
 			Conf('Near-IR detector performace', 'HSM_DETP', 'detector'),
 			Conf('Detector systematics', 'HSM_DET', 'detector_systematics'),
 			Conf('Seed', 'HSM_SEED', 'noise_seed'),
@@ -108,6 +109,7 @@ def main(input_parameters):
 	str2bool("adr")
 	str2bool("mci")
 	str2bool("detector_systematics")
+	str2bool("constant_lsf")
 	
 	
 	if not os.path.exists(input_parameters['output_dir']):
@@ -189,7 +191,15 @@ def main(input_parameters):
 		if input_parameters["adr"]:
 			logging.warning("Disabling standard ADR simulation for HCAO")
 			input_parameters["adr"] = False
-		
+
+	# Check LSF
+	if input_parameters["constant_lsf"] == False:
+		if input_parameters["spaxel_scale"] not in config_data["LSF_sampling"]["FWHM"].keys():
+			logging.error("Varibale LSF is only available for 6x6 and 25x25 spaxels scales.")
+			return
+
+
+
 	# Get oversampling factor
 	# spectral axis
 	if input_parameters["spectral_sampling"] == -1: # Use default oversampling factor
@@ -756,7 +766,7 @@ def main(input_parameters):
 		save_fits_cube(outFile_ddetector_thermal, noise_cube_thermal, "detector thermal noise variance", head)
 	
 	# Calculate 5-sigma sensitivity
-	sens_5sigma = 5.*np.median(noise_cube_total)/DIT*np.median(factor_calibration) # erg/s/cm2/um
+	sens_5sigma = 5.*np.median(noise_cube_total)/(NDIT*DIT)*np.median(factor_calibration) # erg/s/cm2/um
 	lcentral = np.median(output_lambs) # micron
 	fnu = sens_5sigma*lcentral**2/(const.c.value*1e6) # erg/s/cm2/Hz
 	sens_ABmag = -2.5*np.log10(fnu/3631./1e-23) # AB mag

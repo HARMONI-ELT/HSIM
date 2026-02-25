@@ -189,15 +189,17 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	
 	
 	if "MORFEO" in aoMode:
-		TCool = 273.15 + 7.5
+		TCool = TTel
+		TCool_window = 273.15 + 2.0
 	else:
 		TCool = 273.15 + config_data['HARMONI_FPRS_temp'] # fixed FPRS temp
+		TCool_window = TCool
 		
 	TCryo = config_data['HARMONI_cryo_temp']
 	TCryoMech = TCryo
 	TTrap = TCool
-	Touter_window = TTel - 0.2*(TTel - TCool)
-	Tinner_window = TCool + 0.2*(TTel - TCool)
+	Touter_window = TTel - 0.2*(TTel - TCool_window)
+	Tinner_window = TCool_window + 0.2*(TTel - TCool_window)
 	AreaIns = (config_data['telescope']['diameter']*0.5)**2*np.pi	# Full 37m2 aperture, including central obstruction -- this what we see from a thermal point of view after cold stop
 	global AreaTel
 	AreaTel = get_telescope_area(input_parameters["grating"])	# 37m with 11m central obscuration -- this is what we see before the cold stop
@@ -224,6 +226,7 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	dust_mirror_up = 0.
 	dust_mirror_down = 0.
 	dustfrac = 0.
+	dustfrac_NGSS_up = 0.025
 	rwindow = 0.
 	InstrumentPart.mindustfrac = 0.
 
@@ -253,7 +256,7 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 		np.savetxt(plot_file + "_em.txt", np.c_[complete_range, HARMONI_background])
 
 
-		harmoni.addPart(InstrumentPart("NGSS outer window", Touter_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=dustfrac + InstrumentPart.mindustfrac))
+		harmoni.addPart(InstrumentPart("NGSS outer window", Touter_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=dustfrac_NGSS_up + InstrumentPart.mindustfrac))
 		harmoni.addPart(InstrumentPart("NGSS inner window", Tinner_window, AreaIns, n_lenses=1, emis_scaling=0.5, dust_lens=2.*InstrumentPart.mindustfrac))
 		harmoni.addPart(InstrumentPart("NGSS window reflected", TTrap, AreaIns, n_mirrors=1, emis_mirror=0., dust_mirror=2.*0.8*2.0*rwindow, emis_dust=ecoldtrap))
 
@@ -371,18 +374,26 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 
 	# - LSF
 	logging.info("Convolve with LSF")
-	# Assume Gaussian LSF
+
 	if input_parameters["mci"]:
 		bandws = config_data['gratings_nominal'][grating]
 	else:
 		bandws = config_data['gratings'][grating]
-		
-	new_res = (bandws.lmin + bandws.lmax)/(2.*bandws.R) # micron
+
 	pix_size = (ext_lambs[1] - ext_lambs[0])
+
+	if input_parameters["constant_lsf"]:
+		new_res = (bandws.lmin + bandws.lmax)/(2.*bandws.R) # micron
+	else:
+		lsf_fwhm_interp = interp1d(config_data['LSF_sampling']["wave"], config_data['LSF_sampling']["FWHM"][input_parameters["spaxel_scale"]], kind='linear', bounds_error=False, fill_value=0.)
+		new_res = np.min(lsf_fwhm_interp(ext_lambs))*pix_size*config_data['spectral_sampling']["internal"]/config_data['spectral_sampling']["output"]
+		input_spec_res_pix = input_spec_res/pix_size
+
 	if new_res > input_spec_res:
 		new_res_pix = (new_res**2 - input_spec_res**2)**0.5/pix_size
 	else:
 		logging.warning("The output spectral resolution is higher than the input cube resolution. Assuming input resolution = 0 AA")
+		input_spec_res_pix = 0
 		new_res_pix = new_res/pix_size
 		
 	logging.info("Output resolution: {:.3f} AA".format(new_res*10000.))
@@ -392,28 +403,40 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 	LSF_size = 0
 	if new_res_pix > 1.: # avoid convolution with a kernel narrower than 1 pixel
 		sigma_LSF_pix = new_res_pix/2.35482
-	
-		npix_LSF = int(sigma_LSF_pix*config_data['LSF_kernel_size'])
-		# Ensure that the kernel has an odd number of channels
-		if npix_LSF % 2 == 0:
-			npix_LSF = npix_LSF + 1
-			
-		kernel_LSF = Gaussian1DKernel(stddev=sigma_LSF_pix, x_size=npix_LSF)
+
+		def sigma_lsf(lam):
+			if input_parameters["constant_lsf"]:
+				return new_res_pix/2.35482
+			else:
+				lsf_fwhm = lsf_fwhm_interp(lam)*config_data['spectral_sampling']["internal"]/config_data['spectral_sampling']["output"]
+				lsf_fwhm = (lsf_fwhm**2 - input_spec_res_pix**2)**0.5
+				return lsf_fwhm/2.35482
+
+		# Convolve cube
+		ext_i = np.arange(len(ext_lambs))
+
+		n_full = len(ext_i)
+		n_cube = sum(cube_lamb_mask)
+
+		LSF_matrix = np.zeros((n_full, n_full))
+		for i, lam_i in enumerate(ext_i):
+			sigma_pix = sigma_lsf(ext_lambs[lam_i])  # wavelength dependent sigma
+			kernel = np.exp(-0.5 * ((ext_i - lam_i)/sigma_pix)**2)/(sigma_pix*(2*np.pi)**0.5)
+			LSF_matrix[i, :] = kernel
+
 		z, y, x = cube.shape
-		
-		for py in range(y):
-			for px in range(x):
-				spectrum = np.copy(back_emission)
-				spectrum[cube_lamb_mask] = cube[:, py, px]
-				
-				cube[:, py, px] = np.convolve(spectrum, kernel_LSF, mode="same")[cube_lamb_mask]
-		
-		
-		back_emission = np.convolve(back_emission, kernel_LSF, mode="same")
-		transmission = np.convolve(transmission, kernel_LSF, mode="same")
-		
-		LSF_size = npix_LSF*(ext_lambs[1] - ext_lambs[0])*10000. # AA
-		logging.info("Range for the LSF convolution: {:.3f} AA".format(LSF_size))
+		cube_flat = cube.reshape(z, -1)
+
+		# Build full spectra including background at the edges
+		full_spectra = np.tile(back_emission[:, None], (1, cube_flat.shape[1]))
+		full_spectra[cube_lamb_mask, :] = cube_flat
+
+		# Apply wavelength dependent LSF
+		result = LSF_matrix @ full_spectra
+		cube[:] = result.reshape(n_full, y, x)[cube_lamb_mask, :]
+
+		back_emission = LSF_matrix @ back_emission
+		transmission = LSF_matrix @ transmission
 	else:
 		logging.warning("LSF convolution not performed because the effective LSF FWHM is < 1 pix")
 

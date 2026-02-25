@@ -304,7 +304,7 @@ These options are preceded by \texttt{--} when included in the command-line. Whe
 
 \item \texttt{grating}: HARMONI grating. Available values are: \texttt{V+R, Iz+J, H+K, Iz, J, H, K, z-high, J-short, J-long, H-high, K-short, K-long}.
 
-\item \texttt{spaxel-scale}: HARMONI spatial scale in mas. Available values are: \texttt{4x4, 7x7, 10x10, 20x20, 25x25, 30x60, 60x60, 120x60}. The 60x60 and 120x60 scales are only available for the V+R grating.
+\item \texttt{spaxel-scale}: HARMONI spatial scale in mas. Available values are: \texttt{4x4, 6x6, 10x10, 20x20, 25x25, 30x60, 60x60, 120x60}. The 60x60 and 120x60 scales are only available for the V+R grating.
 
 \item \texttt{exposure-time}: Integration time of each exposure in seconds (e.g., \texttt{600}).
 
@@ -335,6 +335,8 @@ These options are preceded by \texttt{--} when included in the command-line. Whe
 \item \texttt{adr}: When this option is set, the atmospheric differential refraction is first simulated and then corrected in the output cubes in a way similar to what is expected from the pipieline. If it is set to \texttt{False}, the atmospheric differential refraction and its correction are not simulated. Available values are \texttt{True, False}. The default is \texttt{True}.
 
 \item \texttt{mci}: Set all simulation parameters to match the minimum compliant instrument. Available values are \texttt{True, False}. The default is \texttt{False}.
+
+\item \texttt{constant-lsf}: Assume constant LSF FWHM across all the wavelength range. Available values are \texttt{True, False}. The default is \texttt{True}.
 
 \item \texttt{telescope-temp}: Temperature of the site\slash telescope in K. This is used to calculate the telescope and part of the instrument background emission. The default value is \texttt{280}.
 

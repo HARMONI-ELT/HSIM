@@ -54,10 +54,16 @@ config_data = {
                         "bias_amp":500.,
                         "force_new":False
                         },
-                        
+
 	'spectral_sampling':{"output":2.2, "internal":4.}, # spectral sampling of the output cube and internal. Nyquist = 2
 	'LSF_kernel_size':12., # LSF kernel size in sigma units
-	
+
+	'LSF_sampling':{"wave": [0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6],
+		 "FWHM":{"6x6": [2.21, 2.15, 2.10, 2.06, 1.96, 1.81, 1.68, 1.61, 1.58, 1.58],
+			"25x25":[2.16, 2.13, 2.09, 2.06, 2.02, 1.99, 1.96, 1.93, 1.90, 1.90]
+			}},
+
+
 	'telescope': {'diameter':37., 'area':{"VRIz":996.3, "JHK":896.3}}, #diam [m], area [m^2]
 	
 	'HARMONI_FPRS_temp': +2., # C
@@ -103,7 +109,7 @@ config_data = {
 			},
 	
 	'spaxel_scale': {'4x4':SpaxelScaleInfo(4., 4., 0.8, 1250),
-		  '7x7':SpaxelScaleInfo(7., 7., 1.4, 1250),
+		  '6x6':SpaxelScaleInfo(6., 6., 1.2, 1250),
 		  '10x10':SpaxelScaleInfo(10., 10., 2., 800),
 		  '20x20':SpaxelScaleInfo(20., 20., 4., 580),
 		  '25x25':SpaxelScaleInfo(25., 25., 5., 580),
@@ -118,7 +124,7 @@ config_data = {
 	#design image quality, manufacturing and assembly tolerances, vibration, flexure, diff refraction,
 	'dynamic_instrument_psf': 5.5,
 	'static_instrument_psf': {'4x4': 3.,
-		  '7x7': 7.,
+		  '6x6': 6.,
     		  '10x10':14.,
 		  '20x20':28.,
 		  '25x25':12.,
@@ -130,7 +136,7 @@ config_data = {
 	# minimum compliant instrument
 	'mci_dynamic_instrument_psf': 5.5,
 	'mci_static_instrument_psf': {'4x4': 3.,
-		  '7x7':7.,
+		  '6x6':6.,
 		  '10x10':14.,
 		  '20x20':28.,
 		  '25x25':12.,
