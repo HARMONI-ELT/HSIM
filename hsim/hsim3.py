@@ -70,15 +70,11 @@ if __name__ == "__main__":
 	simulation_parameters = [Parameter("input_cube", "FITS input cube"),
 				Parameter("output_dir", "Output directory"),
 				Parameter("grating", "HARMONI grating", choices = get_grating_list()),
-				Parameter("spaxel_scale", "Spaxel Scale", choices = ["4x4", "6x6", "10x10", "20x20", "25x25", "30x60", "60x60", "120x60"]),
+				Parameter("spaxel_scale", "Spaxel Scale", choices = ["6x6", "25x25"]),
 				Parameter("exposure_time", "Exposure time [s]", type=int),
 				Parameter("n_exposures", "Number of exposures", type=int),
-				Parameter("ao_mode", "AO Mode", choices = ["LTAO", "SCAO", "HCAO", "noAO", "Airy", "MORFEO", "User"]),
+				Parameter("ao_mode", "AO Mode", choices = ["MORFEO", "noAO", "Airy", "User"]),
 				Parameter("user_defined_psf", "User defined PSF FITS file when ao-mode is set to User", default="''"),
-				Parameter("ao_star_hmag", "H magnitude of the LTAO AO star", type=float, default=17.5, choices = [15., 17.5, 19.]),
-				Parameter("ao_star_distance", "Distance from the HARMONI FoV center to the LTAO AO star [arcsec]", type=int, default=30, choices = [15, 30, 45]),
-				Parameter("hc_apodizer", "HCAO High-contrast apodizer", default="HSP1", choices = ["HSP1", "HSP2"]),
-				Parameter("hc_fp_mask", "HCAO High-contrast focal plane mask", default="FPM1", choices = ["FPM1"]),
 				Parameter("zenith_seeing", "Optical 500nm atmospheric seeing FWHM at zenith [arcsec]", type=float, choices = config_data["PSD_params"]["seeings"]),
 				Parameter("air_mass", "Air mass of the observation", type=float, choices = config_data["PSD_params"]["air_masses"]),
 				Parameter("moon_illumination", "Moon fractional illumination", type=float, default = 0., choices = [0.0, 0.5, 1.0]),
@@ -89,7 +85,6 @@ if __name__ == "__main__":
 				Parameter("constant_lsf", "Use constant LSF", default="True", choices = ["True", "False"]),
 				Parameter("detector", "Near-IR detector performance", default="avg", choices = ["avg", "best", "worst", "contractual"]),
 				Parameter("telescope_temp", "Telescope temperature [K]", type=float, default = 280),
-				Parameter("fprs_temp", "FPRS temperature [C]", type=float, default = +2),
 				Parameter("scattered_sky", "Scattered sky fraction [%%]", type=float, default = 20),
 				Parameter("extra_jitter", "Additional telescope PSF blur [mas]", type=str, default = "0"),
 				Parameter("noise_seed", "Noise random number generator seed", type=int, default = 100),
@@ -307,10 +302,10 @@ if __name__ == "__main__":
 				create_field("exposure_time", panel_instrument.add_field("Exposure time [s]", Entry, default=600))
 				create_field("n_exposures", panel_instrument.add_field("Number of exposures", Entry, default=3))
 				spaxel_choices = list(parameter_actions["spaxel_scale"].choices)
-				create_field("spaxel_scale", panel_instrument.add_field("Spaxel scale [mas]", OptionMenu, extra=spaxel_choices, default=spaxel_choices[1]))
+				create_field("spaxel_scale", panel_instrument.add_field("Spaxel scale [mas]", OptionMenu, extra=spaxel_choices, default=spaxel_choices[0]))
 	
 				grating_choices = ["{name} [{info.lmin:.2f}-{info.lmax:.2f} um] (R={info.R:.0f})".format(name=_, info=config_data["gratings"][_]) for _ in get_grating_list()]
-				create_field("grating", panel_instrument.add_field("Grating", OptionMenu, extra=grating_choices, default=grating_choices[6]))
+				create_field("grating", panel_instrument.add_field("Grating", OptionMenu, extra=grating_choices, default=grating_choices[5]))
 
 				# Telescope frame
 				def browse_psf_file(self):
@@ -322,28 +317,19 @@ if __name__ == "__main__":
 
 				panel_telescope = panel_gui(parent, "Telescope", 2)
 				seeing_choices = list(map(str, parameter_actions["zenith_seeing"].choices))
-				create_field("zenith_seeing", panel_telescope.add_field("Zenith seeing [arcsec]", OptionMenu, default=seeing_choices[2], extra=seeing_choices))
+				create_field("zenith_seeing", panel_telescope.add_field("Zenith seeing [arcsec]", OptionMenu, default=seeing_choices[1], extra=seeing_choices))
 				ao_choices = list(parameter_actions["ao_mode"].choices)
 				create_field("ao_mode", panel_telescope.add_field("AO mode", OptionMenu, extra=ao_choices))
-				ao_star_hmag_choices = list(parameter_actions["ao_star_hmag"].choices)
-				create_field("ao_star_hmag", panel_telescope.add_field("LTAO star H mag", OptionMenu, extra=ao_star_hmag_choices))
-				ao_star_distance_choices = list(parameter_actions["ao_star_distance"].choices)
-				create_field("ao_star_distance", panel_telescope.add_field("LTAO star distance [arcsec]", OptionMenu, extra=ao_star_distance_choices))
-				hc_apodizer_choices = list(parameter_actions["hc_apodizer"].choices)
-				create_field("hc_apodizer", panel_telescope.add_field("HCAO High-contrast apodizer", OptionMenu, extra=hc_apodizer_choices))
-				hc_mask_choices = list(parameter_actions["hc_fp_mask"].choices)
-				create_field("hc_fp_mask", panel_telescope.add_field("HCAO High-contrast mask", OptionMenu, extra=hc_mask_choices))
 				create_field("user_defined_psf", panel_telescope.add_field("Used defined PSF", Button, command=lambda : browse_psf_file(self)))
 				
 				air_mass_choices = list(parameter_actions["air_mass"].choices)
-				create_field("air_mass", panel_telescope.add_field("Air mass", OptionMenu, default=air_mass_choices[1], extra=air_mass_choices))
+				create_field("air_mass", panel_telescope.add_field("Air mass", OptionMenu, default=air_mass_choices[0], extra=air_mass_choices))
 				create_field("moon_illumination", panel_telescope.add_field("Moon illumination", OptionMenu, extra=list(map(str, [0, 0.5, 1]))))
 				
 
 				# Misc frame
 				panel_misc = panel_gui(parent, "Miscellaneous", 3)
 				create_field("telescope_temp", panel_misc.add_field("Telescope temperature [K]", Entry))
-				create_field("fprs_temp", panel_misc.add_field("FPRS temperature [C]", Entry))
 				create_field("scattered_sky", panel_misc.add_field("Scattered sky fraction [%]", Entry))
 				create_field("extra_jitter", panel_misc.add_field("Additional jitter [mas]", Entry))
 				create_field("adr", panel_misc.add_field("ADR on/off", Checkbutton, default=1, height=1000))

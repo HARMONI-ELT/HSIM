@@ -244,88 +244,17 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 	zenith_seeing = input_parameters["zenith_seeing"]
 	air_mass = input_parameters["air_mass"]
 	
-	if AO_mode in ["LTAO", "SCAO", "HCAO", "AIRY"]:
+	if AO_mode in ["AIRY"]:
 		jitter = _jitter
 		diameter = config_data["telescope"]["diameter"]
 		logging.info("define AO PSF - " + AO_mode)
 		if os.path.isfile(os.path.join(psf_path, "ELT_pup.fits")):
 			
 			# PSD
-			if AO_mode == "HCAO":
-				pup = fits.getdata(os.path.join(hc_path, input_parameters["hc_apodizer"] + "_1024.fits.gz"))
-				logging.info("Using HC pupil: " + input_parameters["hc_apodizer"] + "_1024.fits.gz")
-			else:
-				pup = fits.getdata(os.path.join(psf_path, "ELT_pup.fits"))
-			
-			
-			if AO_mode == "AIRY":
-				stats = None
-				psd = np.zeros((2048, 2048))
-			else:
-				stats = fits.getdata(os.path.join(psf_path, "ELT_statics.fits"))
-				
-				
-				if AO_mode == "HCAO":
-					psd_ao_file = "SCAO"
-				else:
-					psd_ao_file = AO_mode
-				
-				logging.info("Using PSD file: " + config_data["PSD_file"][psd_ao_file])
-				psd = fits.getdata(os.path.join(psf_path, config_data["PSD_file"][psd_ao_file]))
-				
-				# estimate PSD jitter
-				if AO_mode == "SCAO" or AO_mode == "HCAO":
-					jitter_PSD = 2.
-				elif AO_mode == "LTAO":
-					# jitter dependency on AO star mag and distance
-					jitter_matrix = {} # [Star H mag, distance (arcsec)] = jitter (mas)
-					jitter_matrix[15.0, 15] = 1.7
-					jitter_matrix[15.0, 30] = 2.0
-					jitter_matrix[15.0, 45] = 2.7
+			pup = fits.getdata(os.path.join(psf_path, "ELT_pup.fits"))
+			stats = None
+			psd = np.zeros((2048, 2048))
 
-					jitter_matrix[17.5, 15] = 2.5
-					jitter_matrix[17.5, 30] = 3.5
-					jitter_matrix[17.5, 45] = 3.7
-
-					jitter_matrix[19.0, 15] = 6.
-					jitter_matrix[19.0, 30] = 9.
-					jitter_matrix[19.0, 45] = 10.
-					
-					jitter_PSD = jitter_matrix[float(input_parameters["ao_star_hmag"]), int(input_parameters["ao_star_distance"])]
-					logging.info("Initial LTAO jitter = {:.2f} mas".format(jitter_PSD))
-					
-					# scaling jitter depending on zenit seeing and air mass
-					zenit_angle = np.arccos(1./air_mass)
-					seeing_scaling = 1./(np.cos(zenit_angle))**0.5
-					effective_seeing = seeing_scaling*zenith_seeing
-					
-					if effective_seeing < 0.64:
-						scaling_jitter_seeing = 1.
-					else:
-						jitter_seeing_interp = interp1d([0.64, 0.74, 1.04, 1.40], [1., 1.5, 2., 3.], kind='linear', bounds_error=False, fill_value="extrapolate")
-						scaling_jitter_seeing = jitter_seeing_interp(effective_seeing)
-						
-					# scaling due to airmass
-					jitter_airmass_interp = interp1d([1.1, 1.3, 1.5, 2.0], [1., 1.02, 1.2, 1.4], kind='linear', bounds_error=False, fill_value="extrapolate")
-					scaling_jitter_airmass = jitter_airmass_interp(air_mass)
-					
-					
-					scaling_jitter = scaling_jitter_seeing*scaling_jitter_airmass
-					
-					logging.info("LTAO jitter scaling factor = {:.2f}".format(scaling_jitter))
-					logging.info("  Effective seeing at airmass = {:.2f} arcsec".format(effective_seeing))
-					logging.info("  Airmass = {:.2f}".format(air_mass))
-					
-					jitter_PSD = scaling_jitter*jitter_PSD
-					
-				
-				logging.info("Total AO jitter = {:.2f} mas".format(jitter_PSD))
-				
-				# combine PSD jitter and instrument and extra user defined jitter
-				jitter = (jitter**2 + jitter_PSD**2)**0.5
-				logging.info("Total PSF jitter = {0:.2f}x{1:.2f} mas".format(*jitter))
-
-				
 		else:
 			#Test PSF
 			logging.warning("Using test PSD files")
@@ -366,18 +295,12 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		
 		logging.info("User PSF x={0} y={1} flux={sum}".format(*user_psf.shape, sum=np.sum(user_psf)))
 		
-	elif AO_mode == "MCI_LTAO" or AO_mode == "MCI_SCAO" or AO_mode == "MCI_MORFEO":
+	elif AO_mode == "MCI_MORFEO":
 		
 		import tiptop.tiptop as tiptop
 		#from matplotlib import rc
 
-		if AO_mode == "MCI_LTAO":
-			tiptop_ini_file = "HarmoniLTAO_3_SR50.ini"
-			jitter_FHWM = 8.9 # AO jitter FWHM in mas - Low order AO
-		elif AO_mode == "MCI_SCAO":
-			tiptop_ini_file = "HarmoniSCAO_1.ini"
-			jitter_FHWM = 6.8 # Telescope environment
-		elif AO_mode == "MCI_MORFEO":
+		if AO_mode == "MCI_MORFEO":
 			tiptop_ini_file = "MORFEO_3NGS_median_central_psf.ini"
 			jitter_FHWM = 0.0 #
 		else:
@@ -387,7 +310,7 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		with open(tiptopini, 'r') as file :
 			filedata = file.read()
 
-		mci_grating_w = {'V+R':0.639e-6, # in meters
+		mci_grating_w = {
 			'Iz+J':1.0885e-6,
 			'H+K':2.20e-6,
 			# med-resolution
@@ -396,11 +319,7 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 			#'H':1.76e-6,
 			'H':1.45e-6,
 			'K':2.20e-6,
-			# high-resolution
-			'z-high':0.865e-6,
-			'H-high':1.6076e-6,
-			'K-short':2.20e-6,
-			'K-long':2.20e-6}
+			}
 
 		mci_wavelength_meters = mci_grating_w[input_parameters["grating"]]
 
@@ -446,7 +365,6 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		
 		xx, yy = np.meshgrid(xgrid_out, ygrid_out)
 
-
 		# Low order AO jitter
 		if sigma_AO > 0:
 			Gauss2D_AO = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*sigma_AO**2))
@@ -465,28 +383,6 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 
 		logging.info("SR AO = {:.4f}".format(SR_AO))
 		
-		#
-		if AO_mode == "MCI_LTAO":
-			tiptop_FWHM = float(head["FWHM0000"])
-			
-			e2e_fwhm_correction = interp1d([0.8, 1.0, 1.22, 1.45, 1.65, 2.20], [0.67, 0.3, 0.17, 0.10, 0.07, 0.03], kind='linear', bounds_error=False, fill_value="extrapolate")
-			correction_fwhm = e2e_fwhm_correction(mci_wavelength_meters/1e-6)
-			target_FWHM = tiptop_FWHM*(1. + correction_fwhm)
-			
-			kernel_e2e_corr_sigma = (target_FWHM**2 - tiptop_FWHM**2)**0.5/2.35482
-			Gauss2D_e2e = lambda x, y: 1.*np.exp(-(x**2 + y**2)/(2.*kernel_e2e_corr_sigma**2))
-
-			kernel_e2e_corr = Gauss2D_e2e(xx, yy)
-			kernel_e2e_corr = kernel_e2e_corr/np.sum(kernel_e2e_corr)
-			user_psf_AO = fftconvolve(user_psf_AO, kernel_e2e_corr, mode="same")
-			peak_psf_AO = np.max(user_psf_AO)
-			SR_E2E_corr = float(head["SR0000"])/peak_psf_tiptop*peak_psf_AO
-			
-			logging.info("FWHM E2E correction = {:.4f} mas - corr = {:.4f}".format(target_FWHM, correction_fwhm))
-			logging.info("SR E2E correction = {:.4f}".format(SR_E2E_corr))
-		
-		
-
 		onlyAO_psf = user_psf_AO
 
 		# Instrument jitter
@@ -505,8 +401,6 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 			onlyAO_psf = np.roll(user_psf_AO, (-1, -1), axis=(0,1))
 
 	elif AO_mode == "MORFEO":
-		raise HSIMError("MORFEO can only be used with the Minimum compliant instrument mode")
-		assert(1 == 0) # this should never happen
 		jitter = _jitter
 		diameter = config_data["telescope"]["diameter"]
 		logging.info("define AO PSF - " + AO_mode)
@@ -560,7 +454,7 @@ def create_psf(lamb, Airy=False):
 	global pup, stats, psd, xgrid_out, ygrid_out, jitter, psfscale, fov, diameter, AO_mode, rotation
 	global zenith_seeing, air_mass
 
-	if AO_mode in ["LTAO", "SCAO", "HCAO", "AIRY", "MORFEO"]:
+	if AO_mode in ["AIRY", "MORFEO"]:
 		# size of a pixel returned by psd_to_psf
 		psf_sampling = 2.
 		pix_psf = lamb*1e-6/(psf_sampling*diameter)*1/(4.85*1e-9) # mas
@@ -607,7 +501,7 @@ def create_psf(lamb, Airy=False):
 	elif AO_mode == "USER":
 		# user defined PSF
 		return user_psf
-	elif AO_mode == "MCI_LTAO" or AO_mode == "MCI_SCAO" or AO_mode == "MCI_MORFEO":
+	elif AO_mode == "MCI_MORFEO":
 		return user_psf
 	else:
 		assert(1 == 0) # this should never happen

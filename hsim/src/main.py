@@ -85,7 +85,6 @@ def main(input_parameters):
 			Conf('Air Mass', 'HSM_AIRM', 'air_mass'),
 			Conf('Extra jitter', 'HSM_JITT', 'extra_jitter'),
 			Conf('Telescope temperature [K]', 'HSM_TEMP', 'telescope_temp'),
-			Conf('FPRS temperature [C]', 'HSM_FPRS', 'fprs_temp'),
 			Conf('Scattered background [%]', 'HSM_SCSK', 'scattered_sky'),
 			Conf('Moon', 'HSM_MOON', 'moon_illumination'),
 			Conf('ADR', 'HSM_ADR', 'adr'),
@@ -139,11 +138,7 @@ def main(input_parameters):
 	if input_parameters["mci"]:
 		logging.info("mci: forcing air mass = 1.3 = 40deg")
 		input_parameters["air_mass"] = 1.3
-		if input_parameters["ao_mode"] == "LTAO":
-			input_parameters["ao_mode"] = "MCI_LTAO"
-		elif input_parameters["ao_mode"] == "SCAO":
-			input_parameters["ao_mode"] = "MCI_SCAO"
-		elif input_parameters["ao_mode"] == "MORFEO":
+		if input_parameters["ao_mode"] == "MORFEO":
 			input_parameters["ao_mode"] = "MCI_MORFEO"
 		else:
 			logging.error("No valid AO mode for MCI.")
@@ -153,13 +148,7 @@ def main(input_parameters):
 	if input_parameters["detector_systematics"] == True:
 		simulation_conf.append(Conf('Detectors tmp path', 'HSM_DDIR', 'detector_tmp_path'))
 	
-	if input_parameters["ao_mode"] == "LTAO":
-		simulation_conf.append(Conf('LTAO star H mag', 'HSM_AOMA', 'ao_star_hmag'))
-		simulation_conf.append(Conf('LTAO star H distance', 'HSM_AODI', 'ao_star_distance'))
-	elif input_parameters["ao_mode"] == "HCAO":
-		simulation_conf.append(Conf('HC apodizer', 'HSM_HCAP', 'hc_apodizer'))
-		simulation_conf.append(Conf('HC mask', 'HSM_HCMK', 'hc_fp_mask'))
-	elif input_parameters["ao_mode"] == "User":
+	if input_parameters["ao_mode"] == "User":
 		simulation_conf.append(Conf('User defined PSF file', 'HSM_UPSF', 'user_defined_psf'))
 
 
@@ -168,37 +157,11 @@ def main(input_parameters):
 		logging.error("The minimum exposure time is 1.3s")
 		return
 
-	# Check that the 60x60 and 120x60 are only used with the V+R grating
-	if input_parameters["spaxel_scale"] in ["60x60", "120x60"] and input_parameters["grating"] != "V+R":
-		logging.error(input_parameters["spaxel_scale"] + ' is only available for the V+R grating.')
-		return
-	
-	# Check HCAO configuration
-	if input_parameters["ao_mode"] == "HCAO":
-		
-		logging.warning("HCAO mode is experimental. Please use with caution the results.")
-		
-		if input_parameters["spaxel_scale"] !=  "4x4":
-			logging.error("4x4 spaxel scale must be used for the HCAO mode.")
-			return
-		if input_parameters["grating"] in ["V+R", "Iz", "z-high"]:
-			logging.error("V+R, Iz, and z-high gratings are not compatible with the HCAO mode.")
-			return
-		
-		if input_parameters["exposure_time"]*input_parameters["n_exposures"] > 10.:
-			logging.warning("The total exposure time (DIT*NDIT) should be < 10s since field rotation is not simulated by HSIM")
-		
-		if input_parameters["adr"]:
-			logging.warning("Disabling standard ADR simulation for HCAO")
-			input_parameters["adr"] = False
-
 	# Check LSF
 	if input_parameters["constant_lsf"] == False:
 		if input_parameters["spaxel_scale"] not in config_data["LSF_sampling"]["FWHM"].keys():
 			logging.error("Varibale LSF is only available for 6x6 and 25x25 spaxels scales.")
 			return
-
-
 
 	# Get oversampling factor
 	# spectral axis
@@ -212,10 +175,8 @@ def main(input_parameters):
 			logging.warning("The selected spectral oversampling (" + str(input_parameters["spectral_sampling"]) + ") is lower than the defaul value: " + str(config_data["spectral_sampling"]["internal"]))
 			
 		config_data["spectral_sampling"]["internal"] = input_parameters["spectral_sampling"]
-		
-	# Update FPRS temperature
-	config_data["HARMONI_FPRS_temp"] = input_parameters["fprs_temp"]
-
+	
+	
 	# spatial axes
 	spax_scale = config_data['spaxel_scale'][input_parameters["spaxel_scale"]]
 	if input_parameters["spatial_sampling"] == -1: # Use default oversampling factor
@@ -345,6 +306,9 @@ def main(input_parameters):
 	logging.info("- Output spectral sampling: {:.2f} AA".format(new_lamb_per_pix*10000.))
 	
 	output_cube_spec = rebin_cube_1d(output_lambs, lambs, output_cube)
+	#output_back_emission = rebin1d(output_lambs, lambs_extended + new_lamb_per_pix/20., back_emission)
+	#output_transmission = rebin1d(output_lambs, lambs_extended + new_lamb_per_pix/20., transmission)
+	
 	output_back_emission = rebin1d(output_lambs, lambs_extended, back_emission)
 	output_transmission = rebin1d(output_lambs, lambs_extended, transmission)
 	
@@ -377,12 +341,10 @@ def main(input_parameters):
 	grating = input_parameters["grating"]
 	det_switch = input_parameters["detector_systematics"]
 	# Cut cubes to correct size if using detector systematics and generate detectors 
-	if det_switch == True and grating != "V+R":
+	if det_switch == True:
 		logging.info("Trimming datacubes to correct size")
 		output_cube_spec = trim_cube(output_cube_spec, verbose=True)
-	elif det_switch == True and grating == "V+R":
-		logging.warning("IR detector systematics selected for visible grating. Ignoring detector systematics.")
-		det_switch = False
+
 	
 	output_cube_spec, output_back_emission, output_transmission, read_noise, dark_current, thermal_background = \
 				sim_detector(input_parameters, output_cube_spec, output_back_emission, output_transmission, output_lambs, \
@@ -403,8 +365,6 @@ def main(input_parameters):
 	if det_switch == True:
 		output_back_emission_cube = trim_cube(output_back_emission_cube)
 		
-	if input_parameters["ao_mode"] == "HCAO":
-		output_back_emission_cube *= fpm_mask_rebin
 		
 	# - mask saturated pixels
 	output_back_emission_cube, saturated_back = mask_saturated_pixels(output_back_emission_cube, grating)
@@ -420,11 +380,11 @@ def main(input_parameters):
 	NDIT = input_parameters["n_exposures"]
 	# - object exposure with crosstalk
 	sim_object_plus_back = np.random.poisson(abs(output_cube_spec*NDIT)).astype(np.float32)
-	# Apply crosstalk only to NIR detectors
-	if grating != "V+R":
-		if not input_parameters["mci"]:
-			logging.info("Applying detector crosstalk")
-			sim_object_plus_back = apply_crosstalk(sim_object_plus_back, config_data["crosstalk"])
+	# Apply crosstalk to NIR detectors
+
+	if not input_parameters["mci"]:
+		logging.info("Applying detector crosstalk")
+		sim_object_plus_back = apply_crosstalk(sim_object_plus_back, config_data["crosstalk"])
 	
 	if np.sum(saturated_obj_back) > 0:
 		logging.warning(str(np.sum(saturated_obj_back)) + " pixels are saturated in the obj + back frames")
@@ -455,10 +415,9 @@ def main(input_parameters):
 	# B. Background exposure
 	#- background with crosstalk
 	sim_back = np.random.poisson(abs(output_back_emission_cube*NDIT)).astype(np.float32)
-	# Apply crosstalk only to NIR detectors
-	if grating != "V+R":
-		if not input_parameters["mci"]:
-			sim_back = apply_crosstalk(sim_back, config_data["crosstalk"])
+	# Apply crosstalk to NIR detectors
+	if not input_parameters["mci"]:
+		sim_back = apply_crosstalk(sim_back, config_data["crosstalk"])
 
 	if np.sum(saturated_back) > 0:
 		logging.warning(str(np.sum(saturated_back)) + " pixels are saturated in the back frames")
@@ -530,12 +489,9 @@ def main(input_parameters):
 		noise_cube_pca0 = zero_cube + np.sqrt(NDIT)*config_data['systematics']['pca0_amp']
 		noise_cube_dets = zero_cube + np.sqrt(NDIT)*sim_only_dets + np.sqrt(NDIT)*sim_back_dets
 	
-	if grating != "V+R":
-		n_observations = 2
-	else:
-		n_observations = 1 # no dedicated sky observation
 	
-
+	n_observations = 2 # dedicated sky observation
+	
 	if det_switch == False:
 		noise_cube_total = np.sqrt(noise_cube_object + n_observations*noise_cube_back + n_observations*noise_cube_dark + n_observations*noise_cube_thermal + n_observations*noise_cube_read_noise**2)
 	else:
@@ -708,11 +664,10 @@ def main(input_parameters):
 	head['HSM_TIME'] = str(datetime.datetime.utcnow())
 	
 	# Apply crosstalk to the noiseless cubes
-	if grating != "V+R":
-		if not input_parameters["mci"]:
-			output_cube_spec = apply_crosstalk(output_cube_spec, config_data["crosstalk"])
-			output_back_emission_cube = apply_crosstalk(output_back_emission_cube, config_data["crosstalk"])
-			output_cube_spec_wo_back = apply_crosstalk(output_cube_spec_wo_back, config_data["crosstalk"])
+	if not input_parameters["mci"]:
+		output_cube_spec = apply_crosstalk(output_cube_spec, config_data["crosstalk"])
+		output_back_emission_cube = apply_crosstalk(output_back_emission_cube, config_data["crosstalk"])
+		output_cube_spec_wo_back = apply_crosstalk(output_cube_spec_wo_back, config_data["crosstalk"])
 	
 	save_fits_cube(outFile_noiseless_object_plus_back, output_cube_spec*NDIT, "Noiseless O+B", head)
 	save_fits_cube(outFile_noiseless_background, output_back_emission_cube*NDIT, "Noiseless B", head)
@@ -782,9 +737,8 @@ def main(input_parameters):
 	logging.info("Noise contributions: Background (sky+tel+instrument) = {:.2f} %. Dark current = {:.2f} %. Read noise = {:.2f} %".format(fraction_noise_back, fraction_noise_dark, fraction_noise_read))
 
 	# Save transmission with crosstalk
-	if grating != "V+R":
-		if not input_parameters["mci"]:
-			output_transmission = apply_crosstalk_1d(output_transmission, config_data["crosstalk"])
+	if not input_parameters["mci"]:
+		output_transmission = apply_crosstalk_1d(output_transmission, config_data["crosstalk"])
 	
 	np.savetxt(base_filename + "_total_tr.txt", np.c_[output_lambs, output_transmission], comments="#", header="\n".join([
 		'TYPE: Total transmission.',
@@ -831,13 +785,6 @@ def main(input_parameters):
 		tmp[x0:x0 + psf_info.psfsize, x0:x0 + psf_info.psfsize] = psf[:, :]
 
 		psf_spaxel = rebin_psf(tmp, (psf_spaxel_shape, psf_spaxel_shape))
-
-		if input_parameters["spaxel_scale"] == "30x60":
-			# an extra rebin is needed for the y axis
-			psf_spaxel_shape_y = psf_spaxel_shape_y//2
-		elif input_parameters["spaxel_scale"] == "120x60":
-			# an extra rebin is needed for the x axis
-			psf_spaxel_shape_x = psf_spaxel_shape_x//2
 
 		psf_spaxel = frebin2d(tmp, (psf_spaxel_shape_x, psf_spaxel_shape_y))
 		psf_spaxel = psf_spaxel/np.sum(psf_spaxel)*np.sum(tmp) # Normalize PSF

@@ -63,8 +63,8 @@ def sky_background(input_parameters, lambs, air_mass, dit, input_spec_res, debug
 			[units of photons/m^2/um/arcsec^2]
 	'''
 	inbuilt_airmasses = [1.1, 1.3, 1.5, 2.0]
-	if air_mass not in inbuilt_airmasses:
-		raise HSIMError('Error: ' + str(air_mass) + ' is not a valid air_mass. Valid options are: ' + ",".join([str(_) for _ in inbuilt_airmasses]))
+	#if air_mass not in inbuilt_airmasses:
+		#raise HSIMError('Error: ' + str(air_mass) + ' is not a valid air_mass. Valid options are: ' + ",".join([str(_) for _ in inbuilt_airmasses]))
 
 
 	#determine the closest data to the airmass value given and find it's location in the data file
@@ -189,8 +189,8 @@ def sky_transmission(lambs, air_mass, input_spec_res, debug_plots, output_file):
 	'''
 	#convert from zenith angle to airmass
 	inbuilt_airmasses = [1.1, 1.3, 1.5, 2.0]
-	if air_mass not in inbuilt_airmasses:
-		raise HSIMError('Error: ' + str(air_mass) + ' is not a valid air_mass. Valid options are: ' + ",".join([str(_) for _ in inbuilt_airmasses]))
+	#if air_mass not in inbuilt_airmasses:
+		#raise HSIMError('Error: ' + str(air_mass) + ' is not a valid air_mass. Valid options are: ' + ",".join([str(_) for _ in inbuilt_airmasses]))
 
 	#determine the closest data to the airmass value given and find it's location in the data file
 	closest_X = min(inbuilt_airmasses, key=lambda x: abs(x - air_mass))

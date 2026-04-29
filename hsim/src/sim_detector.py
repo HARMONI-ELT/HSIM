@@ -53,10 +53,7 @@ def mask_saturated_pixels(cube, grating):
 	'''
 	logging.info("Masking saturated pixels")
 	
-	if grating == "V+R":
-		limit = config_data["saturation"]["vis"]
-	else:
-		limit = config_data["saturation"]["nir"]
+	limit = config_data["saturation"]["nir"]
 		
 	
 	mask_pixels = cube > limit
