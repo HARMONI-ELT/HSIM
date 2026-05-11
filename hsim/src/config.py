@@ -66,14 +66,13 @@ config_data = {
 
 	'telescope': {'diameter':37., 'area':{"VRIz":996.3, "JHK":896.3}}, #diam [m], area [m^2]
 	
-	'HARMONI_FPRS_temp': +2., # C
 	'HARMONI_cryo_temp': 130., # K
 	
 	'data_dir':"sim_data/",
 	
 	#  HRM-00244
 	'gratings': {	#low resolution
-			'Iz+J':GratingInfo(0.811, 1.369, 3355.),
+			'Iz+J':GratingInfo(0.75, 1.369, 2945.),
 			'H+K':GratingInfo(1.450, 2.450, 3355.),
 			# med-resolution
 			'Iz':GratingInfo(0.830, 1.050, 7104.),
