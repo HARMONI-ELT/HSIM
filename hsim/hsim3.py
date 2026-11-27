@@ -69,6 +69,7 @@ if __name__ == "__main__":
 	
 	simulation_parameters = [Parameter("input_cube", "FITS input cube"),
 				Parameter("output_dir", "Output directory"),
+				Parameter("input_cube_extension", "FITS file extension to read the input cube from. Default looks for the 'DATA' extension", default=None),
 				Parameter("grating", "HARMONI grating", choices = get_grating_list()),
 				Parameter("spaxel_scale", "Spaxel Scale", choices = ["6x6", "25x25"]),
 				Parameter("exposure_time", "Exposure time [s]", type=int),
@@ -299,6 +300,7 @@ if __name__ == "__main__":
 					
 				create_field("input_cube", panel_instrument.add_field("Input cube", Button, command=lambda : browse_input_file(self), default="(None)"))
 				create_field("output_dir", panel_instrument.add_field("Output dir", Button, command=lambda : browse_dir(self), default="./output_cubes"))
+				create_field("input_cube_extension", panel_instrument.add_field("Input cube extension (default first or DATA extension)", Entry, default=" "))
 				create_field("exposure_time", panel_instrument.add_field("Exposure time [s]", Entry, default=600))
 				create_field("n_exposures", panel_instrument.add_field("Number of exposures", Entry, default=3))
 				spaxel_choices = list(parameter_actions["spaxel_scale"].choices)
@@ -354,9 +356,19 @@ if __name__ == "__main__":
 							input_parameters[param.name] = "True" if int(getattr(self, param.name).get()) == 1 else "False"
 						elif param.name == "grating":
 							input_parameters["grating"] = str(self.grating.get()).split("[")[0].strip()
+						elif param.name == "input_cube_extension":
+							value = getattr(self, param.name).get().strip()
+							if not value:
+								input_parameters["input_cube_extension"] = None
+							else:
+								# int extension case
+								try:
+									input_parameters["input_cube_extension"] = int(value)
+									# string extension case
+								except ValueError:
+									input_parameters["input_cube_extension"] = value
 						else:
 							input_parameters[param.name] = param.type(getattr(self, param.name).get())
-						
 					from src.main import main
 					main(input_parameters)
 

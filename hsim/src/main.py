@@ -38,6 +38,7 @@ def main(input_parameters):
 		
 		'input_cube': Input high resolution datacube (RA, DEC, lambda)
 		'output_dir': Output file directory
+		'input_cube_extension': FITS file extension to read the input cube from. Default looks for the 'DATA' extension
 		'spaxel_scale': spatial pixel (spaxel) scale [mas]
 		'grating': Spectral grating
 		'n_exposures': NDIT: No. of exposures
@@ -77,6 +78,7 @@ def main(input_parameters):
 			Conf('Config file', 'HSM_CFG', 'config_file'),
 			Conf('Filename', 'HSM_FILE', 'input_cube'),
 			Conf('Output dir', 'HSM_OUTD', 'output_dir'),
+			Conf('Input cube extension', 'HSM_EXT', 'input_cube_extension'),
 			Conf('Exposure time', 'HSM_EXP', 'exposure_time'),
 			Conf('Number of exposures', 'HSM_NEXP', 'n_exposures'),
 			Conf('Spaxel scale', 'HSM_SPAX', 'spaxel_scale'),
@@ -229,7 +231,7 @@ def main(input_parameters):
 
 	# Read input FITS cube and resample depending on grating and spaxel scale
 	# output is in ph/s/m2/um/arcsec2 units
-	cube_exp, head, lambs, input_spec_res = init_cube(input_parameters["input_cube"], input_parameters["grating"], input_parameters["spaxel_scale"])
+	cube_exp, head, lambs, input_spec_res = init_cube(input_parameters["input_cube"], input_parameters["grating"], input_parameters["spaxel_scale"], extension=input_parameters.get("input_cube_extension"))
 	
 	# Calculate extended lambda range to convolve with the LSF
 	LSF_width = int(config_data["spectral_sampling"]["internal"]/2.35482*config_data['LSF_kernel_size'])

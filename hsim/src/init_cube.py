@@ -196,7 +196,7 @@ def spatial_res(datacube, head, spax):
 	return new_cube, head
 
 
-def init_cube(datacube, grating, spax):
+def init_cube(datacube, grating, spax, extension=None):
 	''' Read input fits cube and resamples spatial and spectral 
 		depending on selected grating and spaxel scale
 
@@ -204,6 +204,7 @@ def init_cube(datacube, grating, spax):
 		datacube: Input high resolution datacube (RA, DEC, lambda)
 		grating: Spectral grating
 		spax: spatial pixel (spaxel) scale 
+		extension: fits file extension to read the data from. It can be integer or string (e.g. 1 or "DATA"). Blank finds the primary HDU.
 
 	Outputs:
 		resampled cube
@@ -212,7 +213,10 @@ def init_cube(datacube, grating, spax):
 	
 	#OPEN INPUT FITS file
 	if os.path.isfile(datacube) == True and os.path.splitext(datacube)[1].lower() == '.fits':
-		cube, head = fits.getdata(datacube, 0, header=True, memmap=True)
+		if extension is None:
+			cube, head = fits.getdata(datacube, header=True, memmap=True)
+		else:
+			cube, head = fits.getdata(datacube, extension, header=True, memmap=True)
 		#If not FITS file, try passing datacube directly
 	else:
 		try:
