@@ -196,7 +196,7 @@ def spatial_res(datacube, head, spax):
 	return new_cube, head
 
 
-def init_cube(datacube, grating, spax, extension=None):
+def init_cube(datacube, grating, spax, extension=""):
 	''' Read input fits cube and resamples spatial and spectral 
 		depending on selected grating and spaxel scale
 
@@ -213,7 +213,7 @@ def init_cube(datacube, grating, spax, extension=None):
 	
 	#OPEN INPUT FITS file
 	if os.path.isfile(datacube) == True and os.path.splitext(datacube)[1].lower() == '.fits':
-		if extension is None:
+		if extension == "":
 			cube, head = fits.getdata(datacube, header=True, memmap=True)
 		else:
 			cube, head = fits.getdata(datacube, extension, header=True, memmap=True)

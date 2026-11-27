@@ -69,7 +69,7 @@ if __name__ == "__main__":
 	
 	simulation_parameters = [Parameter("input_cube", "FITS input cube"),
 				Parameter("output_dir", "Output directory"),
-				Parameter("input_cube_extension", "FITS file extension to read the input cube from. Default looks for the 'DATA' extension", default=None),
+				Parameter("input_cube_extension", "FITS file extension to read the input cube from. Default looks for the 'DATA' extension", default=""),
 				Parameter("grating", "HARMONI grating", choices = get_grating_list()),
 				Parameter("spaxel_scale", "Spaxel Scale", choices = ["6x6", "25x25"]),
 				Parameter("exposure_time", "Exposure time [s]", type=int),
