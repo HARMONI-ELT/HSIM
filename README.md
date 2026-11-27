@@ -13,10 +13,10 @@ For updated information on how to run HSIM3, you can read the manual [hsim3.pdf]
 The pipeline is written in Python v3.10. We have tested it on Linux Ubuntu, although it should be possible to run on Windows and Mac OSX.
 
 The required Python modules are:
-- astropy 6.1.6
-- numpy 2.1.3
-- scipy 1.13.1
-- matplotlib 3.9.2
+- astropy 8.0.1
+- numpy 2.5.2
+- scipy 1.18.1
+- matplotlib 3.11.1
 - astro-tiptop 1.3.12
 
 The code has been tested with the indicated package version, although more recent releases of these packages are likely to work as well.
