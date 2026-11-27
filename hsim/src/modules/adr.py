@@ -5,7 +5,7 @@ to datacubes.
 from src.modules.rebin import *
 import numpy as np
 import matplotlib.pylab as plt
-from scipy.interpolate import interp2d
+from scipy.interpolate import RectBivariateSpline
 
 def apply_adr(cube, header, wave, T, am, correct=False, debug_plots=False, output_file=""):
 	''' calculates the differential refration in MILLI-ARCSEC
@@ -53,8 +53,8 @@ def apply_adr(cube, header, wave, T, am, correct=False, debug_plots=False, outpu
 		else:
 			ygrid_in = ygrid_out - adr[k]
 		
-		image = interp2d(xgrid_in, ygrid_in, cube[k,:,:], kind='cubic')
-		cube[k,:,:] = image(xgrid_out, ygrid_out)
+		image = RectBivariateSpline(xgrid_in, ygrid_in, cube[k, :, :].T, kx=3, ky=3)
+		cube[k,:,:] = image(xgrid_out, ygrid_out).T
 
 	return cube
 

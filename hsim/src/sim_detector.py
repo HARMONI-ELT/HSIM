@@ -201,7 +201,7 @@ def sim_detector(input_parameters, cube, back_emission, transmission, lambs, deb
 	frad = blackbody(orig_qe_lambda, Trad)/(sp.h*sp.c/(orig_qe_lambda*1.E-6))*pixel_solid_rad # photons/s/um/m2
 	ftot = (fcryomech + frad)*pixel_area # photons/um/pixel
 	ftot = ftot*orig_qe  # e/um/pixel
-	ftot_electron = integrate.simps(ftot, orig_qe_lambda) #e/pixel
+	ftot_electron = integrate.simpson(ftot, x=orig_qe_lambda) #e/pixel
 	
 	return cube, back_emission, transmission, read_noise, dark*DIT, ftot_electron*DIT
 	

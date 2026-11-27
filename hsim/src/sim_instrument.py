@@ -4,7 +4,8 @@ Calculates LSF, instrument background and transmission
 import logging
 
 import numpy as np
-from scipy.interpolate import interp1d, interp2d
+from scipy.interpolate import interp1d
+from scipy.interpolate import RectBivariateSpline
 import scipy.constants as sp
 from astropy.convolution import Gaussian1DKernel
 from astropy.io import fits
@@ -426,8 +427,10 @@ def sim_instrument(input_parameters, cube, back_emission, transmission, ext_lamb
 		xgrid_out = np.arange(-abs(cube_xsize)*0.5, abs(cube_xsize)*0.5, abs(pix_size))
 		ygrid_out = np.arange(-abs(cube_ysize)*0.5, abs(cube_ysize)*0.5, abs(pix_size))
 
-		fpm_interp = interp2d(xgrid_in, ygrid_in, fpm, kind='linear')
-		fpm_final = fpm_interp(xgrid_out, ygrid_out)
+
+		#fpm_interp = interp2d(xgrid_in, ygrid_in, fpm, kind='linear')
+		fpm_interp = RectBivariateSpline(xgrid_in, ygrid_in, fpm.T, kx=1, ky=1)
+		fpm_final = fpm_interp(xgrid_out, ygrid_out).T
 		
 		for i in range(cube.shape[0]):
 			cube[i,:,:] *= fpm_final

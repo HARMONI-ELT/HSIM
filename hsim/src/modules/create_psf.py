@@ -8,7 +8,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 import scipy.ndimage
 from astropy.io import fits
-from scipy.interpolate import interp2d
+from scipy.interpolate import RectBivariateSpline
 from scipy.signal import fftconvolve
 
 try:
@@ -95,13 +95,13 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 		npupover =  float(int(npup*overFoV/2)*2)
 		xxover  = np.arange(dimover)/dimover*dimnum
 		xxpupover  = np.arange(npupover)/npupover*npup
-		
-		fDphi2 = interp2d(np.arange(Dphi2.shape[0]), np.arange(Dphi2.shape[0]), Dphi2, kind='cubic')
-		Dphi2 = fDphi2(xxover, xxover)
+
+		fDphi2 = RectBivariateSpline(np.arange(Dphi2.shape[1]), np.arange(Dphi2.shape[0]), Dphi2.T, kx=3, ky=3)
+		Dphi2 = fDphi2(xxover, xxover).T
 		Dphi2[Dphi2 < 0] = 0.
-		
-		fpup = interp2d(np.arange(pup.shape[0]), np.arange(pup.shape[0]), pup, kind='cubic')
-		pupover = fpup(xxpupover, xxpupover)
+
+		fpup = RectBivariateSpline(np.arange(pup.shape[1]), np.arange(pup.shape[0]), pup.T, kx=3, ky=3)
+		pupover = fpup(xxpupover, xxpupover).T
 		pupover[pupover < 0] = 0.
 	else:
 		dimover = dimnum
@@ -116,7 +116,7 @@ def psd_to_psf(psd, pup, D, phase_static = None, samp = None, fov = None, lamb =
 			raise HSIMError("pup and static phase must have the same number of pixels")
 
 		if overFoV != 1:
-			fphase_static = interp2d(np.arange(phase_static.shape[0]), np.arange(phase_static.shape[0]), phase_static, kind='cubic')
+			fphase_static = RectBivariateSpline(np.arange(phase_static.shape[1]), np.arange(phase_static.shape[0]), phase_static.T, kx=3, ky=3)
 			phase_static_o = fphase_static(xxpupover, xxpupover)
 			#phase_static_o[phase_static_o < 0] = 0.
 			
@@ -342,8 +342,9 @@ def define_psf(input_parameters, _jitter, _fov, _psfscale, rotation=None):
 		if area_scale > 1:
 			xgrid_in = (np.linspace(0, user_psf.shape[0]-1, user_psf.shape[0]) - user_psf.shape[0]*0.5)*mci_pix_psf
 			ygrid_in = (np.linspace(0, user_psf.shape[1]-1, user_psf.shape[1]) - user_psf.shape[1]*0.5)*mci_pix_psf
-			image = interp2d(xgrid_in, ygrid_in, user_psf, kind='cubic', fill_value=0.)
-			user_psf = image(xgrid_out, ygrid_out)/area_scale
+			image_func = RectBivariateSpline(xgrid_in, ygrid_in, user_psf.T, kx=3, ky=3)
+
+			user_psf = np.where((xgrid_out[:, None] >= xgrid_in[0]) & (xgrid_out[:, None] <= xgrid_in[-1]) & (ygrid_out[None, :] >= ygrid_in[0]) & (ygrid_out[None, :] <= ygrid_in[-1]), image_func(xgrid_out, ygrid_out), 0.).T / area_scale
 		else:
 			side = int(user_psf.shape[0]*mci_pix_psf/psfscale/2)*2
 			rebin_psf = frebin2d(user_psf, (side, side))/area_scale
@@ -470,8 +471,9 @@ def create_psf(lamb, Airy=False):
 			# interpolate PSF
 			xgrid_in = (np.linspace(0, psf.shape[0]-1, psf.shape[0]) - psf.shape[0]*0.5)*pix_psf
 			ygrid_in = (np.linspace(0, psf.shape[1]-1, psf.shape[1]) - psf.shape[1]*0.5)*pix_psf
-			image = interp2d(xgrid_in, ygrid_in, psf, kind='cubic', fill_value=0.)
-			finalpsf = image(xgrid_out, ygrid_out)/area_scale
+			image_func = RectBivariateSpline(xgrid_in, ygrid_in, psf.T, kx=3, ky=3)
+
+			finalpsf = np.where((xgrid_out[:, None] >= xgrid_in[0]) & (xgrid_out[:, None] <= xgrid_in[-1]) & (ygrid_out[None, :] >= ygrid_in[0]) & (ygrid_out[None, :] <= ygrid_in[-1]), image_func(xgrid_out, ygrid_out), 0.).T / area_scale
 		else:
 			# rebin PSF
 			side = int(psf.shape[0]*pix_psf/psfscale/2)*2

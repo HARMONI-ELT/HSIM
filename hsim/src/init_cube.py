@@ -8,7 +8,7 @@ import logging
 import astropy.io.fits as fits
 import astropy.units as u
 import numpy as np
-from scipy.interpolate import interp2d
+from scipy.interpolate import RectBivariateSpline
 
 from src.config import *
 from src.modules.rebin import *
@@ -165,8 +165,8 @@ def spatial_res(datacube, head, spax):
 		if abs(new_sampling_x) < abs(head['CDELT1']):
 			logging.warning('Interpolating data cube - spatial')
 			for k in np.arange(0, z):
-				image = interp2d(xgrid_in, ygrid_in, datacube[k,:,:], kind='linear')
-				new_cube[k,:,:] = image(xgrid_out, ygrid_out)
+				image = RectBivariateSpline(xgrid_in, ygrid_in, datacube[k, :, :].T, kx=1, ky=1)
+				new_cube[k,:,:] = image(xgrid_out, ygrid_out).T
 			
 		else:
 			logging.info('Rebinning data cube - spatial')

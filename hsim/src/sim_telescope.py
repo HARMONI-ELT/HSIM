@@ -45,6 +45,9 @@ def save_result(results):
 	result_cube[i, :, :] = conv_image[y0:y1, x0:x1]
 
 
+def init_worker():
+	signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 def sim_telescope(input_parameters, cube, back_emission, transmission, ext_lambs, cube_lamb_mask, debug_plots=False, output_file=""):
 	''' Simulates telescope effects
 	Inputs:
@@ -159,34 +162,41 @@ def sim_telescope(input_parameters, cube, back_emission, transmission, ext_lambs
 	logging.info(("Using {:d} CPU" + ("s" if ncpus > 1 else "")).format(ncpus))
 	if ncpus > 1:
 
-		def init_worker():
-			signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-		pool = mp.Pool(ncpus, init_worker)
-		
+		ctx = mp.get_context('fork')
+		pool = ctx.Pool(processes=ncpus, initializer=init_worker)
+
 		counter = 0
 		result_cube = np.zeros_like(cube)
 		llambs = len(lambs)
 		
-		for j in range(0, len(lambs), ncpus):
-			result = []
-			for i in range(j, min([len(lambs), j+ncpus])):
-				result.append(pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i, :, :], padding_x, padding_y, padding_back[i]), callback=save_result))
-			
-			
-			try:
+		try:
+			for j in range(0, llambs, ncpus):
+				result = []
+				for i in range(j, min([llambs, j+ncpus])):
+					result.append(pool.apply_async(process_lambda, args=((i, x0, x1, y0, y1), lambs[i], cube[i, :, :], padding_x, padding_y, padding_back[i]), callback=save_result))
+
+
 				while True:
 					time.sleep(0.5)
 					if all([r.ready() for r in result]):
 						break
 
-			except KeyboardInterrupt:
-				pool.terminate()
-				pool.join()
+				for r in result:
+					r.get()
 
-		
-		pool.close()
-		pool.join()
+			pool.close()
+
+		except KeyboardInterrupt:
+			pool.terminate()
+			raise
+
+		except Exception:
+			pool.terminate()
+			raise
+
+		finally:
+			pool.join()
 
 		
 		cube = result_cube
